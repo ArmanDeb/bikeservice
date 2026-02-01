@@ -1,0 +1,131 @@
+import { synchronize } from '@nozbe/watermelondb/sync'
+import { database } from '../database'
+import { supabase } from './Supabase'
+import { TableName } from '../database/constants'
+
+export async function sync() {
+    await synchronize({
+        database,
+        pullChanges: async ({ lastPulledAt, schemaVersion, migration }) => {
+            // 1. Calculate timestamp for "changes since"
+            const lastPulled = lastPulledAt || 0
+
+            // 2. Fetch changes from Supabase for each table using parallel requests
+            // Ideally this should be a single RPC call to ensure atomicity and consistency
+            const { data: vehicles, error: vehiclesError } = await supabase
+                .from(TableName.VEHICLES)
+                .select('*')
+                .gt('updated_at', lastPulled)
+
+            if (vehiclesError) throw new Error(vehiclesError.message)
+
+            const { data: logs, error: logsError } = await supabase
+                .from(TableName.MAINTENANCE_LOGS)
+                .select('*')
+                .gt('updated_at', lastPulled)
+
+            if (logsError) throw new Error(logsError.message)
+
+            const { data: docs, error: docsError } = await supabase
+                .from(TableName.DOCUMENTS)
+                .select('*')
+                .gt('updated_at', lastPulled)
+
+            if (docsError) throw new Error(docsError.message)
+
+            // 3. Format for WatermelonDB
+            // Note: This simple implementation implies Supabase 'deleted_at' handling 
+            // is distinct. For a proper sync with deletions, we typically need a 'deleted' boolean
+            // or check if 'deleted_at' is not null.
+
+            // Helper to process raw rows
+            const processChanges = (rows: any[]) => {
+                return {
+                    created: rows.filter(r => !r.deleted_at && r.created_at > lastPulled),
+                    updated: rows.filter(r => !r.deleted_at && r.created_at <= lastPulled),
+                    deleted: rows.filter(r => !!r.deleted_at).map(r => r.id)
+                }
+            }
+
+            const changes = {
+                [TableName.VEHICLES]: processChanges(vehicles || []),
+                [TableName.MAINTENANCE_LOGS]: processChanges(logs || []),
+                [TableName.DOCUMENTS]: processChanges(docs || []),
+            }
+
+            // 4. Return
+            // 'timestamp' should ideally be the current server time to avoid clock drift issues.
+            // We use Date.now() here but in prod should be a timestamp returned from server.
+            return { changes, timestamp: Date.now() }
+        },
+        pushChanges: async ({ changes, lastPulledAt }) => {
+            const sanitize = (record: any) => {
+                const { _status, _changed, ...rest } = record
+                return rest
+            }
+
+            // Extract all changes upfront
+            const { created: createdVehicles, updated: updatedVehicles, deleted: deletedVehicles } = changes[TableName.VEHICLES]
+            const { created: createdLogs, updated: updatedLogs, deleted: deletedLogs } = changes[TableName.MAINTENANCE_LOGS]
+            const { created: createdDocs, updated: updatedDocs, deleted: deletedDocs } = changes[TableName.DOCUMENTS]
+
+            // ============================================
+            // PHASE 1: DELETES (Reverse order for FK constraints)
+            // Documents → Logs → Vehicles
+            // ============================================
+
+            // Delete documents FIRST (they reference logs)
+            if (deletedDocs.length > 0) {
+                const { error } = await supabase.from(TableName.DOCUMENTS).delete().in('id', deletedDocs)
+                if (error) throw new Error(`Doc Delete Error: ${error.message}`)
+            }
+
+            // Delete logs SECOND (they reference vehicles)
+            if (deletedLogs.length > 0) {
+                const { error } = await supabase.from(TableName.MAINTENANCE_LOGS).delete().in('id', deletedLogs)
+                if (error) throw new Error(`Log Delete Error: ${error.message}`)
+            }
+
+            // Delete vehicles LAST
+            if (deletedVehicles.length > 0) {
+                const { error } = await supabase.from(TableName.VEHICLES).delete().in('id', deletedVehicles)
+                if (error) throw new Error(`Vehicle Delete Error: ${error.message}`)
+            }
+
+            // ============================================
+            // PHASE 2: CREATES/UPDATES (Normal order)
+            // Vehicles → Logs → Documents
+            // ============================================
+
+            // Vehicles
+            if (createdVehicles.length > 0) {
+                const { error } = await supabase.from(TableName.VEHICLES).upsert(createdVehicles.map(sanitize))
+                if (error) throw new Error(`Vehicle Insert Error: ${error.message}`)
+            }
+            if (updatedVehicles.length > 0) {
+                const { error } = await supabase.from(TableName.VEHICLES).upsert(updatedVehicles.map(sanitize))
+                if (error) throw new Error(`Vehicle Update Error: ${error.message}`)
+            }
+
+            // Logs
+            if (createdLogs.length > 0) {
+                const { error } = await supabase.from(TableName.MAINTENANCE_LOGS).upsert(createdLogs.map(sanitize))
+                if (error) throw new Error(`Log Insert Error: ${error.message}`)
+            }
+            if (updatedLogs.length > 0) {
+                const { error } = await supabase.from(TableName.MAINTENANCE_LOGS).upsert(updatedLogs.map(sanitize))
+                if (error) throw new Error(`Log Update Error: ${error.message}`)
+            }
+
+            // Documents
+            if (createdDocs.length > 0) {
+                const { error } = await supabase.from(TableName.DOCUMENTS).upsert(createdDocs.map(sanitize))
+                if (error) throw new Error(`Doc Insert Error: ${error.message}`)
+            }
+            if (updatedDocs.length > 0) {
+                const { error } = await supabase.from(TableName.DOCUMENTS).upsert(updatedDocs.map(sanitize))
+                if (error) throw new Error(`Doc Update Error: ${error.message}`)
+            }
+        },
+    })
+}

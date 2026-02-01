@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Expo / Mobile folders (if not tracking them here)
+# mobile/node_modules/
+# mobile/.expo/
+
+# System
+.DS_Store
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# AG Kit specific
+.temp_ag_kit/
+antigravity-doc/
+
+# Logs
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# IDE
+.vscode/
+.idea/
