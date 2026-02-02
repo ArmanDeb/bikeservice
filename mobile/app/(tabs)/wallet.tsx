@@ -1,558 +1,556 @@
-import React, { useState, useMemo } from 'react'
-import { View, Text, SafeAreaView, TouchableOpacity, Modal, TextInput, Image, Alert, FlatList, ScrollView } from 'react-native'
+import React, { useState } from 'react'
+import { View, Text, TouchableOpacity, Modal, TextInput, Image, Alert, ScrollView, StatusBar, StyleSheet, Pressable } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { withObservables } from '@nozbe/watermelondb/react'
-import { switchMap, of } from 'rxjs'
 import * as ImagePicker from 'expo-image-picker'
 import { DocumentService } from '../../src/services/DocumentService'
 import Document from '../../src/database/models/Document'
 import { VehicleService } from '../../src/services/VehicleService'
 import Vehicle from '../../src/database/models/Vehicle'
+import { Camera, FileText, ChevronRight, ChevronLeft, Bike, FolderOpen, X, Plus } from 'lucide-react-native'
 import { useVehicle } from '../../src/context/VehicleContext'
-import VehicleItem from '../../src/components/vehicle/VehicleItem'
+import { useTheme } from '../../src/context/ThemeContext'
+import { useLanguage } from '../../src/context/LanguageContext'
 
-// User-level document types (shared across all vehicles)
-const USER_LEVEL_TYPES = ['license'] as const
+// Styles definition
+const styles = StyleSheet.create({
+    // Modal Styles
+    vehicleChip: {
+        marginRight: 8,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 9999,
+        borderWidth: 1,
+        backgroundColor: '#F1F5F9',
+        borderColor: '#E2E8F0',
+    },
+    vehicleChipSelected: {
+        backgroundColor: '#3B82F6',
+        borderColor: '#3B82F6',
+    },
+    vehicleChipDark: {
+        backgroundColor: '#334155',
+        borderColor: '#475569',
+    },
+    typeButton: {
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 12,
+        borderWidth: 1,
+        backgroundColor: '#F1F5F9',
+        borderColor: 'rgba(226, 232, 240, 0.5)',
+    },
+    typeButtonDark: {
+        backgroundColor: '#334155',
+        borderColor: 'rgba(51, 65, 85, 0.5)',
+    },
+    typeButtonSelected: {
+        backgroundColor: '#3B82F6',
+        borderColor: '#3B82F6',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    cameraButton: {
+        backgroundColor: '#F1F5F9',
+        borderWidth: 2,
+        borderColor: '#E2E8F0',
+        borderStyle: 'dashed',
+        padding: 32,
+        borderRadius: 16,
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    cameraButtonDark: {
+        backgroundColor: '#334155',
+        borderColor: '#475569',
+    },
+    submitButton: {
+        backgroundColor: '#3B82F6',
+        padding: 16,
+        borderRadius: 12,
+        alignItems: 'center',
+        marginBottom: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    deleteButton: {
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        borderWidth: 1,
+        borderColor: 'rgba(239, 68, 68, 0.5)',
+        padding: 16,
+        borderRadius: 12,
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    cancelButton: {
+        padding: 12,
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    // Screen Styles
+    addButton: {
+        backgroundColor: '#3B82F6',
+        padding: 8,
+        borderRadius: 9999,
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: '#3B82F6',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    backButton: {
+        backgroundColor: '#FFFFFF',
+        padding: 8,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(226, 232, 240, 0.5)',
+        marginRight: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
+    },
+    backButtonDark: {
+        backgroundColor: '#1E293B',
+        borderColor: 'rgba(51, 65, 85, 0.5)',
+    },
+    docItem: {
+        backgroundColor: '#FFFFFF',
+        padding: 16,
+        borderRadius: 16,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(226, 232, 240, 0.5)',
+        flexDirection: 'row',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
+    },
+    docItemDark: {
+        backgroundColor: '#1E293B',
+        borderColor: 'rgba(51, 65, 85, 0.5)',
+    },
+    docIconContainer: {
+        width: 56,
+        height: 56,
+        backgroundColor: '#F1F5F9', // surface-highlight
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(226, 232, 240, 0.5)',
+        overflow: 'hidden',
+    },
+    docIconContainerDark: {
+        backgroundColor: '#334155',
+        borderColor: 'rgba(51, 65, 85, 0.5)',
+    },
+    vehicleCard: {
+        backgroundColor: '#FFFFFF',
+        padding: 24,
+        borderRadius: 16,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(226, 232, 240, 0.5)',
+        flexDirection: 'row',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    vehicleCardDark: {
+        backgroundColor: '#1E293B',
+        borderColor: 'rgba(51, 65, 85, 0.5)',
+    },
+    previewOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.9)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+    },
+    previewCloseButton: {
+        position: 'absolute',
+        top: 48,
+        right: 24,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        padding: 8,
+        borderRadius: 9999,
+    }
+});
 
-// --- Document Item Component ---
-const DocumentItem = ({ doc, onPress }: { doc: Document, onPress: (doc: Document) => void }) => (
-    <TouchableOpacity onPress={() => onPress(doc)} className="bg-neutral-800 p-4 rounded-xl mb-3 flex-row items-center border border-neutral-700">
-        <View className="h-12 w-12 bg-neutral-700 rounded-lg mr-4 items-center justify-center overflow-hidden">
-            {doc.localUri ? (
-                <Image source={{ uri: doc.localUri }} className="h-full w-full" />
-            ) : (
-                <Text className="text-2xl">
-                    {doc.type === 'invoice' ? '🧾' :
-                        doc.type === 'insurance' ? '🛡️' :
-                            doc.type === 'license' ? '🪪' :
-                                doc.type === 'registration' ? '📝' :
-                                    doc.type === 'technical_control' ? '🔧' :
-                                        doc.type === 'coc' ? '📋' : '📄'}
-                </Text>
-            )}
-        </View>
-        <View className="flex-1">
-            <Text className="text-white font-bold text-lg">{doc.reference || 'Untitled'}</Text>
-            <Text className="text-neutral-400 text-sm uppercase">{doc.type.replace('_', ' ')}</Text>
-        </View>
-        <View>
-            {doc.expiryDate && (
-                <Text className={`text-sm ${doc.expiryDate < new Date() ? 'text-red-500 font-bold' : 'text-green-500'}`}>
-                    {doc.expiryDate.toLocaleDateString('fr-FR')}
-                </Text>
-            )}
-        </View>
-    </TouchableOpacity>
-)
 
-// --- Document Viewer Level ---
-const DocumentViewer = ({
-    visible,
-    onClose,
-    document,
-    onEdit
-}: {
-    visible: boolean,
-    onClose: () => void,
-    document: Document | null,
-    onEdit: (doc: Document) => void
-}) => {
-    if (!document) return null
 
-    return (
-        <Modal visible={visible} animationType="fade" transparent>
-            <View className="flex-1 bg-black">
-                {/* Header */}
-                <SafeAreaView className="z-10 absolute top-0 left-0 right-0">
-                    <View className="flex-row justify-between items-center p-4">
-                        <TouchableOpacity onPress={onClose} className="bg-neutral-800/80 p-3 rounded-full">
-                            <Text className="text-white font-bold">✕</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => { onClose(); onEdit(document) }} className="bg-neutral-800/80 p-3 rounded-full">
-                            <Text className="text-yellow-500 font-bold">Edit</Text>
-                        </TouchableOpacity>
-                    </View>
-                </SafeAreaView>
-
-                {/* Content */}
-                <View className="flex-1 items-center justify-center p-4">
-                    {document.localUri ? (
-                        <Image
-                            source={{ uri: document.localUri }}
-                            className="w-full h-[70%] rounded-lg"
-                            resizeMode="contain"
-                        />
-                    ) : (
-                        <View className="items-center justify-center py-20">
-                            <Text className="text-8xl mb-4">
-                                {document.type === 'invoice' ? '🧾' :
-                                    document.type === 'insurance' ? '🛡️' :
-                                        document.type === 'license' ? '🪪' :
-                                            document.type === 'registration' ? '📝' :
-                                                document.type === 'technical_control' ? '🔧' :
-                                                    document.type === 'coc' ? '📋' : '📄'}
-                            </Text>
-                            <Text className="text-neutral-500">No image attached</Text>
-                        </View>
-                    )}
-
-                    {/* Metadata Footer */}
-                    <View className="mt-8 bg-neutral-900 w-full p-6 rounded-2xl border border-neutral-800">
-                        <Text className="text-2xl font-bold text-white mb-2">{document.reference || 'Untitled'}</Text>
-
-                        <View className="flex-row justify-between items-center border-t border-neutral-800 pt-4 mt-2">
-                            <View>
-                                <Text className="text-neutral-500 text-xs uppercase font-bold">Type</Text>
-                                <Text className="text-neutral-300 capitalize">{document.type.replace('_', ' ')}</Text>
-                            </View>
-                            {document.expiryDate && (
-                                <View>
-                                    <Text className="text-neutral-500 text-xs uppercase font-bold text-right">Expires</Text>
-                                    <Text className={`text-right ${document.expiryDate < new Date() ? 'text-red-500 font-bold' : 'text-green-500'}`}>
-                                        {document.expiryDate.toLocaleDateString('fr-FR')}
-                                    </Text>
-                                </View>
-                            )}
-                        </View>
-                    </View>
-                </View>
-            </View>
-        </Modal>
-    )
-}
-
-// --- Document Modal (Add / Edit) ---
-const DocumentModal = ({
-    visible,
-    onClose,
-    vehicleId,
-    document,
-    existingTypes
-}: {
-    visible: boolean,
-    onClose: () => void,
-    vehicleId: string | null,
-    document?: Document | null,
-    existingTypes: string[]
-}) => {
+// Document Modal Component
+const DocumentModal = ({ visible, onClose, document, vehicles }: { visible: boolean, onClose: () => void, document?: Document | null, vehicles: Vehicle[] }) => {
+    const { selectedVehicleId } = useVehicle()
+    const { t, language } = useLanguage()
+    const { isDark } = useTheme()
     const [title, setTitle] = useState('')
-    const [type, setType] = useState<'registration' | 'insurance' | 'license' | 'invoice' | 'technical_control' | 'coc' | 'other'>('other')
-    const [imageUri, setImageUri] = useState<string | null>(null)
-    const [expiryText, setExpiryText] = useState('')
+    const [type, setType] = useState<'registration' | 'insurance' | 'license' | 'technical_control' | 'coc' | 'invoice' | 'other'>('invoice')
+    const [expiryDate, setExpiryDate] = useState('')
+    const [localUri, setLocalUri] = useState<string | null>(null)
+    const [vehicleId, setVehicleId] = useState('')
 
-    // Reset / Populate
     React.useEffect(() => {
         if (visible) {
             if (document) {
                 setTitle(document.reference || '')
                 setType(document.type)
-                setImageUri(document.localUri || null)
-
-                if (document.expiryDate) {
-                    const d = document.expiryDate
-                    const isoDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-                    setExpiryText(isoDate)
-                } else {
-                    setExpiryText('')
-                }
+                setExpiryDate(document.expiryDate ? document.expiryDate.toISOString().split('T')[0] : '')
+                setLocalUri(document.localUri || null)
+                setVehicleId(document.vehicleId || '')
             } else {
                 setTitle('')
-
-                // Determine a safe default if strict types are hidden
-                // Filter legal types against existing ones
-                const availableLegal = ['registration', 'license', 'insurance', 'technical_control', 'coc'].filter(t => !existingTypes.includes(t))
-                if (availableLegal.length > 0) {
-                    // @ts-ignore
-                    setType(availableLegal[0])
-                } else {
-                    setType('other')
-                }
-
-                setImageUri(null)
-                setExpiryText('')
+                setType('invoice')
+                setExpiryDate('')
+                setLocalUri(null)
+                setVehicleId(selectedVehicleId || (vehicles.length > 0 ? vehicles[0].id : ''))
             }
         }
-    }, [visible, document, existingTypes])
+    }, [visible, document, selectedVehicleId, vehicles])
 
     const pickImage = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'],
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true,
-            aspect: [4, 3],
-            quality: 1,
+            quality: 0.5,
         })
 
-        if (!result.canceled) {
-            setImageUri(result.assets[0].uri)
+        if (!result.canceled && result.assets[0].uri) {
+            setLocalUri(result.assets[0].uri)
         }
-    }
-
-    const handleDelete = () => {
-        if (!document) return
-        Alert.alert(
-            "Delete Document",
-            "Are you sure you want to delete this document?",
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Delete",
-                    style: "destructive",
-                    onPress: async () => {
-                        await DocumentService.deleteDocument(document)
-                        onClose()
-                    }
-                }
-            ]
-        )
     }
 
     const handleSubmit = async () => {
-        try {
-            if (!title) return
-
-            // Simple date parsing for MVP
-            let expiryDate = null
-            if (expiryText) {
-                expiryDate = new Date(expiryText)
-                if (isNaN(expiryDate.getTime())) throw new Error("Invalid Date Format (use YYYY-MM-DD)")
-            }
-
-            if (document) {
-                // Update
-                await DocumentService.updateDocument(
-                    document,
-                    title,
-                    expiryDate,
-                    imageUri,
-                    type
-                )
-            } else {
-                // Create - vehicleId is passed but license will ignore it (user-level)
-                await DocumentService.createDocument(
-                    title,
-                    type,
-                    expiryDate,
-                    imageUri,
-                    vehicleId || undefined
-                )
-            }
-            onClose()
-        } catch (e: any) {
-            Alert.alert("Error", e.message)
+        if (!title || !vehicleId) {
+            Alert.alert(t('alert.error'), 'Title and Vehicle are required')
+            return
         }
+
+        const expiry = expiryDate ? new Date(expiryDate) : null
+
+        if (document) {
+            // updateDocument: (document, title, expiryDate, filePath, type?)
+            await DocumentService.updateDocument(document, title, expiry, localUri, type)
+        } else {
+            // createDocument: (title, type, expiryDate, filePath, vehicleId?)
+            await DocumentService.createDocument(title, type, expiry, localUri, vehicleId)
+        }
+        onClose()
     }
 
-    const legalTypes = ['registration', 'license', 'insurance', 'technical_control', 'coc'] as const
-    const visibleLegalTypes = legalTypes.filter(t => {
-        // If we are editing, current type must be visible even if it 'exists' (it is this one)
-        if (document && document.type === t) return true
-        // If adding new, hide if already exists
-        if (existingTypes.includes(t)) return false
-        return true
-    })
+    const docTypes = [
+        { id: 'registration', label: t('wallet.type.registration') },
+        { id: 'license', label: t('wallet.type.license') },
+        { id: 'insurance', label: t('wallet.type.insurance') },
+        { id: 'technical_control', label: t('wallet.type.technical_control') },
+        { id: 'coc', label: t('wallet.type.coc') },
+        { id: 'invoice', label: t('wallet.type.invoice') },
+        { id: 'other', label: t('wallet.type.other') },
+    ] as const
 
     return (
         <Modal visible={visible} animationType="slide" transparent>
-            <View className="flex-1 bg-black/90 justify-end">
-                <View className="bg-neutral-900 p-6 rounded-t-3xl border-t border-neutral-800">
-                    <Text className="text-2xl font-bold text-white mb-6">
-                        {document ? 'Edit Document' : 'Add Document'}
+            <View className="flex-1 justify-end bg-black/50">
+                <View className="bg-surface p-6 rounded-t-3xl border-t border-border/50 shadow-lg max-h-[90%]">
+                    <Text className="text-2xl font-heading text-text mb-6">
+                        {document ? t('wallet.modal.edit_title') : t('wallet.modal.add_title')}
                     </Text>
 
-                    {/* Type Selector */}
-                    <Text className="text-neutral-400 mb-2 text-xs uppercase">Document Type</Text>
-                    <View className="flex-row flex-wrap gap-2 mb-4">
-                        {visibleLegalTypes.map(t => (
-                            <TouchableOpacity
-                                key={t}
-                                onPress={() => setType(t)}
-                                className={`px-3 py-2 rounded-lg border ${type === t ? 'bg-yellow-500 border-yellow-500' : 'bg-neutral-800 border-neutral-700'}`}
-                            >
-                                <Text className={`text-xs font-bold uppercase ${type === t ? 'text-black' : 'text-neutral-400'}`}>{t.replace('_', ' ')}</Text>
-                            </TouchableOpacity>
-                        ))}
-
-                        {/* Only show Invoice if we are editing an Invoice, otherwise hide it from manual selection */}
-                        {type === 'invoice' && (
-                            <TouchableOpacity
-                                onPress={() => setType('invoice')}
-                                className="px-3 py-2 rounded-lg border bg-purple-500 border-purple-500"
-                            >
-                                <Text className="text-xs font-bold uppercase text-white">Invoice</Text>
-                            </TouchableOpacity>
-                        )}
-
-                        <TouchableOpacity
-                            onPress={() => setType('other')}
-                            className={`px-3 py-2 rounded-lg border ${type === 'other' ? 'bg-neutral-600 border-neutral-600' : 'bg-neutral-800 border-neutral-700'}`}
-                        >
-                            <Text className={`text-xs font-bold uppercase ${type === 'other' ? 'text-white' : 'text-neutral-400'}`}>Other</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    <TextInput
-                        placeholder="Title (e.g. Insurance)"
-                        placeholderTextColor="#666"
-                        className="bg-neutral-800 text-white p-4 rounded-xl mb-3 text-lg"
-                        value={title} onChangeText={setTitle}
-                    />
-                    <TextInput
-                        placeholder="Expiry (YYYY-MM-DD) - Optional"
-                        placeholderTextColor="#666"
-                        className="bg-neutral-800 text-white p-4 rounded-xl mb-3 text-lg"
-                        value={expiryText} onChangeText={setExpiryText}
-                    />
-
-                    <TouchableOpacity onPress={pickImage} className="bg-neutral-800 p-4 rounded-xl mb-6 flex-row items-center justify-center border border-neutral-700 border-dashed">
-                        {imageUri ? (
-                            <View className="flex-row items-center">
-                                <Image source={{ uri: imageUri }} className="w-10 h-10 rounded-md mr-3" />
-                                <Text className="text-green-500 font-bold">Change Image</Text>
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                        <View className="mb-4">
+                            <Text className="text-text-secondary text-xs uppercase mb-2 tracking-wider">{t('maintenance.select_vehicle')}</Text>
+                            <View className="bg-surface-highlight p-4 rounded-xl border border-border flex-row items-center opacity-80">
+                                <Bike size={20} color={isDark ? "#EAB308" : "#3B82F6"} />
+                                <Text className="text-text font-heading ml-3">
+                                    {vehicleId 
+                                        ? `${vehicles.find(v => v.id === vehicleId)?.brand} ${vehicles.find(v => v.id === vehicleId)?.model}`
+                                        : (language === 'fr' ? 'Sélectionner un véhicule' : 'Select a vehicle')}
+                                </Text>
                             </View>
-                        ) : (
-                            <Text className="text-neutral-400">📷 Attach Photo</Text>
-                        )}
-                    </TouchableOpacity>
+                        </View>
 
-                    <View className="flex-row gap-3">
+                        <Text className="text-text-secondary text-xs uppercase mb-2 tracking-wider">{t('wallet.modal.type')}</Text>
+                        <View className="flex-row flex-wrap gap-2 mb-4">
+                            {docTypes.map((dt) => (
+                                <Pressable
+                                    key={dt.id}
+                                    onPress={() => setType(dt.id as any)}
+                                    style={[
+                                        styles.typeButton,
+                                        isDark && styles.typeButtonDark,
+                                        type === dt.id && styles.typeButtonSelected
+                                    ]}
+                                >
+                                    <Text className={`font-heading text-xs ${type === dt.id ? 'text-white' : 'text-text-secondary'}`}>{dt.label}</Text>
+                                </Pressable>
+                            ))}
+                        </View>
+
+                        <TextInput
+                            placeholder={t('wallet.field.title')}
+                            placeholderTextColor="#9CA3AF"
+                            className="bg-surface-highlight text-text p-4 rounded-xl mb-4 text-lg border border-border"
+                            value={title}
+                            onChangeText={setTitle}
+                        />
+
+                        <TextInput
+                            placeholder={t('wallet.field.expiry')}
+                            placeholderTextColor="#9CA3AF"
+                            className="bg-surface-highlight text-text p-4 rounded-xl mb-4 text-lg border border-border"
+                            value={expiryDate}
+                            onChangeText={setExpiryDate}
+                        />
+
+                        <Pressable
+                            onPress={pickImage}
+                            style={[styles.cameraButton, isDark && styles.cameraButtonDark]}
+                        >
+                            {localUri ? (
+                                <Image source={{ uri: localUri }} className="w-full h-40 rounded-xl" />
+                            ) : (
+                                <>
+                                    <Camera size={32} color="#9CA3AF" />
+                                    <Text className="text-text-secondary font-body mt-2 font-medium">{t('wallet.field.attach_photo')}</Text>
+                                </>
+                            )}
+                        </Pressable>
+
+                        <Pressable onPress={handleSubmit} style={styles.submitButton}>
+                            <Text className="text-white font-heading text-lg">
+                                {document ? t('common.save') : t('wallet.modal.add_title')}
+                            </Text>
+                        </Pressable>
+
                         {document && (
-                            <TouchableOpacity onPress={handleDelete} className="bg-red-500/10 p-4 rounded-xl items-center flex-1 border border-red-500/20">
-                                <Text className="text-red-500 font-bold text-lg">Delete</Text>
-                            </TouchableOpacity>
+                            <Pressable
+                                onPress={() => {
+                                    Alert.alert(
+                                        t('wallet.modal.delete_confirm_title'),
+                                        t('wallet.modal.delete_confirm_desc'),
+                                        [
+                                            { text: t('common.cancel'), style: 'cancel' },
+                                            {
+                                                text: t('common.delete'), style: 'destructive', onPress: async () => {
+                                                    await DocumentService.deleteDocument(document)
+                                                    onClose()
+                                                }
+                                            }
+                                        ]
+                                    )
+                                }}
+                                style={styles.deleteButton}
+                            >
+                                <Text className="text-red-500 font-bold text-lg">{t('wallet.modal.delete')}</Text>
+                            </Pressable>
                         )}
-                        <TouchableOpacity onPress={handleSubmit} className="bg-yellow-500 p-4 rounded-xl items-center flex-[2]">
-                            <Text className="text-black font-bold text-lg">Save</Text>
-                        </TouchableOpacity>
-                    </View>
-                    <TouchableOpacity onPress={onClose} className="p-4 items-center mt-2">
-                        <Text className="text-neutral-500 font-bold">Cancel</Text>
-                    </TouchableOpacity>
+
+                        <Pressable onPress={onClose} style={styles.cancelButton}>
+                            <Text className="text-text-secondary font-bold">{t('common.cancel')}</Text>
+                        </Pressable>
+                    </ScrollView>
                 </View>
             </View>
         </Modal>
     )
 }
 
-// --- Collapsible Section Component ---
-const CollapsibleSection = ({
-    title,
-    data,
-    isExpanded,
-    onToggle,
-    onPressItem
-}: {
-    title: string,
-    data: Document[],
-    isExpanded: boolean,
-    onToggle: () => void,
-    onPressItem: (doc: Document) => void
-}) => {
-    if (data.length === 0) return null
-
-    return (
-        <View className="mb-4">
-            {/* Collapsible Header */}
-            <TouchableOpacity
-                onPress={onToggle}
-                className="flex-row justify-between items-center bg-neutral-800/50 p-4 rounded-xl border border-neutral-700"
-            >
-                <View className="flex-row items-center">
-                    <Text className="text-yellow-500 font-bold uppercase tracking-wider text-sm">
-                        {title}
-                    </Text>
-                    <View className="bg-yellow-500/20 px-2 py-1 rounded-full ml-3">
-                        <Text className="text-yellow-500 text-xs font-bold">{data.length}</Text>
-                    </View>
-                </View>
-                <Text className="text-neutral-400 text-xl">
-                    {isExpanded ? '▼' : '▶'}
-                </Text>
-            </TouchableOpacity>
-
-            {/* Content */}
-            {isExpanded && (
-                <View className="mt-3">
-                    {data.map(doc => (
-                        <DocumentItem key={doc.id} doc={doc} onPress={onPressItem} />
-                    ))}
-                </View>
-            )}
-        </View>
-    )
-}
-
-// --- Wallet Screen ---
-const WalletScreen = ({
-    vehicleDocuments,
-    allDocuments,
-    vehicles
-}: {
-    vehicleDocuments: Document[],
-    allDocuments: Document[],
-    vehicles: Vehicle[]
-}) => {
-    const [editModalVisible, setEditModalVisible] = useState(false)
-    const [viewerVisible, setViewerVisible] = useState(false)
-    const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
+const WalletScreen = ({ documents, vehicles }: { documents: Document[], vehicles: Vehicle[] }) => {
     const { selectedVehicleId, setSelectedVehicleId } = useVehicle()
+    const { isDark } = useTheme()
+    const { t, language } = useLanguage()
+    const [modalVisible, setModalVisible] = useState(false)
+    const [editingDoc, setEditingDoc] = useState<Document | null>(null)
+    const [previewImage, setPreviewImage] = useState<string | null>(null)
 
-    // Collapsible section states
-    const [legalExpanded, setLegalExpanded] = useState(true)
-    const [invoicesExpanded, setInvoicesExpanded] = useState(true)
+    // Reactive filtering: Show NOTHING if no vehicle is selected (Focus Mode)
+    const filteredDocs = selectedVehicleId
+        ? documents.filter(d => d.vehicleId === selectedVehicleId || d.type === 'license')
+        : []
 
-    // Documents to display = vehicle docs + shared license (handled by observeDocumentsForVehicle)
-    const displayDocs = selectedVehicleId ? vehicleDocuments : []
+    // Group documents: Legal vs History
+    const legalDocs = filteredDocs.filter(d => ['registration', 'license', 'insurance', 'technical_control', 'coc'].includes(d.type))
+    const historyDocs = filteredDocs.filter(d => ['invoice', 'other'].includes(d.type))
 
-    // Existing types for this view - includes license if it exists globally
-    // (License check is global, not per-vehicle)
-    const existingTypes = useMemo(() => {
-        const vehicleTypes = displayDocs.map(d => d.type)
-        // Also check if license exists globally (in allDocuments with null vehicle_id)
-        const hasGlobalLicense = allDocuments.some(d => d.type === 'license')
-        if (hasGlobalLicense && !vehicleTypes.includes('license')) {
-            return [...vehicleTypes, 'license']
-        }
-        return vehicleTypes
-    }, [displayDocs, allDocuments])
-
-    // Group documents for sections
-    // Section 1: Legal (ID, Permit, Insurance, Tech Control)
-    // Section 2: Invoices (Invoice, Other)
-    const legalTypes = ['registration', 'license', 'insurance', 'technical_control', 'coc']
-    const legalDocs = displayDocs.filter(d => legalTypes.includes(d.type))
-    const otherDocs = displayDocs.filter(d => !legalTypes.includes(d.type))
-
-    const selectedVehicle = selectedVehicleId ? vehicles.find(v => v.id === selectedVehicleId) : null
-
-    const openAdd = () => {
-        setSelectedDoc(null)
-        setEditModalVisible(true)
-    }
-
-    const openViewer = (doc: Document) => {
-        setSelectedDoc(doc)
-        setViewerVisible(true)
-    }
-
-    // When editing from Viewer
-    const handleEditFromViewer = (doc: Document) => {
-        setViewerVisible(false)
-        setTimeout(() => { // Small delay to allow modal transition
-            setSelectedDoc(doc)
-            setEditModalVisible(true)
-        }, 300)
-    }
+    const renderDocItem = (item: Document) => (
+        <Pressable
+            key={item.id}
+            onPress={() => {
+                setEditingDoc(item)
+                setModalVisible(true)
+            }}
+            style={[styles.docItem, isDark && styles.docItemDark]}
+        >
+            <Pressable
+                onPress={() => item.localUri && setPreviewImage(item.localUri)}
+                style={[styles.docIconContainer, isDark && styles.docIconContainerDark]}
+            >
+                {item.localUri ? (
+                    <Image source={{ uri: item.localUri }} className="w-full h-full" />
+                ) : (
+                    <FileText size={24} color="#9CA3AF" />
+                )}
+            </Pressable>
+            <View className="flex-1">
+                <Text className="text-text font-heading text-lg" numberOfLines={1}>{item.reference || t('wallet.document.untitled')}</Text>
+                <Text className="text-text-secondary font-body text-xs uppercase font-medium">{t(`wallet.type.${item.type}`)}</Text>
+                {item.expiryDate && (
+                    <Text className="text-red-400 font-body text-[10px] mt-1 font-bold">
+                        {t('wallet.document.expires')}: {item.expiryDate.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US')}
+                    </Text>
+                )}
+            </View>
+            <ChevronRight size={20} color="#9CA3AF" />
+        </Pressable>
+    )
 
     return (
-        <SafeAreaView className="flex-1 bg-black">
-            <View className="p-6 flex-1">
-                {/* Header */}
+        <SafeAreaView className="flex-1 bg-background">
+            <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+            <View className="flex-1 p-6">
+                {/* Header Contextuel */}
                 <View className="flex-row justify-between items-center mb-6">
-                    <View>
-                        <Text className="text-3xl font-bold text-white">Wallet</Text>
-                        {selectedVehicle ? (
-                            <TouchableOpacity onPress={() => setSelectedVehicleId(null)}>
-                                <Text className="text-neutral-400 text-sm font-bold uppercase tracking-wider flex-row items-center">
-                                    <Text className="text-yellow-500">← </Text>
-                                    {selectedVehicle.brand} {selectedVehicle.model}
-                                </Text>
-                            </TouchableOpacity>
-                        ) : (
-                            <Text className="text-neutral-500 text-sm">Select a bike to view documents</Text>
-                        )}
-                    </View>
-                    {selectedVehicle && (
-                        <TouchableOpacity onPress={openAdd} className="bg-neutral-800 p-2 rounded-full w-10 h-10 items-center justify-center">
-                            <Text className="text-white font-bold text-2xl">+</Text>
-                        </TouchableOpacity>
+                    <Text className="text-3xl font-heading text-text">
+                        {selectedVehicleId ? t('wallet.title') : t('wallet.select_bike_title')}
+                    </Text>
+                    {selectedVehicleId && (
+                        <Pressable
+                            onPress={() => setModalVisible(true)}
+                            style={styles.addButton}
+                        >
+                            <Plus size={24} color="white" />
+                        </Pressable>
                     )}
                 </View>
 
-                {!selectedVehicleId ? (
-                    /* Vehicle List Selection */
-                    <FlatList
-                        data={vehicles}
-                        keyExtractor={item => item.id}
-                        renderItem={({ item }) => (
-                            <VehicleItem
-                                vehicle={item}
-                                onPress={(v: Vehicle) => setSelectedVehicleId(v.id)}
-                            />
-                        )}
-                        ListEmptyComponent={
-                            <View className="items-center justify-center py-20">
-                                <Text className="text-neutral-500 text-lg">No bikes in garage.</Text>
+                {selectedVehicleId ? (
+                    <>
+                        {/* Vehicle Indicator (Dashboard Style) */}
+                        <View className="mb-6 items-start">
+                            <View className="bg-primary px-5 py-3 rounded-full flex-row items-center shadow-sm">
+                                <Bike size={20} color="white" />
+                                <Text className="text-white font-heading text-base ml-3">
+                                    {vehicles.find(v => v.id === selectedVehicleId)?.brand} {vehicles.find(v => v.id === selectedVehicleId)?.model}
+                                </Text>
                             </View>
-                        }
-                    />
-                ) : (
-                    /* Document Sections - Collapsible */
-                    legalDocs.length === 0 && otherDocs.length === 0 ? (
-                        <View className="items-center justify-center py-20">
-                            <Text className="text-6xl mb-4">📂</Text>
-                            <Text className="text-neutral-500 text-lg">No documents.</Text>
-                            <Text className="text-neutral-700 text-sm mt-2">
-                                Add papers for this bike.
-                            </Text>
                         </View>
-                    ) : (
-                        <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-                            {/* Legal & Papers Section */}
-                            <CollapsibleSection
-                                title="Legal & Papers"
-                                data={legalDocs}
-                                isExpanded={legalExpanded}
-                                onToggle={() => setLegalExpanded(!legalExpanded)}
-                                onPressItem={openViewer}
-                            />
 
-                            {/* Invoices & History Section */}
-                            <CollapsibleSection
-                                title="Invoices & History"
-                                data={otherDocs}
-                                isExpanded={invoicesExpanded}
-                                onToggle={() => setInvoicesExpanded(!invoicesExpanded)}
-                                onPressItem={openViewer}
-                            />
+                        <ScrollView showsVerticalScrollIndicator={false}>
+                            {legalDocs.length > 0 && (
+                                <View className="mb-6">
+                                    <Text className="text-text-secondary text-xs uppercase mb-3 tracking-widest font-bold">{t('wallet.section.legal')}</Text>
+                                    {legalDocs.map(renderDocItem)}
+                                </View>
+                            )}
+
+                            {historyDocs.length > 0 && (
+                                <View className="mb-6">
+                                    <Text className="text-text-secondary text-xs uppercase mb-3 tracking-widest font-bold">{t('wallet.section.history')}</Text>
+                                    {historyDocs.map(renderDocItem)}
+                                </View>
+                            )}
+
+                            {filteredDocs.length === 0 && (
+                                <View className="items-center justify-center py-20 px-10">
+                                    <View className="bg-surface-highlight w-20 h-20 rounded-full items-center justify-center mb-6 shadow-sm">
+                                        <FolderOpen size={40} color="#9CA3AF" />
+                                    </View>
+                                    <Text className="text-text font-heading text-xl text-center mb-2">{t('wallet.no_documents')}</Text>
+                                    <Text className="text-text-secondary font-body text-center text-lg">{t('wallet.no_documents_desc')}</Text>
+                                </View>
+                            )}
                         </ScrollView>
-                    )
+                    </>
+                ) : (
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                        <Text className="text-text-secondary mb-6 text-lg">{t('wallet.select_bike_desc_full')}</Text>
+                        {vehicles.map(v => (
+                            <Pressable
+                                key={v.id}
+                                onPress={() => setSelectedVehicleId(v.id)}
+                                style={[styles.vehicleCard, isDark && styles.vehicleCardDark]}
+                            >
+                                <View className="bg-primary/10 w-14 h-14 rounded-full items-center justify-center mr-4">
+                                    <Bike size={30} color="#EAB308" />
+                                </View>
+                                <View className="flex-1">
+                                    <Text className="text-text font-heading text-xl">{v.brand} {v.model}</Text>
+                                    <Text className="text-text-secondary font-body text-sm">{v.year} • {v.currentMileage.toLocaleString()} km</Text>
+                                </View>
+                                <ChevronRight size={24} color="#9CA3AF" />
+                            </Pressable>
+                        ))}
+                        {vehicles.length === 0 && (
+                            <View className="items-center justify-center py-20">
+                                <Bike size={60} color="#9CA3AF" />
+                                <Text className="text-text-secondary font-body mt-4 text-center">{t('garage.no_vehicles')}</Text>
+                            </View>
+                        )}
+                    </ScrollView>
+                )}
+
+                <DocumentModal
+                    visible={modalVisible}
+                    onClose={() => {
+                        setModalVisible(false)
+                        setEditingDoc(null)
+                    }}
+                    document={editingDoc}
+                    vehicles={vehicles}
+                />
+
+                {/* Full Screen Image Preview Modal */}
+                {previewImage && (
+                    <Modal visible={!!previewImage} transparent animationType="fade">
+                        <View style={styles.previewOverlay}>
+                            <Pressable
+                                className="w-full h-full justify-center items-center"
+                                onPress={() => setPreviewImage(null)}
+                            >
+                                <Image
+                                    source={{ uri: previewImage }}
+                                    className="w-full h-[80%] rounded-2xl"
+                                    resizeMode="contain"
+                                />
+                            </Pressable>
+                            <Pressable
+                                onPress={() => setPreviewImage(null)}
+                                style={styles.previewCloseButton}
+                            >
+                                <X size={30} color="white" />
+                            </Pressable>
+                        </View>
+                    </Modal>
                 )}
             </View>
-
-            {/* Edit/Add Modal */}
-            <DocumentModal
-                visible={editModalVisible}
-                onClose={() => setEditModalVisible(false)}
-                vehicleId={selectedVehicleId}
-                document={selectedDoc}
-                existingTypes={existingTypes}
-            />
-
-            {/* Viewer Modal */}
-            <DocumentViewer
-                visible={viewerVisible}
-                onClose={() => setViewerVisible(false)}
-                document={selectedDoc}
-                onEdit={handleEditFromViewer}
-            />
         </SafeAreaView>
     )
 }
 
-// Enhanced observable: provides both vehicle-specific docs and all docs for license check
-const enhance = withObservables(['selectedVehicleId'], ({ selectedVehicleId }: { selectedVehicleId: string | null }) => ({
-    vehicleDocuments: selectedVehicleId
-        ? DocumentService.observeDocumentsForVehicle(selectedVehicleId)
-        : of([]),
-    allDocuments: DocumentService.observeDocuments(),
+const enhance = withObservables([], () => ({
+    documents: DocumentService.observeDocuments(),
     vehicles: VehicleService.observeVehicles(),
 }))
 
-// Wrapper to pass selectedVehicleId from context to the enhanced component
-const WalletScreenWrapper = () => {
-    const { selectedVehicleId } = useVehicle()
-    const EnhancedWallet = enhance(WalletScreen)
-    return <EnhancedWallet selectedVehicleId={selectedVehicleId} />
-}
-
-export default WalletScreenWrapper
-
+export default enhance(WalletScreen)

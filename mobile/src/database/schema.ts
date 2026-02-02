@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb'
 
 export const schema = appSchema({
-    version: 2,
+    version: 3,
     tables: [
         tableSchema({
             name: 'vehicles',
@@ -11,6 +11,7 @@ export const schema = appSchema({
                 { name: 'vin', type: 'string', isOptional: true },
                 { name: 'year', type: 'number', isOptional: true },
                 { name: 'current_mileage', type: 'number' },
+                { name: 'user_id', type: 'string', isOptional: true, isIndexed: true },
                 { name: 'created_at', type: 'number' },
                 { name: 'updated_at', type: 'number' },
             ],
@@ -25,6 +26,7 @@ export const schema = appSchema({
                 { name: 'date', type: 'number' }, // Timestamp
                 { name: 'vehicle_id', type: 'string', isIndexed: true },
                 { name: 'notes', type: 'string', isOptional: true },
+                { name: 'user_id', type: 'string', isOptional: true, isIndexed: true },
                 { name: 'created_at', type: 'number' },
                 { name: 'updated_at', type: 'number' },
             ],
@@ -39,6 +41,7 @@ export const schema = appSchema({
                 { name: 'remote_path', type: 'string', isOptional: true }, // Supabase storage path
                 { name: 'vehicle_id', type: 'string', isOptional: true, isIndexed: true },
                 { name: 'log_id', type: 'string', isOptional: true, isIndexed: true },
+                { name: 'user_id', type: 'string', isOptional: true, isIndexed: true },
                 { name: 'created_at', type: 'number' },
                 { name: 'updated_at', type: 'number' },
             ],

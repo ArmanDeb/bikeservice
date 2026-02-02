@@ -15,6 +15,32 @@ export const migrations = schemaMigrations({
                 }
             ],
         },
+        {
+            toVersion: 3,
+            steps: [
+                {
+                    type: 'add_columns',
+                    table: 'vehicles',
+                    columns: [
+                        { name: 'user_id', type: 'string', isOptional: true, isIndexed: true }
+                    ]
+                },
+                {
+                    type: 'add_columns',
+                    table: 'maintenance_logs',
+                    columns: [
+                        { name: 'user_id', type: 'string', isOptional: true, isIndexed: true }
+                    ]
+                },
+                {
+                    type: 'add_columns',
+                    table: 'documents',
+                    columns: [
+                        { name: 'user_id', type: 'string', isOptional: true, isIndexed: true }
+                    ]
+                }
+            ]
+        }
     ],
 })
 

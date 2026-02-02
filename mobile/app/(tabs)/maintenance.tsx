@@ -1,588 +1,868 @@
-import React, { useState, useEffect } from 'react'
-import { View, Text, SafeAreaView, FlatList, TouchableOpacity, TextInput, Modal, Alert, ActivityIndicator, ScrollView } from 'react-native'
+import React, { useState, useEffect, useMemo } from 'react'
+import { View, Text, FlatList, TouchableOpacity, TextInput, Modal, Alert, ActivityIndicator, ScrollView, StatusBar, StyleSheet, Pressable } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { withObservables } from '@nozbe/watermelondb/react'
 import * as ImagePicker from 'expo-image-picker'
-import { Ionicons } from '@expo/vector-icons'
+import { Scan, ChevronLeft, Bike, Calendar, Wrench, FlaskConical, FileText, ChevronRight, X, Plus, ChevronDown, ArrowUpDown, Check, Minus, ArrowUp, ArrowDown } from 'lucide-react-native'
 import { database } from '../../src/database'
+import { useTheme } from '../../src/context/ThemeContext'
+import { useLanguage } from '../../src/context/LanguageContext'
 import Vehicle from '../../src/database/models/Vehicle'
 import { TableName } from '../../src/database/constants'
 import { MaintenanceService } from '../../src/services/MaintenanceService'
-import { AIService } from '../../src/services/AIService'
-import { useVehicle } from '../../src/context/VehicleContext'
 import MaintenanceLog from '../../src/database/models/MaintenanceLog'
-import VehicleItem from '../../src/components/vehicle/VehicleItem'
+import { useVehicle } from '../../src/context/VehicleContext'
+import { Q } from '@nozbe/watermelondb'
+import { AIService } from '../../src/services/AIService'
+import { DocumentService } from '../../src/services/DocumentService'
 import { VehicleService } from '../../src/services/VehicleService'
+import { sync } from '../../src/services/SyncService'
 
-// --- Log Item ---
-const LogItem = ({ log, showVehicleName, onPress }: { log: MaintenanceLog, showVehicleName: boolean, onPress: (log: MaintenanceLog) => void }) => (
-    <TouchableOpacity onPress={() => onPress(log)} className="bg-neutral-800 p-4 rounded-xl mb-3 border border-neutral-700">
-        <View className="flex-row justify-between items-start mb-2">
-            <View className="flex-1">
-                <Text className="text-white font-bold text-lg">{log.title}</Text>
-                {showVehicleName && (
-                    <Text className="text-neutral-500 text-xs font-bold uppercase tracking-wider">
-                        {/* Context handled by parent listing */}
-                    </Text>
-                )}
-            </View>
-            <View className="items-end">
-                <Text className="text-yellow-500 font-bold">{log.cost} €</Text>
-                <View className={`px-2 py-0.5 rounded mt-1 ${log.type === 'periodic' ? 'bg-blue-500/10' :
-                    log.type === 'repair' ? 'bg-red-500/10' : 'bg-purple-500/10'
-                    }`}>
-                    <Text className={`text-xs font-bold uppercase ${log.type === 'periodic' ? 'text-blue-500' :
-                        log.type === 'repair' ? 'text-red-500' : 'text-purple-500'
-                        }`}>{log.type}</Text>
-                </View>
-            </View>
-        </View>
-        <View className="flex-row justify-between mt-1">
-            <Text className="text-neutral-400 text-sm">{log.date.toLocaleDateString('fr-FR')}</Text>
-            <Text className="text-neutral-400 text-sm">{log.mileageAtLog.toLocaleString()} km</Text>
-        </View>
-        {log.notes ? <Text className="text-neutral-500 text-sm mt-2 italic">{log.notes}</Text> : null}
-    </TouchableOpacity>
-)
+// Styles definition
+const styles = StyleSheet.create({
+    // Modal Styles
+    aiScanButton: {
+        backgroundColor: 'rgba(59, 130, 246, 0.2)', // primary/20
+        padding: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(59, 130, 246, 0.3)', // primary/30
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    typeButton: {
+        flex: 1,
+        padding: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        alignItems: 'center',
+        backgroundColor: '#F1F5F9',
+        borderColor: '#E2E8F0',
+    },
+    typeButtonDark: {
+        backgroundColor: '#334155',
+        borderColor: '#475569',
+    },
+    typeButtonSelected: {
+        backgroundColor: '#3B82F6',
+        borderColor: '#3B82F6',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    submitButton: {
+        backgroundColor: '#3B82F6',
+        padding: 16,
+        borderRadius: 12,
+        alignItems: 'center',
+        marginBottom: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    deleteButton: {
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        borderWidth: 1,
+        borderColor: 'rgba(239, 68, 68, 0.5)',
+        padding: 16,
+        borderRadius: 12,
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    cancelButton: {
+        padding: 12,
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    // Screen Styles
+    addButton: {
+        backgroundColor: '#3B82F6',
+        padding: 8,
+        borderRadius: 9999,
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: '#3B82F6',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    backButton: {
+        backgroundColor: '#FFFFFF',
+        padding: 8,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(226, 232, 240, 0.5)',
+        marginRight: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
+    },
+    backButtonDark: {
+        backgroundColor: '#1E293B',
+        borderColor: 'rgba(51, 65, 85, 0.5)',
+    },
+    logItem: {
+        backgroundColor: '#FFFFFF',
+        padding: 20,
+        borderRadius: 16,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        flexDirection: 'row',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    logItemDark: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+    },
+    vehicleCard: {
+        backgroundColor: '#FFFFFF',
+        padding: 24,
+        borderRadius: 16,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(226, 232, 240, 0.5)',
+        flexDirection: 'row',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    vehicleCardDark: {
+        backgroundColor: '#1E293B',
+        borderColor: 'rgba(51, 65, 85, 0.5)',
+    }
+});
 
-// --- Add Modal ---
-const MaintenanceModal = ({
-    visible,
-    onClose,
-    vehicles,
-    preSelectedVehicleId,
-    existingLog
-}: {
-    visible: boolean,
-    onClose: () => void,
-    vehicles: Vehicle[],
-    preSelectedVehicleId: string | null,
-    existingLog?: MaintenanceLog | null
-}) => {
-    const [vehicleId, setVehicleId] = useState(preSelectedVehicleId || '')
+// Maintenance Modal Component
+const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolean, onClose: () => void, log?: MaintenanceLog | null, vehicles: Vehicle[] }) => {
+    const { selectedVehicleId } = useVehicle()
+    const { t, language } = useLanguage()
+    const { isDark } = useTheme()
     const [title, setTitle] = useState('')
     const [cost, setCost] = useState('')
-    const [mileage, setMileage] = useState('')
+    const [mileageAtLog, setMileageAtLog] = useState('')
     const [notes, setNotes] = useState('')
     const [type, setType] = useState<'periodic' | 'repair' | 'modification'>('periodic')
+    const [vehicleId, setVehicleId] = useState('')
+    const [date, setDate] = useState<Date>(new Date())
     const [isScanning, setIsScanning] = useState(false)
-    const [scannedImageUri, setScannedImageUri] = useState<string | undefined>(undefined)
-    const [serviceDate, setServiceDate] = useState<Date>(new Date())
+    const [showDatePicker, setShowDatePicker] = useState(false)
+    const [scannedDocumentUri, setScannedDocumentUri] = useState<string | null>(null)
 
-    // Update internal state when preSelected changes or modal opens
     useEffect(() => {
         if (visible) {
-            if (existingLog) {
-                // EDIT MODE
-                setVehicleId(existingLog.vehicle.id) // Assuming relation is synchronous or ID available. WatermelonDB access: log.vehicle.id might need await if not eager, but log.vehicleId (raw) is safest if public
-                // Note: WatermelonDB models exposes _raw usually or you access relation. 
-                // Let's assume we can get ID. Log has `vehicle_id` column.
-                // We'll use the passed objects or just assume user doesn't change vehicle often.
-                // Actually MaintenanceLog model likely has `vehicleId` updated in observe? 
-                // Let's rely on standard access. If existingLog was passed, it's a Model.
-
-                // @ts-ignore - Assuming relation or field availability.
-                // Safest to access the ID via raw or property if defined in Model.
-                // Let's try standard prop if defined in model, else raw.
-                // @ts-ignore
-                setVehicleId(existingLog._raw.vehicle_id || existingLog.vehicle?.id || '')
-
-                setTitle(existingLog.title)
-                setCost(existingLog.cost.toString())
-                setMileage(existingLog.mileageAtLog.toString())
-                setNotes(existingLog.notes || '')
-                setType(existingLog.type)
-                setScannedImageUri(undefined) // Don't show scan for edit unless they scan new
+            if (log) {
+                setTitle(log.title)
+                setCost(log.cost.toString())
+                setMileageAtLog(log.mileageAtLog.toString())
+                setNotes(log.notes || '')
+                setType(log.type)
+                setVehicleId(log.vehicleId)
+                setDate(log.date)
             } else {
-                // CREATE MODE
-                setVehicleId(preSelectedVehicleId || (vehicles.length > 0 ? vehicles[0].id : ''))
-                setTitle(''); setCost(''); setMileage(''); setNotes(''); setType('periodic'); setScannedImageUri(undefined); setServiceDate(new Date())
+                setTitle('')
+                setCost('')
+                setMileageAtLog('')
+                setNotes('')
+                setType('periodic')
+                setVehicleId(selectedVehicleId || (vehicles.length > 0 ? vehicles[0].id : ''))
+                setDate(new Date())
+                setScannedDocumentUri(null)
             }
         }
-    }, [visible, preSelectedVehicleId, vehicles, existingLog])
+    }, [visible, log, selectedVehicleId, vehicles])
+
+    const performAIScan = async (source: 'camera' | 'library') => {
+        const { status } = source === 'camera'
+            ? await ImagePicker.requestCameraPermissionsAsync()
+            : await ImagePicker.requestMediaLibraryPermissionsAsync()
+
+        if (status !== 'granted') {
+            Alert.alert(t('alert.error'), `Permission to access ${source === 'camera' ? 'camera' : 'gallery'} was denied`)
+            return
+        }
+
+        const pickerOptions: ImagePicker.ImagePickerOptions = {
+            base64: true,
+            quality: 0.8,
+        }
+
+        const result = source === 'camera'
+            ? await ImagePicker.launchCameraAsync(pickerOptions)
+            : await ImagePicker.launchImageLibraryAsync(pickerOptions)
+
+        if (!result.canceled && result.assets[0].base64) {
+            setIsScanning(true)
+            try {
+                const data = await AIService.analyzeInvoice(result.assets[0].base64, language)
+                if (data.title) setTitle(data.title)
+                if (data.cost) setCost(data.cost.toString())
+                if (data.type) setType(data.type as any)
+                if (data.notes) setNotes(data.notes)
+                if (data.mileage) setMileageAtLog(data.mileage.toString())
+                if (data.date) setDate(data.date)
+
+                // Store document URI for later - will be linked to the log when form is submitted
+                setScannedDocumentUri(result.assets[0].uri)
+
+                Alert.alert(t('maintenance.alert.ia_success'), t('maintenance.alert.ia_success_desc'))
+            } catch (err: any) {
+                Alert.alert(t('maintenance.alert.ia_error'), t('maintenance.alert.ia_error_desc'))
+            } finally {
+                setIsScanning(false)
+            }
+        }
+    }
+
+    const handleAIScanOptions = () => {
+        Alert.alert(
+            t('maintenance.assistant_ia'),
+            language === 'fr' ? 'Choisissez une source pour l\'analyse' : 'Choose a source for analysis',
+            [
+                { text: language === 'fr' ? 'Appareil Photo' : 'Camera', onPress: () => performAIScan('camera') },
+                { text: language === 'fr' ? 'Galerie Photo' : 'Gallery', onPress: () => performAIScan('library') },
+                { text: t('common.cancel'), style: 'cancel' }
+            ]
+        )
+    }
 
     const handleSubmit = async () => {
-        try {
-            const selectedVehicle = vehicles.find(v => v.id === vehicleId)
-            if (!selectedVehicle) throw new Error("Please select a vehicle")
-
-            const newMileage = parseInt(mileage)
-            if (isNaN(newMileage)) throw new Error("Invalid mileage")
-
-            if (existingLog) {
-                // UPDATE
-                await MaintenanceService.updateLog(
-                    existingLog,
-                    title,
-                    type,
-                    parseFloat(cost) || 0,
-                    existingLog.date, // Keep original date for now or add date picker later
-                    notes,
-                    newMileage
-                )
-            } else {
-                // CREATE
-                await MaintenanceService.createLog(
-                    selectedVehicle,
-                    title,
-                    type,
-                    parseFloat(cost) || 0,
-                    newMileage,
-                    serviceDate, // Use date from invoice (or today if not scanned)
-                    notes,
-                    scannedImageUri // Pass the image URI
-                )
-            }
-            onClose()
-            // Reset
-            setTitle(''); setCost(''); setMileage(''); setNotes(''); setType('periodic'); setScannedImageUri(undefined); setServiceDate(new Date())
-        } catch (e: any) {
-            Alert.alert("Error", e.message)
+        if (!title || !cost || !mileageAtLog || !vehicleId) {
+            Alert.alert(t('alert.error'), 'Please fill in all required fields')
+            return
         }
-    }
 
-    const handleDelete = () => {
-        if (!existingLog) return
-        Alert.alert(
-            "Delete Log",
-            "Are you sure you want to delete this maintenance record?",
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Delete",
-                    style: "destructive",
-                    onPress: async () => {
-                        await MaintenanceService.deleteLog(existingLog)
-                        onClose()
-                    }
-                }
-            ]
-        )
-    }
-
-    const launchPicker = async (mode: 'camera' | 'gallery') => {
-        try {
-            const options: ImagePicker.ImagePickerOptions = {
-                mediaTypes: ['images'],
-                quality: 0.8,
-                base64: true,
-            }
-
-            const result = mode === 'camera'
-                ? await ImagePicker.launchCameraAsync(options)
-                : await ImagePicker.launchImageLibraryAsync(options)
-
-            if (!result.canceled && result.assets && result.assets.length > 0 && result.assets[0].base64) {
-                setIsScanning(true)
-                // Store URI for saving later
-                setScannedImageUri(result.assets[0].uri)
-
-                try {
-                    const analysis = await AIService.analyzeInvoice(result.assets[0].base64)
-                    if (analysis) {
-                        setTitle(analysis.title || '')
-                        setCost(analysis.cost?.toString() || '')
-                        setMileage(analysis.mileage?.toString() || '')
-
-                        if (analysis.type && ['periodic', 'repair', 'modification'].includes(analysis.type)) {
-                            setType(analysis.type)
-                        } else {
-                            setType('periodic')
-                        }
-
-                        if (analysis.notes) setNotes(analysis.notes)
-
-                        // Use the date from the invoice instead of today
-                        if (analysis.date) setServiceDate(analysis.date)
-
-                        Alert.alert("IA Success", "Données extraites avec succès ! L'image sera sauvegardée dans le Wallet.")
-                    }
-                } catch (error: any) {
-                    Alert.alert("Erreur IA", error.message || "Impossible d'analyser l'image.")
-                } finally {
-                    setIsScanning(false)
-                }
-            }
-        } catch (e) {
-            Alert.alert("Error", "Failed to launch picker")
+        const selectedVehicle = vehicles.find(v => v.id === vehicleId)
+        if (!selectedVehicle) {
+            Alert.alert(t('alert.error'), 'Vehicle not found')
+            return
         }
-    }
 
-    const handleScanInvoice = () => {
-        Alert.alert(
-            "Invoice Scanner",
-            "Choose a source",
-            [
-                { text: "Camera", onPress: () => launchPicker('camera') },
-                { text: "Gallery", onPress: () => launchPicker('gallery') },
-                { text: "Cancel", style: "cancel" }
-            ]
-        )
-    }
-
-    const handleVoiceAssistant = () => {
-        Alert.alert("Bientôt disponible", "Cette fonctionnalité arrive bientôt dans une prochaine mise à jour.")
+        if (log) {
+            // updateLog: (log, title, type, cost, date, notes?, mileageAtLog?)
+            await MaintenanceService.updateLog(log, title, type, parseFloat(cost), date, notes || undefined, parseInt(mileageAtLog))
+        } else {
+            // createLog: (vehicle, title, type, cost, mileageAtLog, date, notes?, documentUri?)
+            // Pass the scanned document URI so it gets linked to this maintenance log
+            await MaintenanceService.createLog(selectedVehicle, title, type, parseFloat(cost), parseInt(mileageAtLog), date, notes || undefined, scannedDocumentUri || undefined)
+        }
+        onClose()
     }
 
     return (
         <Modal visible={visible} animationType="slide" transparent>
-            <View className="flex-1 bg-black/90 justify-end">
-                <View className="bg-neutral-900 p-6 rounded-t-3xl border-t border-neutral-800">
-                    <View className="flex-row justify-between items-start mb-6">
-                        <Text className="text-2xl font-bold text-white">{existingLog ? 'Edit Maintenance' : 'New Maintenance'}</Text>
-                        <TouchableOpacity onPress={onClose} className="bg-neutral-800 p-2 rounded-full">
-                            <Text className="text-neutral-500 font-bold px-1">✕</Text>
-                        </TouchableOpacity>
+            <View className="flex-1 justify-end bg-black/50">
+                <View className="bg-surface p-6 rounded-t-3xl border-t border-border max-h-[90%]">
+                    <View className="flex-row justify-between items-center mb-6">
+                        <Text className="text-2xl font-heading text-text">
+                            {log ? t('maintenance.modal.edit_title') : t('maintenance.modal.add_title')}
+                        </Text>
+                        <Pressable
+                            onPress={handleAIScanOptions}
+                            disabled={isScanning}
+                            style={styles.aiScanButton}
+                        >
+                            {isScanning ? (
+                                <ActivityIndicator size="small" color="#EAB308" />
+                            ) : (
+                                <Scan size={20} color="#EAB308" />
+                            )}
+                            <Text className="text-primary-dark font-heading ml-2">
+                                {isScanning 
+                                    ? (language === 'fr' ? 'Analyse...' : 'Scanning...') 
+                                    : (language === 'fr' ? 'Scanner facture' : 'Scan invoice')}
+                            </Text>
+                        </Pressable>
                     </View>
 
-                    {/* AI ASSISTANT SECTION - Only show if ADDING new log */}
-                    {!existingLog && (
-                        <View className="bg-neutral-800 p-4 rounded-2xl mb-6 border border-yellow-500/20">
-                            {/* AI Assistant Section */}
-                            <View className="bg-neutral-800 p-4 rounded-xl border border-neutral-700 mb-6 relative overflow-hidden">
-                                {/* Gradient-like border or effect could go here */}
-                                <Text className="text-yellow-500 font-bold mb-3 text-xs tracking-wider">ASSISTANT IA ✨</Text>
-                                <View className="flex-row gap-3">
-                                    <TouchableOpacity
-                                        onPress={handleScanInvoice}
-                                        disabled={isScanning}
-                                        className={`flex-1 p-3 rounded-lg border items-center flex-row justify-center gap-2 ${scannedImageUri ? 'bg-green-500/20 border-green-500' : 'bg-neutral-900/50 border-neutral-700'}`}
-                                    >
-                                        {isScanning ? (
-                                            <ActivityIndicator color="#EAB308" />
-                                        ) : (
-                                            <>
-                                                <Ionicons name={scannedImageUri ? "checkmark-circle" : "camera-outline"} size={20} color={scannedImageUri ? "#4ade80" : "#EAB308"} />
-                                                <Text className={scannedImageUri ? "text-green-500 font-bold" : "text-neutral-200 font-bold"}>
-                                                    {scannedImageUri ? "Scanned" : "Scanner"}
-                                                </Text>
-                                            </>
-                                        )}
-                                    </TouchableOpacity>
-                                    <TouchableOpacity className="flex-1 bg-neutral-900/50 p-3 rounded-lg border border-neutral-700 items-center flex-row justify-center gap-2">
-                                        <Ionicons name="mic-outline" size={20} color="#666" />
-                                        <Text className="text-neutral-500 font-bold">Dicter</Text>
-                                    </TouchableOpacity>
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                        {/* Selected Vehicle Display (ReadOnly) */}
+                        {!log && (
+                            <View className="mb-4">
+                                <Text className="text-text-secondary text-xs uppercase mb-2 tracking-wider">{t('maintenance.select_vehicle')}</Text>
+                                <View className="bg-surface-highlight p-4 rounded-xl border border-border flex-row items-center opacity-80">
+                                    <Bike size={20} color={isDark ? "#EAB308" : "#3B82F6"} />
+                                    <Text className="text-text font-heading ml-3">
+                                        {vehicleId 
+                                            ? `${vehicles.find(v => v.id === vehicleId)?.brand} ${vehicles.find(v => v.id === vehicleId)?.model}`
+                                            : (language === 'fr' ? 'Sélectionner un véhicule' : 'Select a vehicle')}
+                                    </Text>
                                 </View>
                             </View>
-
-                            {/* Vehicle Selector (Visual only for MVP, simple scroll) */}
-                            <Text className="text-neutral-400 text-xs uppercase mb-2">Select Vehicle</Text>
-                            <View className="flex-row mb-4 overflow-scroll">
-                                <FlatList
-                                    horizontal
-                                    data={vehicles}
-                                    keyExtractor={v => v.id}
-                                    renderItem={({ item }) => (
-                                        <TouchableOpacity
-                                            onPress={() => setVehicleId(item.id)}
-                                            className={`mr-3 px-4 py-3 rounded-xl border ${vehicleId === item.id
-                                                ? 'bg-neutral-700 border-yellow-500'
-                                                : 'bg-neutral-800 border-neutral-700'
-                                                }`}
-                                        >
-                                            <Text className={`font-bold ${vehicleId === item.id ? 'text-white' : 'text-neutral-500'}`}>
-                                                {item.brand} {item.model}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    )}
-                                />
-                            </View>
-                        </View>
-                    )}
-
-                    {/* Type Selector */}
-                    <View className="flex-row gap-2 mb-4">
-                        {(['periodic', 'repair', 'modification'] as const).map((t) => (
-                            <TouchableOpacity
-                                key={t}
-                                onPress={() => setType(t)}
-                                className={`flex-1 p-3 rounded-xl border ${type === t
-                                    ? 'bg-yellow-500 border-yellow-500'
-                                    : 'bg-neutral-800 border-neutral-700'
-                                    }`}
-                            >
-                                <Text className={`text-center font-bold capitalize ${type === t ? 'text-black' : 'text-neutral-400'
-                                    }`}>
-                                    {t === 'modification' ? 'Mod' : t}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-
-                    <TextInput
-                        placeholder="Title (e.g. Oil Change)"
-                        placeholderTextColor="#666"
-                        className="bg-neutral-800 text-white p-4 rounded-xl mb-3 text-lg"
-                        value={title} onChangeText={setTitle}
-                    />
-                    <View className="flex-row gap-3 mb-3">
-                        <TextInput
-                            placeholder="Cost (€)"
-                            placeholderTextColor="#666"
-                            keyboardType="numeric"
-                            className="bg-neutral-800 text-white p-4 rounded-xl flex-1 text-lg"
-                            value={cost} onChangeText={setCost}
-                        />
-                        <TextInput
-                            placeholder="New Mileage"
-                            placeholderTextColor="#666"
-                            keyboardType="numeric"
-                            className="bg-neutral-800 text-white p-4 rounded-xl flex-1 text-lg"
-                            value={mileage} onChangeText={setMileage}
-                        />
-                    </View>
-                    <TextInput
-                        placeholder="Notes (Optional)"
-                        placeholderTextColor="#666"
-                        multiline
-                        className="bg-neutral-800 text-white p-4 rounded-xl mb-6 h-20 text-lg"
-                        value={notes} onChangeText={setNotes}
-                    />
-
-                    <View className="flex-row gap-3">
-                        {existingLog && (
-                            <TouchableOpacity onPress={handleDelete} className="bg-red-500/10 p-4 rounded-xl items-center flex-1 border border-red-500/20">
-                                <Text className="text-red-500 font-bold text-lg">Delete</Text>
-                            </TouchableOpacity>
                         )}
-                        <TouchableOpacity onPress={handleSubmit} className="bg-yellow-500 p-4 rounded-xl items-center flex-[2]">
-                            <Text className="text-black font-bold text-lg">{existingLog ? 'Update Record' : 'Save Record'}</Text>
-                        </TouchableOpacity>
-                    </View>
 
-                    <TouchableOpacity onPress={onClose} className="p-4 items-center mt-2">
-                        <Text className="text-neutral-500 font-bold">Cancel</Text>
-                    </TouchableOpacity>
+                        {/* Type Picker */}
+                        <View className="flex-row gap-2 mb-4">
+                            {(['periodic', 'repair', 'modification'] as const).map((tType) => (
+                                <Pressable
+                                    key={tType}
+                                    onPress={() => setType(tType)}
+                                    style={[
+                                        styles.typeButton,
+                                        isDark && styles.typeButtonDark,
+                                        type === tType && styles.typeButtonSelected
+                                    ]}
+                                >
+                                    <Text className={`font-heading text-xs uppercase ${type === tType ? 'text-white' : 'text-text-secondary'}`}>
+                                        {t(`maintenance.type.${tType}`)}
+                                    </Text>
+                                </Pressable>
+                            ))}
+                        </View>
+
+                        {/* Date Picker */}
+                        <View className="mb-4">
+                            <Text className="text-text-secondary text-xs uppercase mb-2 tracking-wider">
+                                {language === 'fr' ? 'Date de l\'intervention' : 'Service date'}
+                            </Text>
+                            <Pressable
+                                onPress={() => setShowDatePicker(true)}
+                                className="bg-surface-highlight p-4 rounded-xl border border-border flex-row justify-between items-center"
+                            >
+                                <View className="flex-row items-center">
+                                    <Calendar size={20} color={isDark ? "#EAB308" : "#3B82F6"} />
+                                    <Text className="text-text font-heading ml-3">
+                                        {date.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', {
+                                            weekday: 'short',
+                                            day: 'numeric',
+                                            month: 'long',
+                                            year: 'numeric'
+                                        })}
+                                    </Text>
+                                </View>
+                                <ChevronDown size={20} color="#9CA3AF" />
+                            </Pressable>
+
+                            {/* Custom Date Picker Modal */}
+                            <Modal visible={showDatePicker} transparent animationType="fade">
+                                <Pressable 
+                                    className="flex-1 bg-black/50 justify-center items-center"
+                                    onPress={() => setShowDatePicker(false)}
+                                >
+                                    <Pressable 
+                                        className="bg-surface rounded-2xl w-[85%] overflow-hidden"
+                                        onPress={(e) => e.stopPropagation()}
+                                    >
+                                        <View className="p-4 border-b border-border">
+                                            <Text className="text-text font-heading text-lg text-center">
+                                                {language === 'fr' ? 'Choisir la date' : 'Choose date'}
+                                            </Text>
+                                        </View>
+                                        
+                                        <View className="p-6">
+                                            {/* Quick date buttons */}
+                                            <View className="flex-row gap-2 mb-6">
+                                                <Pressable
+                                                    onPress={() => setDate(new Date())}
+                                                    className="flex-1 bg-primary/10 p-3 rounded-xl items-center"
+                                                >
+                                                    <Text className="text-primary-dark font-heading text-sm">
+                                                        {language === 'fr' ? "Aujourd'hui" : 'Today'}
+                                                    </Text>
+                                                </Pressable>
+                                                <Pressable
+                                                    onPress={() => {
+                                                        const yesterday = new Date()
+                                                        yesterday.setDate(yesterday.getDate() - 1)
+                                                        setDate(yesterday)
+                                                    }}
+                                                    className="flex-1 bg-surface-highlight p-3 rounded-xl items-center border border-border"
+                                                >
+                                                    <Text className="text-text font-heading text-sm">
+                                                        {language === 'fr' ? 'Hier' : 'Yesterday'}
+                                                    </Text>
+                                                </Pressable>
+                                            </View>
+
+                                            {/* Date display */}
+                                            <View className="bg-surface-highlight p-4 rounded-xl mb-6 items-center border border-border">
+                                                <Text className="text-text font-heading text-xl">
+                                                    {date.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', {
+                                                        day: 'numeric',
+                                                        month: 'long',
+                                                        year: 'numeric'
+                                                    })}
+                                                </Text>
+                                            </View>
+
+                                            {/* Day/Month/Year adjusters */}
+                                            <View className="flex-row gap-4">
+                                                {/* Day */}
+                                                <View className="flex-1 items-center">
+                                                    <Text className="text-text-secondary text-xs uppercase mb-2">
+                                                        {language === 'fr' ? 'Jour' : 'Day'}
+                                                    </Text>
+                                                    <View className="flex-row items-center">
+                                                        <Pressable
+                                                            onPress={() => {
+                                                                const newDate = new Date(date)
+                                                                newDate.setDate(newDate.getDate() - 1)
+                                                                if (newDate <= new Date()) setDate(newDate)
+                                                            }}
+                                                            className="w-10 h-10 bg-surface-highlight rounded-full items-center justify-center border border-border"
+                                                        >
+                                                            <Minus size={16} color="#9CA3AF" />
+                                                        </Pressable>
+                                                        <Text className="text-text font-heading text-xl mx-3 w-8 text-center">
+                                                            {date.getDate()}
+                                                        </Text>
+                                                        <Pressable
+                                                            onPress={() => {
+                                                                const newDate = new Date(date)
+                                                                newDate.setDate(newDate.getDate() + 1)
+                                                                if (newDate <= new Date()) setDate(newDate)
+                                                            }}
+                                                            className="w-10 h-10 bg-surface-highlight rounded-full items-center justify-center border border-border"
+                                                        >
+                                                            <Plus size={16} color="#9CA3AF" />
+                                                        </Pressable>
+                                                    </View>
+                                                </View>
+
+                                                {/* Month */}
+                                                <View className="flex-1 items-center">
+                                                    <Text className="text-text-secondary text-xs uppercase mb-2">
+                                                        {language === 'fr' ? 'Mois' : 'Month'}
+                                                    </Text>
+                                                    <View className="flex-row items-center">
+                                                        <Pressable
+                                                            onPress={() => {
+                                                                const newDate = new Date(date)
+                                                                newDate.setMonth(newDate.getMonth() - 1)
+                                                                if (newDate <= new Date()) setDate(newDate)
+                                                            }}
+                                                            className="w-10 h-10 bg-surface-highlight rounded-full items-center justify-center border border-border"
+                                                        >
+                                                            <Minus size={16} color="#9CA3AF" />
+                                                        </Pressable>
+                                                        <Text className="text-text font-heading text-xl mx-3 w-8 text-center">
+                                                            {date.getMonth() + 1}
+                                                        </Text>
+                                                        <Pressable
+                                                            onPress={() => {
+                                                                const newDate = new Date(date)
+                                                                newDate.setMonth(newDate.getMonth() + 1)
+                                                                if (newDate <= new Date()) setDate(newDate)
+                                                            }}
+                                                            className="w-10 h-10 bg-surface-highlight rounded-full items-center justify-center border border-border"
+                                                        >
+                                                            <Plus size={16} color="#9CA3AF" />
+                                                        </Pressable>
+                                                    </View>
+                                                </View>
+
+                                                {/* Year */}
+                                                <View className="flex-1 items-center">
+                                                    <Text className="text-text-secondary text-xs uppercase mb-2">
+                                                        {language === 'fr' ? 'Année' : 'Year'}
+                                                    </Text>
+                                                    <View className="flex-row items-center">
+                                                        <Pressable
+                                                            onPress={() => {
+                                                                const newDate = new Date(date)
+                                                                newDate.setFullYear(newDate.getFullYear() - 1)
+                                                                setDate(newDate)
+                                                            }}
+                                                            className="w-10 h-10 bg-surface-highlight rounded-full items-center justify-center border border-border"
+                                                        >
+                                                            <Minus size={16} color="#9CA3AF" />
+                                                        </Pressable>
+                                                        <Text className="text-text font-heading text-lg mx-2 w-12 text-center">
+                                                            {date.getFullYear()}
+                                                        </Text>
+                                                        <Pressable
+                                                            onPress={() => {
+                                                                const newDate = new Date(date)
+                                                                newDate.setFullYear(newDate.getFullYear() + 1)
+                                                                if (newDate <= new Date()) setDate(newDate)
+                                                            }}
+                                                            className="w-10 h-10 bg-surface-highlight rounded-full items-center justify-center border border-border"
+                                                        >
+                                                            <Plus size={16} color="#9CA3AF" />
+                                                        </Pressable>
+                                                    </View>
+                                                </View>
+                                            </View>
+                                        </View>
+
+                                        <View className="p-4 border-t border-border">
+                                            <Pressable
+                                                onPress={() => setShowDatePicker(false)}
+                                                className="bg-primary p-4 rounded-xl items-center"
+                                            >
+                                                <Text className="text-black font-heading text-lg">OK</Text>
+                                            </Pressable>
+                                        </View>
+                                    </Pressable>
+                                </Pressable>
+                            </Modal>
+                        </View>
+
+                        <TextInput
+                            placeholder={t('maintenance.field.title')}
+                            placeholderTextColor="#9CA3AF"
+                            className="bg-surface-highlight text-text p-4 rounded-xl mb-4 text-lg border border-border"
+                            value={title}
+                            onChangeText={setTitle}
+                        />
+
+                        <View className="flex-row gap-4 mb-4">
+                            <TextInput
+                                placeholder={t('maintenance.field.cost')}
+                                placeholderTextColor="#9CA3AF"
+                                keyboardType="numeric"
+                                className="bg-surface-highlight text-text p-4 rounded-xl text-lg flex-1 border border-border"
+                                value={cost}
+                                onChangeText={setCost}
+                            />
+                            <TextInput
+                                placeholder={t('maintenance.field.mileage')}
+                                placeholderTextColor="#9CA3AF"
+                                keyboardType="numeric"
+                                className="bg-surface-highlight text-text p-4 rounded-xl text-lg flex-1 border border-border"
+                                value={mileageAtLog}
+                                onChangeText={setMileageAtLog}
+                            />
+                        </View>
+
+                        <TextInput
+                            placeholder={t('maintenance.field.notes')}
+                            placeholderTextColor="#9CA3AF"
+                            multiline
+                            numberOfLines={3}
+                            className="bg-surface-highlight text-text p-4 rounded-xl mb-6 text-lg border border-border"
+                            style={{ textAlignVertical: 'top' }}
+                            value={notes}
+                            onChangeText={setNotes}
+                        />
+
+                        <Pressable onPress={handleSubmit} style={styles.submitButton}>
+                            <Text className="text-white font-heading text-lg">
+                                {log ? t('maintenance.modal.submit_edit') : t('maintenance.modal.submit_add')}
+                            </Text>
+                        </Pressable>
+
+                        {log && (
+                            <Pressable
+                                onPress={async () => {
+                                    // Check if there are linked documents
+                                    const linkedDocuments = await database.collections
+                                        .get(TableName.DOCUMENTS)
+                                        .query(Q.where('log_id', log.id))
+                                        .fetch()
+                                    
+                                    const hasLinkedDocument = linkedDocuments.length > 0
+                                    
+                                    if (hasLinkedDocument) {
+                                        // Show choice: delete both or keep document
+                                        Alert.alert(
+                                            t('maintenance.modal.delete_confirm_title'),
+                                            language === 'fr'
+                                                ? 'Cet entretien a un document lié (facture). Voulez-vous aussi supprimer le document du portefeuille ?'
+                                                : 'This maintenance log has a linked document (invoice). Do you also want to delete the document from your wallet?',
+                                            [
+                                                { text: t('common.cancel'), style: 'cancel' },
+                                                {
+                                                    text: language === 'fr' ? 'Garder le document' : 'Keep document',
+                                                    onPress: async () => {
+                                                        // Unlink document first, then delete log only
+                                                        await database.write(async () => {
+                                                            for (const doc of linkedDocuments) {
+                                                                await doc.update(d => {
+                                                                    // @ts-ignore - clear the log_id link
+                                                                    d._raw.log_id = null
+                                                                })
+                                                            }
+                                                            await log.markAsDeleted()
+                                                        })
+                                                        sync() // Sync changes to cloud
+                                                        onClose()
+                                                    }
+                                                },
+                                                {
+                                                    text: language === 'fr' ? 'Tout supprimer' : 'Delete all',
+                                                    style: 'destructive',
+                                                    onPress: async () => {
+                                                        await MaintenanceService.deleteLog(log)
+                                                        onClose()
+                                                    }
+                                                }
+                                            ]
+                                        )
+                                    } else {
+                                        // No linked document, simple confirmation
+                                        Alert.alert(
+                                            t('maintenance.modal.delete_confirm_title'),
+                                            t('maintenance.modal.delete_confirm_desc'),
+                                            [
+                                                { text: t('common.cancel'), style: 'cancel' },
+                                                {
+                                                    text: t('common.delete'),
+                                                    style: 'destructive',
+                                                    onPress: async () => {
+                                                        await MaintenanceService.deleteLog(log)
+                                                        onClose()
+                                                    }
+                                                }
+                                            ]
+                                        )
+                                    }
+                                }}
+                                style={styles.deleteButton}
+                            >
+                                <Text className="text-red-500 font-bold text-lg">{t('maintenance.modal.delete')}</Text>
+                            </Pressable>
+                        )}
+
+                        <Pressable onPress={onClose} style={styles.cancelButton}>
+                            <Text className="text-text-secondary font-bold">{t('common.cancel')}</Text>
+                        </Pressable>
+                    </ScrollView>
                 </View>
             </View>
         </Modal>
     )
 }
 
-// --- Main Screen ---
-type SortOption = 'date_added' | 'mileage' | 'maintenance_date'
-
-const MaintenanceScreen = ({ vehicles, logs }: { vehicles: Vehicle[], logs: MaintenanceLog[] }) => {
-    const [modalVisible, setModalVisible] = useState(false)
-    const [selectedLog, setSelectedLog] = useState<MaintenanceLog | null>(null)
-    const [sortBy, setSortBy] = useState<SortOption>('maintenance_date')
-    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
-    const [showSortMenu, setShowSortMenu] = useState(false)
+const MaintenanceScreen = ({ logs, vehicles }: { logs: MaintenanceLog[], vehicles: Vehicle[] }) => {
     const { selectedVehicleId, setSelectedVehicleId } = useVehicle()
+    const { isDark } = useTheme()
+    const { t, language } = useLanguage()
+    const [modalVisible, setModalVisible] = useState(false)
+    const [editingLog, setEditingLog] = useState<MaintenanceLog | null>(null)
+    const [sortBy, setSortBy] = useState<'date_added' | 'mileage' | 'service_date'>('date_added')
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+    const [showSortDropdown, setShowSortDropdown] = useState(false)
 
-    // Filter logs
+    const sortOptions = [
+        { key: 'date_added' as const, labelFr: 'Date d\'ajout', labelEn: 'Date added' },
+        { key: 'service_date' as const, labelFr: 'Date d\'intervention', labelEn: 'Service date' },
+        { key: 'mileage' as const, labelFr: 'Kilométrage', labelEn: 'Mileage' },
+    ]
+
+    // Reactive filtering: Show NOTHING if no vehicle is selected (Focus Mode)
     const filteredLogs = selectedVehicleId
         ? logs.filter(l => l.vehicleId === selectedVehicleId)
-        : logs
+        : []
 
-    // Sort logs
     const sortedLogs = [...filteredLogs].sort((a, b) => {
-        let comparison = 0
-        switch (sortBy) {
-            case 'date_added':
-                // @ts-ignore - WatermelonDB has _raw with createdAt
-                const aCreated = a._raw?.created_at || 0
-                // @ts-ignore
-                const bCreated = b._raw?.created_at || 0
-                comparison = aCreated - bCreated
-                break
-            case 'mileage':
-                comparison = a.mileageAtLog - b.mileageAtLog
-                break
-            case 'maintenance_date':
-                comparison = a.date.getTime() - b.date.getTime()
-                break
+        let diff = 0
+        if (sortBy === 'mileage') {
+            diff = a.mileageAtLog - b.mileageAtLog
+        } else if (sortBy === 'service_date') {
+            diff = a.date.getTime() - b.date.getTime()
+        } else {
+            // date_added
+            const aTime = a.createdAt?.getTime() || a.date.getTime()
+            const bTime = b.createdAt?.getTime() || b.date.getTime()
+            diff = aTime - bTime
         }
-        return sortOrder === 'desc' ? -comparison : comparison
+        
+        return sortOrder === 'asc' ? diff : -diff
     })
 
-    // Vehicle Name Look up map
-    const vehicleNames = vehicles.reduce((acc, v) => {
-        acc[v.id] = `${v.brand} ${v.model}`
-        return acc
-    }, {} as Record<string, string>)
-
-    const activeVehicle = selectedVehicleId ? vehicles.find(v => v.id === selectedVehicleId) : null
-
-    const handleAdd = () => {
-        setSelectedLog(null)
-        setModalVisible(true)
-    }
-
-    const handleEdit = (log: MaintenanceLog) => {
-        setSelectedLog(log)
-        setModalVisible(true)
-    }
-
-    const handleSortSelect = (option: SortOption) => {
-        if (sortBy === option) {
-            // Toggle order if same option
-            setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')
-        } else {
-            setSortBy(option)
-            setSortOrder('desc') // Default to descending for new sort
-        }
-        setShowSortMenu(false)
-    }
-
-    const getSortLabel = (option: SortOption): string => {
-        switch (option) {
-            case 'date_added': return 'Date Added'
-            case 'mileage': return 'Mileage'
-            case 'maintenance_date': return 'Service Date'
-        }
-    }
-
     return (
-        <SafeAreaView className="flex-1 bg-black">
+        <SafeAreaView className="flex-1 bg-background">
+            <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
             <View className="flex-1 p-6">
-                <View className="flex-row justify-between items-center mb-8">
-                    <View>
-                        <Text className="text-3xl font-bold text-white">Maintenance</Text>
-                        {selectedVehicleId ? (
-                            <TouchableOpacity onPress={() => setSelectedVehicleId(null)}>
-                                <Text className="text-neutral-400 text-sm font-bold uppercase tracking-wider flex-row items-center">
-                                    <Text className="text-yellow-500">← </Text>
-                                    {activeVehicle ? `${activeVehicle.brand} ${activeVehicle.model}` : 'All Vehicles'}
-                                </Text>
-                            </TouchableOpacity>
-                        ) : (
-                            <Text className="text-neutral-500 text-sm">Select a bike to view logs</Text>
-                        )}
-                    </View>
+                {/* Header Contextuel */}
+                <View className="flex-row justify-between items-center mb-6">
+                    <Text className="text-3xl font-heading text-text">
+                        {selectedVehicleId ? t('maintenance.title') : t('maintenance.select_bike_title')}
+                    </Text>
                     {selectedVehicleId && (
-                        <View className="flex-row gap-2">
-                            {/* Sort Button */}
-                            <TouchableOpacity
-                                onPress={() => setShowSortMenu(true)}
-                                className="bg-neutral-800 p-2 rounded-full w-10 h-10 items-center justify-center border border-neutral-700"
-                            >
-                                <Ionicons name="funnel-outline" size={18} color="#a3a3a3" />
-                            </TouchableOpacity>
-                            {/* Add Button */}
-                            <TouchableOpacity onPress={handleAdd} className="bg-neutral-800 p-2 rounded-full w-10 h-10 items-center justify-center">
-                                <Text className="text-white font-bold text-2xl">+</Text>
-                            </TouchableOpacity>
-                        </View>
+                        <Pressable
+                            onPress={() => setModalVisible(true)}
+                            style={styles.addButton}
+                        >
+                            <Plus size={24} color="white" />
+                        </Pressable>
                     )}
                 </View>
 
-                {/* Sort indicator when a vehicle is selected */}
-                {selectedVehicleId && filteredLogs.length > 1 && (
-                    <TouchableOpacity
-                        onPress={() => setShowSortMenu(true)}
-                        className="flex-row items-center mb-4 self-start bg-neutral-800/50 px-3 py-1.5 rounded-full"
-                    >
-                        <Ionicons
-                            name={sortOrder === 'desc' ? 'arrow-down' : 'arrow-up'}
-                            size={12}
-                            color="#EAB308"
-                        />
-                        <Text className="text-neutral-400 text-xs ml-1.5">
-                            {getSortLabel(sortBy)}
-                        </Text>
-                    </TouchableOpacity>
-                )}
-
-                {/* Sort Menu Modal */}
-                <Modal visible={showSortMenu} transparent animationType="fade">
-                    <TouchableOpacity
-                        activeOpacity={1}
-                        onPress={() => setShowSortMenu(false)}
-                        className="flex-1 bg-black/80 justify-center items-center"
-                    >
-                        <View className="bg-neutral-900 rounded-2xl p-4 w-64 border border-neutral-800">
-                            <Text className="text-white font-bold text-lg mb-4 text-center">Sort By</Text>
-                            {(['date_added', 'mileage', 'maintenance_date'] as SortOption[]).map((option) => (
-                                <TouchableOpacity
-                                    key={option}
-                                    onPress={() => handleSortSelect(option)}
-                                    className={`p-3 rounded-xl mb-2 flex-row justify-between items-center ${sortBy === option ? 'bg-yellow-500/20 border border-yellow-500/50' : 'bg-neutral-800'
-                                        }`}
-                                >
-                                    <Text className={`font-bold ${sortBy === option ? 'text-yellow-500' : 'text-neutral-300'}`}>
-                                        {getSortLabel(option)}
-                                    </Text>
-                                    {sortBy === option && (
-                                        <Ionicons
-                                            name={sortOrder === 'desc' ? 'arrow-down' : 'arrow-up'}
-                                            size={16}
-                                            color="#EAB308"
-                                        />
-                                    )}
-                                </TouchableOpacity>
-                            ))}
-                            <TouchableOpacity
-                                onPress={() => setShowSortMenu(false)}
-                                className="p-3 items-center mt-2"
-                            >
-                                <Text className="text-neutral-500 font-bold">Cancel</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </TouchableOpacity>
-                </Modal>
-
-                {!selectedVehicleId ? (
-                    /* Vehicle List Selection */
-                    <FlatList
-                        data={vehicles}
-                        keyExtractor={item => item.id}
-                        renderItem={({ item }) => (
-                            <VehicleItem
-                                vehicle={item}
-                                onPress={(v: Vehicle) => setSelectedVehicleId(v.id)}
-                            />
-                        )}
-                        ListEmptyComponent={
-                            <View className="items-center justify-center py-20">
-                                <Text className="text-neutral-500 text-lg">No bikes in garage.</Text>
-                            </View>
-                        }
-                    />
-                ) : (
-                    /* logs list */
-                    <FlatList
-                        data={sortedLogs}
-                        keyExtractor={item => item.id}
-                        renderItem={({ item }) => (
-                            <View>
-                                {!selectedVehicleId && (
-                                    <Text className="text-neutral-500 text-xs font-bold uppercase tracking-wider mb-1">
-                                        {vehicleNames[item.vehicleId] || 'Unknown Machine'}
-                                    </Text>
-                                )}
-                                <LogItem log={item} showVehicleName={false} onPress={handleEdit} />
-                            </View>
-                        )}
-                        ListEmptyComponent={
-                            <View className="items-center justify-center py-20">
-                                <Text className="text-6xl mb-4">🔧</Text>
-                                <Text className="text-neutral-500 text-lg">No maintenance logs.</Text>
-                                <Text className="text-neutral-700 text-sm mt-2">
-                                    {selectedVehicleId ? 'For this machine.' : 'Time to get your hands dirty?'}
+                {selectedVehicleId ? (
+                    <>
+                        {/* Vehicle Indicator (Dashboard Style) */}
+                        <View className="mb-6 items-start">
+                            <View className="bg-primary px-5 py-3 rounded-full flex-row items-center shadow-sm">
+                                <Bike size={20} color="white" />
+                                <Text className="text-white font-heading text-base ml-3">
+                                    {vehicles.find(v => v.id === selectedVehicleId)?.brand} {vehicles.find(v => v.id === selectedVehicleId)?.model}
                                 </Text>
                             </View>
-                        }
-                    />
-                )}
-            </View>
+                        </View>
 
-            {modalVisible && (
+                        {/* Sort Controls */}
+                        <View className="mb-4 flex-row gap-2">
+                            <Pressable
+                                onPress={() => setShowSortDropdown(true)}
+                                className="bg-surface-highlight px-4 py-3 rounded-xl border border-border flex-row justify-between items-center flex-1"
+                            >
+                                <View className="flex-row items-center">
+                                    <ArrowUpDown size={16} color={isDark ? "#EAB308" : "#3B82F6"} />
+                                    <Text className="text-text font-heading ml-2 text-sm">
+                                        {language === 'fr' 
+                                            ? sortOptions.find(o => o.key === sortBy)?.labelFr 
+                                            : sortOptions.find(o => o.key === sortBy)?.labelEn}
+                                    </Text>
+                                </View>
+                                <ChevronDown size={16} color="#9CA3AF" className="ml-2" />
+                            </Pressable>
+
+                            <Pressable
+                                onPress={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                                className="bg-surface-highlight w-12 items-center justify-center rounded-xl border border-border"
+                            >
+                                {sortOrder === 'desc' ? (
+                                    <ArrowDown size={20} color={isDark ? "#EAB308" : "#3B82F6"} />
+                                ) : (
+                                    <ArrowUp size={20} color={isDark ? "#EAB308" : "#3B82F6"} />
+                                )}
+                            </Pressable>
+                        </View>
+
+                        {/* Sort Dropdown Modal */}
+                            <Modal visible={showSortDropdown} transparent animationType="fade">
+                                <Pressable 
+                                    className="flex-1 bg-black/50 justify-center items-center"
+                                    onPress={() => setShowSortDropdown(false)}
+                                >
+                                    <View className="bg-surface rounded-2xl w-[75%] overflow-hidden">
+                                        <View className="p-4 border-b border-border">
+                                            <Text className="text-text font-heading text-lg text-center">
+                                                {language === 'fr' ? 'Trier par' : 'Sort by'}
+                                            </Text>
+                                        </View>
+                                        {sortOptions.map((option) => (
+                                            <Pressable
+                                                key={option.key}
+                                                onPress={() => {
+                                                    setSortBy(option.key)
+                                                    setShowSortDropdown(false)
+                                                }}
+                                                className={`p-4 flex-row items-center justify-between border-b border-border/50 ${sortBy === option.key ? 'bg-primary/10' : ''}`}
+                                            >
+                                                <Text className={`font-heading ${sortBy === option.key ? 'text-primary-dark' : 'text-text'}`}>
+                                                    {language === 'fr' ? option.labelFr : option.labelEn}
+                                                </Text>
+                                                {sortBy === option.key && (
+                                                    <Check size={20} color="#EAB308" />
+                                                )}
+                                            </Pressable>
+                                        ))}
+                                    </View>
+                                </Pressable>
+                            </Modal>
+
+                        <FlatList
+                            data={sortedLogs}
+                            keyExtractor={item => item.id}
+                            showsVerticalScrollIndicator={false}
+                            renderItem={({ item }) => (
+                                <Pressable
+                                    onPress={() => {
+                                        setEditingLog(item)
+                                        setModalVisible(true)
+                                    }}
+                                    style={[styles.logItem, isDark && styles.logItemDark]}
+                                >
+                                    <View className={`w-12 h-12 rounded-xl items-center justify-center mr-4 ${item.type === 'periodic' ? 'bg-blue-500/10' : item.type === 'repair' ? 'bg-red-500/10' : 'bg-purple-500/10'}`}>
+                                        {item.type === 'periodic' && <Calendar size={24} color='#3B82F6' />}
+                                        {item.type === 'repair' && <Wrench size={24} color='#EF4444' />}
+                                        {item.type === 'modification' && <FlaskConical size={24} color='#A855F7' />}
+                                    </View>
+                                    <View className="flex-1">
+                                        <View className="flex-row justify-between items-start mb-1">
+                                            <Text className="text-text font-heading text-lg flex-1 mr-2">{item.title}</Text>
+                                            <Text className="text-primary-dark font-heading text-lg">{item.cost} €</Text>
+                                        </View>
+                                        <View className="flex-row justify-between items-center">
+                                            <View>
+                                                <Text className="text-text-secondary font-body text-sm">{item.date.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US')}</Text>
+                                                <Text className="text-text-secondary font-body text-sm font-medium">{item.mileageAtLog.toLocaleString()} km</Text>
+                                            </View>
+                                            <View className="bg-surface-highlight px-2 py-0.5 rounded border border-border/50">
+                                                <Text className="text-[10px] font-heading text-text-secondary uppercase">{t(`maintenance.type.${item.type}`)}</Text>
+                                            </View>
+                                        </View>
+                                    </View>
+                                </Pressable>
+                            )}
+                            ListEmptyComponent={
+                                <View className="items-center justify-center py-20 px-10">
+                                    <View className="bg-surface-highlight w-20 h-20 rounded-full items-center justify-center mb-6 shadow-sm">
+                                        <FileText size={40} color="#9CA3AF" />
+                                    </View>
+                                    <Text className="text-text font-heading text-xl text-center mb-2">{t('maintenance.no_logs')}</Text>
+                                    <Text className="text-text-secondary font-body text-center text-lg">{t('maintenance.no_logs_desc')}</Text>
+                                </View>
+                            }
+                        />
+                    </>
+                ) : (
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                        <Text className="text-text-secondary mb-6 text-lg">{t('maintenance.select_bike_desc_full')}</Text>
+                        {vehicles.map(v => (
+                            <Pressable
+                                key={v.id}
+                                onPress={() => setSelectedVehicleId(v.id)}
+                                style={[styles.vehicleCard, isDark && styles.vehicleCardDark]}
+                            >
+                                <View className="bg-primary/10 w-14 h-14 rounded-full items-center justify-center mr-4">
+                                    <Bike size={30} color="#EAB308" />
+                                </View>
+                                <View className="flex-1">
+                                    <Text className="text-text font-heading text-xl">{v.brand} {v.model}</Text>
+                                    <Text className="text-text-secondary font-body text-sm">{v.year} • {v.currentMileage.toLocaleString()} km</Text>
+                                </View>
+                                <ChevronRight size={24} color="#9CA3AF" />
+                            </Pressable>
+                        ))}
+                        {vehicles.length === 0 && (
+                            <View className="items-center justify-center py-20">
+                                <Bike size={60} color="#9CA3AF" />
+                                <Text className="text-text-secondary font-body mt-4 text-center">{t('garage.no_vehicles')}</Text>
+                            </View>
+                        )}
+                    </ScrollView>
+                )}
+
                 <MaintenanceModal
                     visible={modalVisible}
-                    onClose={() => setModalVisible(false)}
+                    onClose={() => {
+                        setModalVisible(false)
+                        setEditingLog(null)
+                    }}
+                    log={editingLog}
                     vehicles={vehicles}
-                    preSelectedVehicleId={selectedVehicleId}
-                    existingLog={selectedLog}
                 />
-            )}
+            </View>
         </SafeAreaView>
     )
 }
 
 const enhance = withObservables([], () => ({
-    vehicles: VehicleService.observeVehicles(),
     logs: MaintenanceService.observeAllLogs(),
+    vehicles: VehicleService.observeVehicles(),
 }))
 
 export default enhance(MaintenanceScreen)

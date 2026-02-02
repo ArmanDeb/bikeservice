@@ -10,6 +10,7 @@ Pour ce projet, j'ai décidé de partir sur des technologies modernes qui permet
 *   **Base de données (Offline-First) :** C'est le cœur technique du projet. Pour que l'application reste utilisable dans un garage sans réseau, j'ai implémenté **WatermelonDB**. Contrairement à une API classique, l'application écrit d'abord dans une base SQLite locale, ce qui rend l'interface extrêmement réactive.
 *   **Backend & Synchro :** J'utilise **Supabase** (PostgreSQL) pour le stockage déporté et l'authentification. La synchronisation entre le téléphone et le cloud est gérée par un "Sync Engine" que j'ai configuré pour réconcilier les données dès qu'une connexion est détectée.
 *   **Design :** Pour le stylage, j'utilise **NativeWind** (Tailwind CSS pour mobile), ce qui me permet d'avoir un design cohérent et facile à maintenir.
+*   **Reporting :** Génération de rapports PDF professionnels via **expo-print** et **expo-sharing**, enrichis par une analyse IA (Gemini).
 
 ## 2. Développement des modules
 
@@ -33,6 +34,15 @@ C'est la partie la plus "sophistiquée" que j'ai décidé d'ajouter pour passer 
 *   **Technologie :** J'ai choisi d'intégrer **Gemini 1.5 Flash**. C'est un modèle multimodal qui peut "lire" une image (OCR intelligent) ou "écouter" un vocal.
 *   **Fonctionnement :** Quand je prends une photo d'une facture de garage, l'IA analyse le texte, extrait le montant, la date et même les travaux effectués pour pré-remplir le formulaire de maintenance.
 *   **Interface :** J'ai intégré un petit bandeau "Assistant IA ✨" directement dans le formulaire d'ajout d'entretien. Ça permet de déclencher le scan sans avoir à naviguer ailleurs dans l'appli.
+
+### 2.5 Authentification et Sécurité Multi-Utilisateurs
+Pour transformer l'application en un véritable service SaaS, j'ai implémenté un système d'authentification complet et une isolation stricte des données.
+*   **Fournisseur :** Utilisation de **Supabase Auth** (Email/Mot de passe).
+*   **Protection des Routes :** J'ai mis en place un `AuthProvider` qui enveloppe l'application. Un composant de navigation surveille l'état de la session : si l'utilisateur n'est pas connecté, il est automatiquement redirigé vers l'écran de login, verrouillant ainsi l'accès aux données du garage.
+*   **Isolation des Données (Multi-Tenancy) :** 
+    *   **Côté Supabase :** J'ai activé le **Row Level Security (RLS)** sur toutes les tables. Chaque ligne de données possède désormais une colonne `user_id`. Des politiques SQL (`POLICIES`) vérifient que le `auth.uid()` de la session correspond au propriétaire de la donnée.
+    *   **Côté Mobile :** J'ai migré le schéma WatermelonDB en **version 3** pour inclure cette colonne `user_id`. Le `SyncService` a été modifié pour injecter l'ID de l'utilisateur lors de chaque synchronisation.
+*   **Hygiène des Données (Clean Slate) :** Pour éviter que deux utilisateurs partageant le même téléphone ne puissent voir les données l'un de l'autre en cache, l'application exécute un `unsafeResetDatabase()` (Wipe local) dès qu'un utilisateur se déconnecte.
 34: 
 35: #### Détails de l'implémentation technique (Scanner)
 36: Pour réaliser cette fonctionnalité, j'ai dû orchestrer plusieurs briques techniques :
@@ -74,6 +84,15 @@ Cette section retrace l'évolution du projet au jour le jour, mes hésitations e
     *   `wallet.tsx` : Refonte de l'observable pour afficher le permis dans tous les wallets, et masquer l'option "LICENSE" dans le sélecteur de type une fois qu'un permis existe.
 *   **Résultat :** Ajouter un permis une fois le rend visible pour toutes les motos. Modifier le permis depuis n'importe quel wallet met à jour l'unique document partagé.
 
+### 1er Février 2026 (fin d'après-midi) : Authentification et Sécurisation totale
+*   **Action :** Mise en place du module d'Authentification Supabase.
+*   **Infrastructure :** Activation du RLS sur Supabase via MCP et modification du schéma local (v3) pour supporter le multi-utilisateur.
+*   **UX :**
+    *   Création des écrans **Login** et **Register** avec navigation sécurisée (`_layout.tsx` réactif).
+    *   Ajout d'une fonctionnalité de **Auto-Login** après inscription pour réduire la friction.
+    *   Implémentation d'un écran **Settings** dédié avec une fonction de déconnexion sécurisée (Sign Out + Wipe Local).
+*   **Sécurité :** Audit des politiques RLS pour garantir qu'un utilisateur A ne peut en aucun cas lire ou modifier les motos d'un utilisateur B, même en connaissant leurs IDs.
+
 ## 5. Problèmes rencontrés & Solutions
 
 | Problème | Solution |
@@ -91,6 +110,18 @@ Cette section retrace l'évolution du projet au jour le jour, mes hésitations e
 | **Sélection de modèle peu intuitive** | Remplacement des listes horizontales scrollables par des champs `AutocompleteInput` dynamiques avec filtrage intelligent. |
 | **Base de modèles motos incomplète** | Enrichissement massif de `MOTORCYCLE_DATA` : ajout de 400+ modèles classiques (FZR, CBF, ZZR, Bandit, etc.) pour les 4 grandes marques japonaises. |
 | **Wallet trop chargé visuellement** | Implémentation de sections pliables (`CollapsibleSection`) pour "Legal & Papers" et "Invoices & History" afin de libérer de l'espace écran. |
+| **Leak de données entre comptes** | Mise en place de Row Level Security (RLS) et d'un mécanisme de "Wipe"本地 base de données à la déconnexion. |
+| **Incompatibilité Schéma DB** | Création d'une migration WatermelonDB (v2 -> v3) pour supporter la colonne `user_id` nécessaire à l'isolation des données. |
+| **Double Authentification bloquante** | Désactivation du "Confirm Email" sur Supabase pour simplifier la phase de test utilisateur. |
+| **PDF non sauvegardable localement** | Implémentation du Storage Access Framework (SAF) d'Android pour permettre la sauvegarde directe dans le dossier Downloads, avec mémorisation du choix utilisateur via AsyncStorage. |
+| **Images absentes dans le PDF** | Conversion des URIs locales en Base64 et vérification de l'existence des fichiers avant lecture pour garantir l'affichage des annexes. |
+| **Page d'accueil non intuitive** | Changement de la route par défaut : le Garage est maintenant la première page affichée au lieu du Dashboard. |
+| **Application mélangeant les langues** | Centralisation de l'i18n dans un Context pour une application 100% bilingue, y compris pour les données extraites par l'IA. |
+| **Confusion sans véhicule sélectionné** | Implémentation d'un "Focus Mode" masquant les données vagues et proposant un sélecteur premium quand aucune moto n'est choisie. |
+| **Date AI ignorée dans formulaire** | Stockage de l'URI du document scanné puis liaison au log lors de la soumission, permettant à la date extraite de pré-remplir le champ. |
+| **Suppression entretien bloque sur FK** | Migration Supabase : `ON DELETE SET NULL` sur `documents.log_id` + choix utilisateur (garder ou supprimer le document lié). |
+| **Perte images (changement téléphone)** | Activation de **Supabase Storage** : upload automatique des photos dans un bucket sécurisé (RLS) pour une sauvegarde cloud pérenne. |
+| **Fichiers orphelins (Cloud)** | Implémentation d'une suppression propre : supprimer un document dans l'app supprime aussi le fichier distant sur Supabase. |
 
 ### 1er Février 2026 (après-midi) : UX Garage & Wallet
 *   **Amélioration Garage :** Refonte complète de la sélection marque/modèle.
@@ -105,6 +136,43 @@ Cette section retrace l'évolution du projet au jour le jour, mes hésitations e
     *   Les sections "Legal & Papers" et "Invoices & History" peuvent maintenant être repliées/dépliées au tap.
     *   Badge indiquant le nombre de documents dans chaque section.
     *   Permet de gagner de l'espace pour visualiser les factures quand les documents légaux n'ont pas besoin d'être consultés.
+
+---
+
+### 1er Février 2026 (soir) : Reporting PDF & Export Android
+*   **PDF Builder :** Implémentation du `PDFService`.
+    *   Mise en page HTML/CSS premium (Thème sombre/jaune, badges, tableaux, annexes).
+    *   **Sauvegarde Automatique Android :** Utilisation du **Storage Access Framework (SAF)** pour un enregistrement direct dans "Downloads", avec mémorisation du dossier via `AsyncStorage`.
+*   **Navigation :** Le **Garage** devient la page d'accueil par défaut pour une meilleure pertinence utilisateur.
+
+### 1er Février 2026 (nuit) : Internationalisation et Raffinement UI
+*   **Internationalisation (i18n) :** Application bilingue (**FR/EN**).
+    *   **IA Localisée :** Le `AIService` et le scanner de factures adaptent leurs langues d'extraction à l'utilisateur.
+    *   **PDF Localisé :** Adaptation automatique des formats de dates et des étiquettes administratifs.
+*   **Expérience "Focus Mode" :** Refonte des écrans Maintenance et Wallet. Masquage des données sans véhicule sélectionné et ajout d'un sélecteur de moto premium.
+*   **Décision Produit :** Simplification du rapport PDF en retirant le résumé IA technique pour privilégier la clarté factuelle.
+
+---
+
+### 1er Février 2026 (suite) : Maintenance UX & Intégrité des données
+*   **Bug Fix (Scanner IA) :** La date extraite de la facture pré-remplit maintenant correctement le formulaire. Auparavant, la date du jour était utilisée par défaut.
+*   **Refonte UX Maintenance :**
+    *   Renommage du bouton "Assistant IA" → **"Scanner facture"** pour plus de clarté.
+    *   Ajout d'un **DatePicker visible** permettant de voir et modifier la date d'intervention.
+    *   Remplacement des sélecteurs horizontaux (véhicule, tri) par des **dropdowns modaux** plus ergonomiques.
+*   **Suppression intelligente :** Lors de la suppression d'un entretien avec document lié, l'utilisateur a désormais le choix :
+    *   **"Garder le document"** : L'entretien est supprimé mais la facture reste dans le portefeuille.
+    *   **"Tout supprimer"** : Suppression en cascade (entretien + document).
+*   **Migration Supabase :** Modification de la contrainte FK `documents.log_id` → `ON DELETE SET NULL` pour supporter la suppression flexible sans violation de clé étrangère.
+
+### 1er Février 2026 (nuit avancée) : Cloud Storage & Nettoyage
+*   **Sauvegarde Cloud des Images :**
+    *   Création d'un bucket `documents` sur Supabase Storage.
+    *   Mise en place de politiques RLS strictes : chaque utilisateur a son propre dossier privé (`user_id/`).
+    *   Implémentation du `StorageService` : upload automatique des photos lors de l'ajout d'une facture ou d'un document.
+*   **Gestion du cycle de vie des fichiers :**
+    *   **Suppression propre :** Quand un utilisateur supprime un document (ou un entretien lié), l'application envoie une commande pour supprimer également le fichier sur le Cloud.
+    *   **Résultat :** Plus de fichiers orphelins sur le serveur et une synchronisation parfaite entre l'état local et distant.
 
 ---
 

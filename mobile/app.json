@@ -15,7 +15,9 @@
         {
           "cameraPermission": "Allow BikeService to access your camera to scan invoices."
         }
-      ]
+      ],
+      "expo-asset",
+      "expo-font"
     ],
     "splash": {
       "image": "./assets/splash-icon.png",

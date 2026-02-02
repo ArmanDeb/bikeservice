@@ -15,6 +15,7 @@ export default class Vehicle extends Model {
 
     @readonly @date('created_at') createdAt!: Date
     @readonly @date('updated_at') updatedAt!: Date
+    @field('user_id') userId?: string
 
     @children(TableName.MAINTENANCE_LOGS) maintenanceLogs!: MaintenanceLog[]
     @children(TableName.DOCUMENTS) documents!: Document[]

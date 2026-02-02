@@ -4,6 +4,8 @@ import MaintenanceLog from '../database/models/MaintenanceLog'
 import Vehicle from '../database/models/Vehicle'
 import { Q } from '@nozbe/watermelondb'
 import { sync } from './SyncService'
+import { StorageService } from './StorageService'
+import { supabase } from './Supabase'
 
 export const MaintenanceService = {
     // Observe logs for a specific vehicle, sorted by date desc
@@ -42,6 +44,15 @@ export const MaintenanceService = {
         // We REMOVED the strict check to allow backfilling old logs (Historical Data).
         // if (mileageAtLog < vehicle.currentMileage) ... 
 
+        // Try to upload file if exists
+        let remotePath: string | null = null
+        if (documentUri) {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) {
+                remotePath = await StorageService.uploadFile(documentUri, user.id)
+            }
+        }
+
         // 2. Atomic Transaction (Create Log + Update Vehicle + Create Document)
         await database.write(async () => {
             // Create the log
@@ -78,6 +89,8 @@ export const MaintenanceService = {
                     doc.reference = `Invoice - ${title}`
                     // @ts-ignore
                     doc.localUri = documentUri
+                    // @ts-ignore
+                    doc.remotePath = remotePath || undefined
                 })
             }
         })
@@ -93,6 +106,10 @@ export const MaintenanceService = {
                 .fetch()
 
             for (const doc of linkedDocuments) {
+                // Delete remote file if exists
+                if (doc.remotePath) {
+                    await StorageService.deleteFile(doc.remotePath)
+                }
                 await doc.markAsDeleted()
             }
 

@@ -14,8 +14,11 @@ export default class Document extends Model {
     @field('remote_path') remotePath?: string
 
     @relation(TableName.VEHICLES, 'vehicle_id') vehicle?: Relation<Vehicle>
+    @field('vehicle_id') vehicleId?: string
     @relation(TableName.MAINTENANCE_LOGS, 'log_id') maintenanceLog?: Relation<MaintenanceLog>
+    @field('log_id') logId?: string
 
     @readonly @date('created_at') createdAt!: Date
     @readonly @date('updated_at') updatedAt!: Date
+    @field('user_id') userId?: string
 }

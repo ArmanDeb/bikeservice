@@ -38,7 +38,7 @@ create table public.documents (
   local_uri text, -- Keeps local path info if needed, though mostly relevant on client
   remote_path text, -- Path in Supabase Storage
   vehicle_id text references public.vehicles(id), -- Optional: NULL for user-level docs (license)
-  log_id text references public.maintenance_logs(id),
+  log_id text references public.maintenance_logs(id) on delete set null,
   created_at bigint default extract(epoch from now()) * 1000,
   updated_at bigint default extract(epoch from now()) * 1000,
   deleted_at bigint
