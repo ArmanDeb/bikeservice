@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SecureStorageAdapter } from '../services/SecureStorage';
 import { supabase } from '../services/Supabase';
 import { database } from '../database';
 
@@ -25,7 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const { data: { session: initialSession } } = await supabase.auth.getSession();
 
             if (initialSession?.user) {
-                const storedUserId = await AsyncStorage.getItem('last_user_id');
+                const storedUserId = await SecureStorageAdapter.getItem('last_user_id');
                 if (storedUserId && storedUserId !== initialSession.user.id) {
                     console.log('🧹 New user detected. Wiping local database...');
                     try {
@@ -37,18 +37,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         console.error('❌ Failed to wipe database:', e);
                     }
                 }
-                await AsyncStorage.setItem('last_user_id', initialSession.user.id);
+                await SecureStorageAdapter.setItem('last_user_id', initialSession.user.id);
             } else {
                 // No user logged in, but we might have lingering data from a forced close
                 // Let's be safe and wipe if we thought we had a user
-                const storedUserId = await AsyncStorage.getItem('last_user_id');
+                const storedUserId = await SecureStorageAdapter.getItem('last_user_id');
                 if (storedUserId) {
                     console.log('🧹 No active session but found old user ID. Wiping local database...');
                     try {
                         await database.write(async () => {
                             await database.unsafeResetDatabase();
                         });
-                        await AsyncStorage.removeItem('last_user_id');
+                        await SecureStorageAdapter.removeItem('last_user_id');
                         console.log('✨ Cleanup complete.');
                     } catch (e) {
                         console.error('❌ Cleanup failed:', e);
@@ -73,14 +73,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     await database.write(async () => {
                         await database.unsafeResetDatabase();
                     });
-                    await AsyncStorage.removeItem('last_user_id');
+                    await SecureStorageAdapter.removeItem('last_user_id');
                     console.log('✨ Database wiped successfully.');
                 } catch (e) {
                     // Ignore concurrent sync errors during logout
                     console.log('Warning during logout wipe:', e);
                 }
             } else if (event === 'SIGNED_IN' && session?.user) {
-                const storedUserId = await AsyncStorage.getItem('last_user_id');
+                const storedUserId = await SecureStorageAdapter.getItem('last_user_id');
                 if (storedUserId && storedUserId !== session.user.id) {
                     console.log('🧹 User switched. Wiping local database...');
                     try {
@@ -92,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         console.error('❌ Failed to wipe database on switch:', e);
                     }
                 }
-                await AsyncStorage.setItem('last_user_id', session.user.id);
+                await SecureStorageAdapter.setItem('last_user_id', session.user.id);
             }
 
             setSession(session);

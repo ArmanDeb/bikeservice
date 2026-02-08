@@ -1,6 +1,6 @@
 import 'react-native-url-polyfill/auto'
 import { createClient } from '@supabase/supabase-js'
-import AsyncStorage from '@react-native-async-storage/async-storage'
+import { SecureStorageAdapter } from './SecureStorage'
 
 // NOTE: These should be in .env, but for now we use placeholders or expect them to be injected.
 // Since we don't have them yet, we'll use empty strings to avoid crashes, but sync will fail (as expected).
@@ -9,7 +9,7 @@ const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'public-a
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
-        storage: AsyncStorage,
+        storage: SecureStorageAdapter,
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: false,

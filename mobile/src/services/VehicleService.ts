@@ -6,21 +6,28 @@ import { sync } from './SyncService'
 import { Q } from '@nozbe/watermelondb'
 
 export const VehicleService = {
-    // Observe all vehicles (Reactive)
+    // Observe all vehicles (Reactive) - Ordered by display_order
     observeVehicles: () => {
-        return database.collections.get<Vehicle>(TableName.VEHICLES).query().observe()
+        return database.collections.get<Vehicle>(TableName.VEHICLES)
+            .query(Q.sortBy('display_order', Q.asc))
+            .observe()
     },
 
 
     // Create a new vehicle
     createVehicle: async (brand: string, model: string, year: number | undefined, vin: string | undefined, initialMileage: number) => {
         await database.write(async () => {
+            // Get current max display order
+            const currentVehicles = await database.collections.get<Vehicle>(TableName.VEHICLES).query().fetch()
+            const maxOrder = currentVehicles.reduce((max, v) => Math.max(max, v.displayOrder || 0), -1)
+
             await database.collections.get<Vehicle>(TableName.VEHICLES).create(vehicle => {
                 vehicle.brand = brand
                 vehicle.model = model
                 vehicle.year = year
                 vehicle.vin = vin
                 vehicle.currentMileage = initialMileage
+                vehicle.displayOrder = maxOrder + 1
             })
         })
         sync()
@@ -61,6 +68,20 @@ export const VehicleService = {
 
             // 3. Delete the Vehicle itself
             await vehicle.markAsDeleted()
+        })
+        sync()
+    },
+
+    // Update the display order of multiple vehicles
+    reorderVehicles: async (reorderedVehicles: Vehicle[]) => {
+        await database.write(async () => {
+            await database.batch(
+                ...reorderedVehicles.map((vehicle, index) =>
+                    vehicle.prepareUpdate(v => {
+                        v.displayOrder = index
+                    })
+                )
+            )
         })
         sync()
     },

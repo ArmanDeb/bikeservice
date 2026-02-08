@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
-import { View, Text, FlatList, Pressable, StatusBar, Modal, TextInput, Alert, StyleSheet } from 'react-native'
+import { View, Text, Pressable, StatusBar, Modal, TextInput, Alert, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import DraggableFlatList, { ScaleDecorator, RenderItemParams } from 'react-native-draggable-flatlist'
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { withObservables } from '@nozbe/watermelondb/react'
 import { VehicleService } from '../../src/services/VehicleService'
 import Vehicle from '../../src/database/models/Vehicle'
@@ -20,52 +22,56 @@ import { ConfirmationModal } from '../../src/components/common/ConfirmationModal
 // Observer wrapper for individual list item to ensure reactivity
 const VehicleListItem = withObservables(['vehicle'], ({ vehicle }) => ({
     vehicle: vehicle.observe()
-}))(({ vehicle, isDark, onPress, onEdit, isSelected }: { vehicle: Vehicle, isDark: boolean, onPress: () => void, onEdit: () => void, isSelected: boolean }) => {
+}))(({ vehicle, isDark, onPress, onEdit, isSelected, drag, isActive }: { vehicle: Vehicle, isDark: boolean, onPress: () => void, onEdit: () => void, isSelected: boolean, drag: () => void, isActive: boolean }) => {
     return (
-        <View style={styles.itemContainer}>
-            <View style={[
-                styles.card,
-                isDark ? styles.cardDark : styles.cardLight,
-                isSelected && styles.cardSelected
-            ]}>
-                <Pressable
-                    onPress={onPress}
-                    style={styles.pressableArea}
-                >
-                    <View style={styles.cardContent}>
-                        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                            <BrandLogo brand={vehicle.brand} variant="icon" size={32} color={isDark ? '#FDFCF8' : '#1C1C1E'} />
-                            <View style={{ flex: 1 }}>
-                                <Text style={[styles.vehicleName, isDark ? styles.vehicleNameDark : styles.vehicleNameLight]}>{vehicle.brand} {vehicle.model}</Text>
-                                <Text style={[styles.vehicleDetails, isDark ? styles.vehicleDetailsDark : styles.vehicleDetailsLight, { marginTop: 4 }]}>
-                                    {vehicle.year ? `${vehicle.year}` : ''}
-                                    {vehicle.year && vehicle.vin ? ' • ' : ''}
-                                    {vehicle.vin ? vehicle.vin : ''}
+        <ScaleDecorator>
+            <View style={[styles.itemContainer, isActive && { opacity: 0.9 }]}>
+                <View style={[
+                    styles.card,
+                    isDark ? styles.cardDark : styles.cardLight,
+                    isSelected && styles.cardSelected,
+                    isActive && { borderColor: '#F97316', borderWidth: 2 }
+                ]}>
+                    <Pressable
+                        onPress={onPress}
+                        onLongPress={drag}
+                        style={styles.pressableArea}
+                    >
+                        <View style={styles.cardContent}>
+                            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                                <BrandLogo brand={vehicle.brand} variant="icon" size={32} color={isDark ? '#FDFCF8' : '#1C1C1E'} />
+                                <View style={{ flex: 1 }}>
+                                    <Text style={[styles.vehicleName, isDark ? styles.vehicleNameDark : styles.vehicleNameLight]}>{vehicle.brand} {vehicle.model}</Text>
+                                    <Text style={[styles.vehicleDetails, isDark ? styles.vehicleDetailsDark : styles.vehicleDetailsLight, { marginTop: 4 }]}>
+                                        {vehicle.year ? `${vehicle.year}` : ''}
+                                        {vehicle.year && vehicle.vin ? ' • ' : ''}
+                                        {vehicle.vin ? vehicle.vin : ''}
+                                    </Text>
+                                </View>
+                            </View>
+                            <View style={[styles.badge, isDark ? styles.badgeDark : styles.badgeLight]}>
+                                <Text style={isDark ? styles.badgeTextDark : styles.badgeTextLight}>
+                                    {vehicle.currentMileage.toLocaleString()} km
                                 </Text>
                             </View>
                         </View>
-                        <View style={[styles.badge, isDark ? styles.badgeDark : styles.badgeLight]}>
-                            <Text style={isDark ? styles.badgeTextDark : styles.badgeTextLight}>
-                                {vehicle.currentMileage.toLocaleString()} km
-                            </Text>
-                        </View>
-                    </View>
-                </Pressable>
-            </View>
-            {isSelected && (
-                <View style={[
-                    styles.editButtonContainer,
-                    isDark ? styles.editButtonContainerDark : styles.editButtonContainerLight
-                ]}>
-                    <Pressable
-                        onPress={onEdit}
-                        style={styles.editButton}
-                    >
-                        <Edit2 size={16} color={isDark ? '#F8FAFC' : '#1E293B'} />
                     </Pressable>
                 </View>
-            )}
-        </View>
+                {isSelected && (
+                    <View style={[
+                        styles.editButtonContainer,
+                        isDark ? styles.editButtonContainerDark : styles.editButtonContainerLight
+                    ]}>
+                        <Pressable
+                            onPress={onEdit}
+                            style={styles.editButton}
+                        >
+                            <Edit2 size={16} color={isDark ? '#F8FAFC' : '#1E293B'} />
+                        </Pressable>
+                    </View>
+                )}
+            </View>
+        </ScaleDecorator>
     )
 })
 
@@ -286,61 +292,66 @@ const GarageScreen = ({ vehicles }: { vehicles: Vehicle[] }) => {
     return (
         <SafeAreaView style={[styles.container, isDark ? styles.containerDark : styles.containerLight]} edges={['top', 'left', 'right']}>
             <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-            <View style={styles.content}>
-                <View style={styles.header}>
-                    <Text style={[styles.headerTitle, isDark ? styles.headerTitleDark : styles.headerTitleLight]}>{t('garage.title')}</Text>
-                    <View style={styles.headerActions}>
-                        <Pressable
-                            onPress={() => setSelectedVehicleId(null)}
-                            style={[
-                                styles.iconButton,
-                                selectedVehicleId === null
-                                    ? styles.iconButtonPrimary
-                                    : (isDark ? styles.iconButtonSurfaceDark : styles.iconButtonSurfaceLight)
-                            ]}
-                        >
-                            <Grid size={20} color={selectedVehicleId === null ? '#FFFFFF' : isDark ? '#F8FAFC' : '#1E293B'} />
-                        </Pressable>
-                        <Pressable
-                            onPress={openAddModal}
-                            style={[
-                                styles.iconButton,
-                                isDark ? styles.iconButtonSurfaceDark : styles.iconButtonSurfaceLight
-                            ]}
-                        >
-                            <Plus size={24} color={isDark ? '#F97316' : '#F97316'} />
-                        </Pressable>
-                    </View>
-                </View>
-
-                <FlatList
-                    data={vehicles}
-                    keyExtractor={item => item.id}
-                    contentContainerStyle={{ paddingBottom: 100 }}
-                    renderItem={({ item }) => (
-                        <VehicleListItem
-                            vehicle={item}
-                            isDark={isDark}
-                            onPress={() => setSelectedVehicleId(item.id)}
-                            onEdit={() => openEditModal(item)}
-                            isSelected={selectedVehicleId === item.id}
-                        />
-                    )}
-                    ListEmptyComponent={
-                        <View style={styles.emptyState}>
-                            <Grid size={48} color={isDark ? '#334155' : '#CBD5E1'} />
-                            <Text style={[styles.emptyStateText, isDark ? { color: '#94A3B8' } : { color: '#64748B' }]}>{t('garage.no_motorcycles')}</Text>
-                            <Text style={[styles.emptyStateDesc, isDark ? { color: '#94A3B8' } : { color: '#64748B' }]}>{t('garage.no_motorcycles_desc')}</Text>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+                <View style={styles.content}>
+                    <View style={styles.header}>
+                        <Text style={[styles.headerTitle, isDark ? styles.headerTitleDark : styles.headerTitleLight]}>{t('garage.title')}</Text>
+                        <View style={styles.headerActions}>
+                            <Pressable
+                                onPress={() => setSelectedVehicleId(null)}
+                                style={[
+                                    styles.iconButton,
+                                    selectedVehicleId === null
+                                        ? styles.iconButtonPrimary
+                                        : (isDark ? styles.iconButtonSurfaceDark : styles.iconButtonSurfaceLight)
+                                ]}
+                            >
+                                <Grid size={20} color={selectedVehicleId === null ? '#FFFFFF' : isDark ? '#F8FAFC' : '#1E293B'} />
+                            </Pressable>
+                            <Pressable
+                                onPress={openAddModal}
+                                style={[
+                                    styles.iconButton,
+                                    isDark ? styles.iconButtonSurfaceDark : styles.iconButtonSurfaceLight
+                                ]}
+                            >
+                                <Plus size={24} color={isDark ? '#F97316' : '#F97316'} />
+                            </Pressable>
                         </View>
-                    }
-                />
+                    </View>
 
-                <VehicleModal
-                    visible={modalVisible}
-                    onClose={() => setModalVisible(false)}
-                    vehicle={editingVehicle}
-                />
-            </View>
+                    <DraggableFlatList
+                        data={vehicles}
+                        onDragEnd={({ data }) => VehicleService.reorderVehicles(data)}
+                        keyExtractor={item => item.id}
+                        contentContainerStyle={{ paddingBottom: 100 }}
+                        renderItem={({ item, drag, isActive }: RenderItemParams<Vehicle>) => (
+                            <VehicleListItem
+                                vehicle={item}
+                                isDark={isDark}
+                                onPress={() => setSelectedVehicleId(item.id)}
+                                onEdit={() => openEditModal(item)}
+                                isSelected={selectedVehicleId === item.id}
+                                drag={drag}
+                                isActive={isActive}
+                            />
+                        )}
+                        ListEmptyComponent={
+                            <View style={styles.emptyState}>
+                                <Grid size={48} color={isDark ? '#334155' : '#CBD5E1'} />
+                                <Text style={[styles.emptyStateText, isDark ? { color: '#94A3B8' } : { color: '#64748B' }]}>{t('garage.no_motorcycles')}</Text>
+                                <Text style={[styles.emptyStateDesc, isDark ? { color: '#94A3B8' } : { color: '#64748B' }]}>{t('garage.no_motorcycles_desc')}</Text>
+                            </View>
+                        }
+                    />
+
+                    <VehicleModal
+                        visible={modalVisible}
+                        onClose={() => setModalVisible(false)}
+                        vehicle={editingVehicle}
+                    />
+                </View>
+            </GestureHandlerRootView>
         </SafeAreaView>
     )
 }

@@ -40,6 +40,18 @@ export const migrations = schemaMigrations({
                     ]
                 }
             ]
+        },
+        {
+            toVersion: 4,
+            steps: [
+                {
+                    type: 'add_columns',
+                    table: 'vehicles',
+                    columns: [
+                        { name: 'display_order', type: 'number' }
+                    ]
+                }
+            ]
         }
     ],
 })
