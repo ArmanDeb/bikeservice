@@ -7,56 +7,129 @@ import { DocumentService } from '../../src/services/DocumentService'
 import Document from '../../src/database/models/Document'
 import { VehicleService } from '../../src/services/VehicleService'
 import Vehicle from '../../src/database/models/Vehicle'
-import { Camera, FileText, ChevronRight, ChevronLeft, Bike, FolderOpen, X, Plus } from 'lucide-react-native'
+import { Camera, FileText, ChevronRight, ChevronLeft, Bike, FolderOpen, X, Plus, Pencil } from 'lucide-react-native'
 import { useVehicle } from '../../src/context/VehicleContext'
 import { useTheme } from '../../src/context/ThemeContext'
 import { useLanguage } from '../../src/context/LanguageContext'
+import { BrandLogo } from '../../src/components/common/BrandLogo'
+import { ConfirmationModal } from '../../src/components/common/ConfirmationModal'
 
 // Styles definition
 const styles = StyleSheet.create({
-    // Modal Styles
-    vehicleChip: {
-        marginRight: 8,
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 9999,
+    container: {
+        flex: 1,
+        backgroundColor: '#FDFCF8',
+    },
+    containerDark: {
+        backgroundColor: '#1C1C1E',
+    },
+    title: {
+        fontFamily: 'Outfit_700Bold',
+        fontSize: 32,
+        color: '#1C1C1E',
+    },
+    titleDark: {
+        color: '#FDFCF8',
+    },
+    // Modal Overlay
+    modalOverlay: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        backgroundColor: 'rgba(28, 28, 30, 0.4)', // Warm overlay
+    },
+    modalContent: {
+        borderTopWidth: 1,
+        borderTopColor: '#E6E5E0',
+        padding: 24,
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
+        maxHeight: '90%',
+        backgroundColor: '#FFFFFF',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 10,
+    },
+    modalContentDark: {
+        backgroundColor: '#2C2C2E',
+        borderColor: '#3A3A3C',
+        borderTopColor: '#3A3A3C',
+    },
+    // Vehicle Selection in Modal
+    vehicleSelector: {
+        padding: 16,
+        borderRadius: 14,
         borderWidth: 1,
-        backgroundColor: '#F1F5F9',
-        borderColor: '#E2E8F0',
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 16,
+        backgroundColor: '#F5F5F0',
+        borderColor: '#E6E5E0',
     },
-    vehicleChipSelected: {
-        backgroundColor: '#3B82F6',
-        borderColor: '#3B82F6',
+    vehicleSelectorDark: {
+        backgroundColor: '#323234',
+        borderColor: '#3A3A3C',
     },
-    vehicleChipDark: {
-        backgroundColor: '#334155',
-        borderColor: '#475569',
+    // Inputs
+    input: {
+        padding: 16,
+        borderRadius: 14,
+        marginBottom: 16,
+        fontSize: 16,
+        borderWidth: 1,
+        backgroundColor: '#F5F5F0',
+        borderColor: '#E6E5E0',
+        fontFamily: 'WorkSans_400Regular',
+        color: '#1C1C1E',
     },
+    inputDark: {
+        backgroundColor: '#323234',
+        color: '#F8FAFC',
+        borderColor: '#3A3A3C',
+    },
+    // Buttons
     typeButton: {
-        paddingHorizontal: 12,
-        paddingVertical: 8,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
         borderRadius: 12,
         borderWidth: 1,
-        backgroundColor: '#F1F5F9',
-        borderColor: 'rgba(226, 232, 240, 0.5)',
+        backgroundColor: '#FFFFFF',
+        borderColor: '#E6E5E0',
+        marginRight: 8,
+        marginBottom: 8,
     },
     typeButtonDark: {
-        backgroundColor: '#334155',
-        borderColor: 'rgba(51, 65, 85, 0.5)',
+        backgroundColor: '#2C2C2E',
+        borderColor: '#3A3A3C',
     },
     typeButtonSelected: {
-        backgroundColor: '#3B82F6',
-        borderColor: '#3B82F6',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
+        backgroundColor: '#1C1C1E', // Dark Stone
+        borderColor: '#1C1C1E',
     },
+    typeButtonSelectedDark: {
+        backgroundColor: '#FDFCF8',
+        borderColor: '#FDFCF8',
+    },
+    typeText: {
+        fontFamily: 'WorkSans_500Medium',
+        fontSize: 14,
+        color: '#666660',
+    },
+    typeTextDark: {
+        color: '#9CA3AF',
+    },
+    typeTextSelected: {
+        color: '#FFFFFF',
+    },
+    typeTextSelectedDark: {
+        color: '#1C1C1E',
+    },
+
     cameraButton: {
-        backgroundColor: '#F1F5F9',
-        borderWidth: 2,
-        borderColor: '#E2E8F0',
+        backgroundColor: '#F5F5F0',
+        borderWidth: 1,
+        borderColor: '#E6E5E0',
         borderStyle: 'dashed',
         padding: 32,
         borderRadius: 16,
@@ -64,25 +137,31 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     cameraButtonDark: {
-        backgroundColor: '#334155',
-        borderColor: '#475569',
+        backgroundColor: '#323234',
+        borderColor: '#3A3A3C',
     },
     submitButton: {
-        backgroundColor: '#3B82F6',
-        padding: 16,
-        borderRadius: 12,
+        backgroundColor: '#1C1C1E', // Dark Stone
+        padding: 20,
+        borderRadius: 14,
         alignItems: 'center',
         marginBottom: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+    },
+    submitButtonDark: {
+        backgroundColor: '#FDFCF8',
+    },
+    submitButtonText: {
+        color: '#FFFFFF',
+        fontFamily: 'Outfit_700Bold',
+        fontSize: 18,
+    },
+    submitButtonTextDark: {
+        color: '#1C1C1E',
     },
     deleteButton: {
-        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        backgroundColor: 'transparent',
         borderWidth: 1,
-        borderColor: 'rgba(239, 68, 68, 0.5)',
+        borderColor: '#BA4444',
         padding: 16,
         borderRadius: 12,
         alignItems: 'center',
@@ -95,113 +174,124 @@ const styles = StyleSheet.create({
     },
     // Screen Styles
     addButton: {
-        backgroundColor: '#3B82F6',
-        padding: 8,
-        borderRadius: 9999,
-        width: 40,
-        height: 40,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: '#3B82F6',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
-    },
-    backButton: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#1C1C1E',
         padding: 8,
         borderRadius: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(226, 232, 240, 0.5)',
-        marginRight: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
+        width: 44,
+        height: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
-    backButtonDark: {
-        backgroundColor: '#1E293B',
-        borderColor: 'rgba(51, 65, 85, 0.5)',
+    addButtonDark: {
+        backgroundColor: '#FDFCF8',
     },
+
     docItem: {
         backgroundColor: '#FFFFFF',
         padding: 16,
         borderRadius: 16,
         marginBottom: 12,
         borderWidth: 1,
-        borderColor: 'rgba(226, 232, 240, 0.5)',
+        borderColor: '#E6E5E0',
         flexDirection: 'row',
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
+        shadowColor: 'transparent',
     },
     docItemDark: {
-        backgroundColor: '#1E293B',
-        borderColor: 'rgba(51, 65, 85, 0.5)',
+        backgroundColor: '#2C2C2E',
+        borderColor: '#3A3A3C',
     },
     docIconContainer: {
-        width: 56,
-        height: 56,
-        backgroundColor: '#F1F5F9', // surface-highlight
+        width: 48,
+        height: 48,
+        backgroundColor: '#F5F5F0',
         borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 16,
-        borderWidth: 1,
-        borderColor: 'rgba(226, 232, 240, 0.5)',
-        overflow: 'hidden',
     },
     docIconContainerDark: {
-        backgroundColor: '#334155',
-        borderColor: 'rgba(51, 65, 85, 0.5)',
+        backgroundColor: '#3A3A3C',
     },
     vehicleCard: {
         backgroundColor: '#FFFFFF',
-        padding: 24,
+        padding: 20,
         borderRadius: 16,
         marginBottom: 16,
         borderWidth: 1,
-        borderColor: 'rgba(226, 232, 240, 0.5)',
+        borderColor: '#E6E5E0',
         flexDirection: 'row',
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
     },
     vehicleCardDark: {
-        backgroundColor: '#1E293B',
-        borderColor: 'rgba(51, 65, 85, 0.5)',
+        backgroundColor: '#2C2C2E',
+        borderColor: '#3A3A3C',
+    },
+    vehicleIconContainer: {
+        width: 56,
+        height: 56,
+        borderRadius: 9999,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 16,
+        backgroundColor: '#F5F5F0',
+    },
+    vehicleIconContainerDark: {
+        backgroundColor: '#3A3A3C',
+    },
+    vehicleIndicator: {
+        backgroundColor: '#F5F5F0', // Light Stone
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        borderRadius: 9999,
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#E6E5E0'
+    },
+    vehicleIndicatorDark: {
+        backgroundColor: '#FDFCF8',
     },
     previewOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.9)',
+        backgroundColor: 'rgba(28, 28, 30, 0.95)',
         alignItems: 'center',
         justifyContent: 'center',
         padding: 16,
     },
     previewCloseButton: {
         position: 'absolute',
-        top: 48,
+        top: 60,
         right: 24,
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        padding: 8,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        padding: 12,
         borderRadius: 9999,
-    }
+    },
+    // No documents state
+    emptyStateIcon: {
+        backgroundColor: '#F5F5F0',
+        padding: 24,
+        borderRadius: 9999,
+        marginBottom: 24,
+    },
+    emptyStateIconDark: {
+        backgroundColor: '#2C2C2E',
+    },
+    sectionTitle: {
+        fontSize: 12,
+        fontFamily: 'Outfit_700Bold',
+        color: '#666660',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        marginBottom: 12,
+    },
+    sectionTitleDark: {
+        color: '#9CA3AF',
+    },
 });
 
-
-
 // Document Modal Component
-const DocumentModal = ({ visible, onClose, document, vehicles }: { visible: boolean, onClose: () => void, document?: Document | null, vehicles: Vehicle[] }) => {
+const DocumentModal = ({ visible, onClose, onPreview, document, vehicles }: { visible: boolean, onClose: () => void, onPreview: (uri: string) => void, document?: Document | null, vehicles: Vehicle[] }) => {
     const { selectedVehicleId } = useVehicle()
     const { t, language } = useLanguage()
     const { isDark } = useTheme()
@@ -210,6 +300,31 @@ const DocumentModal = ({ visible, onClose, document, vehicles }: { visible: bool
     const [expiryDate, setExpiryDate] = useState('')
     const [localUri, setLocalUri] = useState<string | null>(null)
     const [vehicleId, setVehicleId] = useState('')
+
+    // Alert state
+    const [alertVisible, setAlertVisible] = useState(false)
+    const [alertTitle, setAlertTitle] = useState('')
+    const [alertMessage, setAlertMessage] = useState('')
+    const [alertOnConfirm, setAlertOnConfirm] = useState<(() => void) | undefined>()
+    const [alertConfirmText, setAlertConfirmText] = useState<string | undefined>()
+    const [alertVariant, setAlertVariant] = useState<'default' | 'danger'>('default')
+
+    const showAlert = (
+        title: string,
+        message: string,
+        options?: {
+            onConfirm?: () => void;
+            confirmText?: string;
+            variant?: 'default' | 'danger';
+        }
+    ) => {
+        setAlertTitle(title)
+        setAlertMessage(message)
+        setAlertOnConfirm(() => options?.onConfirm || (() => setAlertVisible(false)))
+        setAlertConfirmText(options?.confirmText)
+        setAlertVariant(options?.variant || 'default')
+        setAlertVisible(true)
+    }
 
     React.useEffect(() => {
         if (visible) {
@@ -243,17 +358,15 @@ const DocumentModal = ({ visible, onClose, document, vehicles }: { visible: bool
 
     const handleSubmit = async () => {
         if (!title || !vehicleId) {
-            Alert.alert(t('alert.error'), 'Title and Vehicle are required')
+            showAlert(t('alert.error'), 'Title and Vehicle are required')
             return
         }
 
         const expiry = expiryDate ? new Date(expiryDate) : null
 
         if (document) {
-            // updateDocument: (document, title, expiryDate, filePath, type?)
             await DocumentService.updateDocument(document, title, expiry, localUri, type)
         } else {
-            // createDocument: (title, type, expiryDate, filePath, vehicleId?)
             await DocumentService.createDocument(title, type, expiry, localUri, vehicleId)
         }
         onClose()
@@ -269,29 +382,32 @@ const DocumentModal = ({ visible, onClose, document, vehicles }: { visible: bool
         { id: 'other', label: t('wallet.type.other') },
     ] as const
 
+    const vehicleSelectorStyle = isDark ? styles.vehicleSelectorDark : styles.vehicleSelector
+    const inputStyle = isDark ? styles.inputDark : styles.input
+
     return (
         <Modal visible={visible} animationType="slide" transparent>
-            <View className="flex-1 justify-end bg-black/50">
-                <View className="bg-surface p-6 rounded-t-3xl border-t border-border/50 shadow-lg max-h-[90%]">
-                    <Text className="text-2xl font-heading text-text mb-6">
+            <Pressable style={styles.modalOverlay} onPress={onClose}>
+                <Pressable onPress={(e) => e.stopPropagation()} style={[styles.modalContent, isDark && styles.modalContentDark]}>
+                    <Text style={[styles.title, isDark && styles.titleDark, { fontSize: 24, marginBottom: 24 }]}>
                         {document ? t('wallet.modal.edit_title') : t('wallet.modal.add_title')}
                     </Text>
 
                     <ScrollView showsVerticalScrollIndicator={false}>
-                        <View className="mb-4">
-                            <Text className="text-text-secondary text-xs uppercase mb-2 tracking-wider">{t('maintenance.select_vehicle')}</Text>
-                            <View className="bg-surface-highlight p-4 rounded-xl border border-border flex-row items-center opacity-80">
-                                <Bike size={20} color={isDark ? "#EAB308" : "#3B82F6"} />
-                                <Text className="text-text font-heading ml-3">
-                                    {vehicleId 
+                        <View style={{ marginBottom: 16 }}>
+                            <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>{t('maintenance.select_vehicle')}</Text>
+                            <View style={[styles.vehicleSelector, vehicleSelectorStyle]}>
+                                <Bike size={24} color={isDark ? "#E5E5E0" : "#1C1C1E"} />
+                                <Text style={{ fontFamily: 'WorkSans_500Medium', fontSize: 16, marginLeft: 12, color: isDark ? '#FDFCF8' : '#1C1C1E' }}>
+                                    {vehicleId
                                         ? `${vehicles.find(v => v.id === vehicleId)?.brand} ${vehicles.find(v => v.id === vehicleId)?.model}`
                                         : (language === 'fr' ? 'Sélectionner un véhicule' : 'Select a vehicle')}
                                 </Text>
                             </View>
                         </View>
 
-                        <Text className="text-text-secondary text-xs uppercase mb-2 tracking-wider">{t('wallet.modal.type')}</Text>
-                        <View className="flex-row flex-wrap gap-2 mb-4">
+                        <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>{t('wallet.modal.type')}</Text>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 24 }}>
                             {docTypes.map((dt) => (
                                 <Pressable
                                     key={dt.id}
@@ -299,10 +415,14 @@ const DocumentModal = ({ visible, onClose, document, vehicles }: { visible: bool
                                     style={[
                                         styles.typeButton,
                                         isDark && styles.typeButtonDark,
-                                        type === dt.id && styles.typeButtonSelected
+                                        type === dt.id && (isDark ? styles.typeButtonSelectedDark : styles.typeButtonSelected)
                                     ]}
                                 >
-                                    <Text className={`font-heading text-xs ${type === dt.id ? 'text-white' : 'text-text-secondary'}`}>{dt.label}</Text>
+                                    <Text style={[
+                                        styles.typeText,
+                                        isDark && styles.typeTextDark,
+                                        type === dt.id && (isDark ? styles.typeTextSelectedDark : styles.typeTextSelected)
+                                    ]}>{dt.label}</Text>
                                 </Pressable>
                             ))}
                         </View>
@@ -310,7 +430,7 @@ const DocumentModal = ({ visible, onClose, document, vehicles }: { visible: bool
                         <TextInput
                             placeholder={t('wallet.field.title')}
                             placeholderTextColor="#9CA3AF"
-                            className="bg-surface-highlight text-text p-4 rounded-xl mb-4 text-lg border border-border"
+                            style={[styles.input, inputStyle]}
                             value={title}
                             onChangeText={setTitle}
                         />
@@ -318,27 +438,38 @@ const DocumentModal = ({ visible, onClose, document, vehicles }: { visible: bool
                         <TextInput
                             placeholder={t('wallet.field.expiry')}
                             placeholderTextColor="#9CA3AF"
-                            className="bg-surface-highlight text-text p-4 rounded-xl mb-4 text-lg border border-border"
+                            style={[styles.input, inputStyle]}
                             value={expiryDate}
                             onChangeText={setExpiryDate}
                         />
 
-                        <Pressable
-                            onPress={pickImage}
-                            style={[styles.cameraButton, isDark && styles.cameraButtonDark]}
-                        >
-                            {localUri ? (
-                                <Image source={{ uri: localUri }} className="w-full h-40 rounded-xl" />
-                            ) : (
-                                <>
-                                    <Camera size={32} color="#9CA3AF" />
-                                    <Text className="text-text-secondary font-body mt-2 font-medium">{t('wallet.field.attach_photo')}</Text>
-                                </>
-                            )}
-                        </Pressable>
+                        {/* Disable file modification in edit mode */}
+                        {!document && (
+                            <Pressable
+                                onPress={pickImage}
+                                style={[styles.cameraButton, isDark && styles.cameraButtonDark]}
+                            >
+                                {localUri ? (
+                                    <Image source={{ uri: localUri }} style={{ width: '100%', height: 160, borderRadius: 12 }} />
+                                ) : (
+                                    <>
+                                        <Camera size={32} color="#9CA3AF" />
+                                        <Text style={{ fontFamily: 'WorkSans_400Regular', color: '#666660', marginTop: 8 }}>{t('wallet.field.attach_photo')}</Text>
+                                    </>
+                                )}
+                            </Pressable>
+                        )}
+                        {document && localUri && (
+                            <Pressable
+                                onPress={() => onPreview(localUri)}
+                                style={[styles.cameraButton, isDark && styles.cameraButtonDark, { opacity: 0.8 }]} // Increased opacity for better visibility
+                            >
+                                <Image source={{ uri: localUri }} style={{ width: '100%', height: 250, borderRadius: 12 }} resizeMode="contain" />
+                            </Pressable>
+                        )}
 
-                        <Pressable onPress={handleSubmit} style={styles.submitButton}>
-                            <Text className="text-white font-heading text-lg">
+                        <Pressable onPress={handleSubmit} style={[styles.submitButton, isDark && styles.submitButtonDark]}>
+                            <Text style={[styles.submitButtonText, isDark && styles.submitButtonTextDark]}>
                                 {document ? t('common.save') : t('wallet.modal.add_title')}
                             </Text>
                         </Pressable>
@@ -346,32 +477,115 @@ const DocumentModal = ({ visible, onClose, document, vehicles }: { visible: bool
                         {document && (
                             <Pressable
                                 onPress={() => {
-                                    Alert.alert(
+                                    const isMaintenanceDoc = !!document.logId
+                                    showAlert(
                                         t('wallet.modal.delete_confirm_title'),
-                                        t('wallet.modal.delete_confirm_desc'),
-                                        [
-                                            { text: t('common.cancel'), style: 'cancel' },
-                                            {
-                                                text: t('common.delete'), style: 'destructive', onPress: async () => {
-                                                    await DocumentService.deleteDocument(document)
-                                                    onClose()
-                                                }
+                                        isMaintenanceDoc
+                                            ? t('wallet.modal.delete_confirm_desc_maintenance')
+                                            : t('wallet.modal.delete_confirm_desc'),
+                                        {
+                                            confirmText: t('common.delete'),
+                                            variant: 'danger',
+                                            onConfirm: async () => {
+                                                await DocumentService.deleteDocument(document)
+                                                setAlertVisible(false)
+                                                onClose()
                                             }
-                                        ]
+                                        }
                                     )
                                 }}
                                 style={styles.deleteButton}
                             >
-                                <Text className="text-red-500 font-bold text-lg">{t('wallet.modal.delete')}</Text>
+                                <Text style={{ fontFamily: 'Outfit_700Bold', color: '#BA4444', fontSize: 16 }}>{t('wallet.modal.delete')}</Text>
                             </Pressable>
                         )}
 
                         <Pressable onPress={onClose} style={styles.cancelButton}>
-                            <Text className="text-text-secondary font-bold">{t('common.cancel')}</Text>
+                            <Text style={{ fontFamily: 'WorkSans_500Medium', color: '#666660' }}>{t('common.cancel')}</Text>
                         </Pressable>
                     </ScrollView>
-                </View>
-            </View>
+                </Pressable>
+            </Pressable>
+
+            <ConfirmationModal
+                visible={alertVisible}
+                title={alertTitle}
+                description={alertMessage}
+                onConfirm={alertOnConfirm || (() => setAlertVisible(false))}
+                onCancel={() => setAlertVisible(false)}
+                confirmText={alertConfirmText || t('common.ok')}
+                variant={alertVariant}
+            />
+        </Modal>
+    )
+}
+
+const DocumentViewModal = ({ visible, onClose, onEdit, onPreview, document }: { visible: boolean, onClose: () => void, onEdit: () => void, onPreview: () => void, document: Document | null }) => {
+    const { t, language } = useLanguage()
+    const { isDark } = useTheme()
+
+    if (!document) return null
+
+    return (
+        <Modal visible={visible} animationType="fade" transparent>
+            <Pressable style={styles.modalOverlay} onPress={onClose}>
+                <Pressable onPress={(e) => e.stopPropagation()} style={[styles.modalContent, isDark && styles.modalContentDark, { height: '80%' }]}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                        <Text style={[styles.title, isDark && styles.titleDark, { fontSize: 24, flex: 1, marginRight: 16 }]} numberOfLines={1}>
+                            {document.reference || t('wallet.document.untitled')}
+                        </Text>
+                        <Pressable
+                            onPress={onEdit}
+                            style={[styles.addButton, isDark && styles.addButtonDark, { width: 44, height: 44, borderRadius: 12 }]}
+                        >
+                            <Pencil size={20} color={isDark ? "#1C1C1E" : "#FFFFFF"} />
+                        </Pressable>
+                    </View>
+
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                        <View style={{ alignItems: 'center', marginBottom: 24 }}>
+                            {document.localUri ? (
+                                <Pressable onPress={onPreview} style={{ width: '100%' }}>
+                                    <Image
+                                        source={{ uri: document.localUri }}
+                                        style={{ width: '100%', height: 400, borderRadius: 16, backgroundColor: isDark ? '#323234' : '#F5F5F0' }}
+                                        resizeMode="contain"
+                                    />
+                                </Pressable>
+                            ) : (
+                                <View style={{ width: '100%', height: 200, alignItems: 'center', justifyContent: 'center', backgroundColor: isDark ? '#323234' : '#F5F5F0', borderRadius: 16 }}>
+                                    <FileText size={48} color="#9CA3AF" />
+                                    <Text style={{ fontFamily: 'WorkSans_400Regular', color: '#666660', marginTop: 16 }}>{t('wallet.document.no_image')}</Text>
+                                </View>
+                            )}
+                        </View>
+
+                        <View style={{ gap: 20, paddingBottom: 40 }}>
+                            <View>
+                                <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>{t('wallet.modal.type')}</Text>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#323234' : '#F5F5F0', padding: 12, borderRadius: 12, alignSelf: 'flex-start' }}>
+                                    <Text style={{ fontFamily: 'WorkSans_500Medium', fontSize: 16, color: isDark ? '#FDFCF8' : '#1C1C1E' }}>
+                                        {t(`wallet.type.${document.type}`)}
+                                    </Text>
+                                </View>
+                            </View>
+
+                            {document.expiryDate && (
+                                <View>
+                                    <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>{t('wallet.field.expiry')}</Text>
+                                    <Text style={{ fontFamily: 'WorkSans_500Medium', fontSize: 18, color: '#BA4444' }}>
+                                        {document.expiryDate.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US')}
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
+                    </ScrollView>
+
+                    <Pressable onPress={onClose} style={[styles.submitButton, isDark && styles.submitButtonDark, { backgroundColor: isDark ? '#323234' : '#F5F5F0', marginTop: 16 }]}>
+                        <Text style={{ fontFamily: 'WorkSans_500Medium', fontSize: 16, color: isDark ? '#FDFCF8' : '#1C1C1E' }}>{t('common.close')}</Text>
+                    </Pressable>
+                </Pressable>
+            </Pressable>
         </Modal>
     )
 }
@@ -381,7 +595,9 @@ const WalletScreen = ({ documents, vehicles }: { documents: Document[], vehicles
     const { isDark } = useTheme()
     const { t, language } = useLanguage()
     const [modalVisible, setModalVisible] = useState(false)
+    const [viewModalVisible, setViewModalVisible] = useState(false)
     const [editingDoc, setEditingDoc] = useState<Document | null>(null)
+    const [viewingDoc, setViewingDoc] = useState<Document | null>(null)
     const [previewImage, setPreviewImage] = useState<string | null>(null)
 
     // Reactive filtering: Show NOTHING if no vehicle is selected (Focus Mode)
@@ -397,26 +613,25 @@ const WalletScreen = ({ documents, vehicles }: { documents: Document[], vehicles
         <Pressable
             key={item.id}
             onPress={() => {
-                setEditingDoc(item)
-                setModalVisible(true)
+                setViewingDoc(item)
+                setViewModalVisible(true)
             }}
             style={[styles.docItem, isDark && styles.docItemDark]}
         >
-            <Pressable
-                onPress={() => item.localUri && setPreviewImage(item.localUri)}
+            <View
                 style={[styles.docIconContainer, isDark && styles.docIconContainerDark]}
             >
                 {item.localUri ? (
-                    <Image source={{ uri: item.localUri }} className="w-full h-full" />
+                    <Image source={{ uri: item.localUri }} style={{ width: '100%', height: '100%', borderRadius: 8 }} />
                 ) : (
-                    <FileText size={24} color="#9CA3AF" />
+                    <FileText size={20} color="#9CA3AF" />
                 )}
-            </Pressable>
-            <View className="flex-1">
-                <Text className="text-text font-heading text-lg" numberOfLines={1}>{item.reference || t('wallet.document.untitled')}</Text>
-                <Text className="text-text-secondary font-body text-xs uppercase font-medium">{t(`wallet.type.${item.type}`)}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+                <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 18, color: isDark ? '#FDFCF8' : '#1C1C1E', marginBottom: 2 }} numberOfLines={1}>{item.reference || t('wallet.document.untitled')}</Text>
+                <Text style={{ fontFamily: 'WorkSans_500Medium', fontSize: 12, color: '#666660', textTransform: 'uppercase' }}>{t(`wallet.type.${item.type}`)}</Text>
                 {item.expiryDate && (
-                    <Text className="text-red-400 font-body text-[10px] mt-1 font-bold">
+                    <Text style={{ fontFamily: 'WorkSans_500Medium', fontSize: 12, color: '#BA4444', marginTop: 4 }}>
                         {t('wallet.document.expires')}: {item.expiryDate.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US')}
                     </Text>
                 )}
@@ -426,20 +641,20 @@ const WalletScreen = ({ documents, vehicles }: { documents: Document[], vehicles
     )
 
     return (
-        <SafeAreaView className="flex-1 bg-background">
+        <SafeAreaView style={[styles.container, isDark && styles.containerDark]} edges={['top']}>
             <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-            <View className="flex-1 p-6">
+            <View style={{ flex: 1, padding: 24 }}>
                 {/* Header Contextuel */}
-                <View className="flex-row justify-between items-center mb-6">
-                    <Text className="text-3xl font-heading text-text">
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                    <Text style={[styles.title, isDark && styles.titleDark]}>
                         {selectedVehicleId ? t('wallet.title') : t('wallet.select_bike_title')}
                     </Text>
                     {selectedVehicleId && (
                         <Pressable
                             onPress={() => setModalVisible(true)}
-                            style={styles.addButton}
+                            style={[styles.addButton, isDark && styles.addButtonDark]}
                         >
-                            <Plus size={24} color="white" />
+                            <Plus size={24} color={isDark ? "#1C1C1E" : "#FFFFFF"} />
                         </Pressable>
                     )}
                 </View>
@@ -447,10 +662,15 @@ const WalletScreen = ({ documents, vehicles }: { documents: Document[], vehicles
                 {selectedVehicleId ? (
                     <>
                         {/* Vehicle Indicator (Dashboard Style) */}
-                        <View className="mb-6 items-start">
-                            <View className="bg-primary px-5 py-3 rounded-full flex-row items-center shadow-sm">
-                                <Bike size={20} color="white" />
-                                <Text className="text-white font-heading text-base ml-3">
+                        <View style={{ marginBottom: 24, alignItems: 'flex-start' }}>
+                            <View style={[styles.vehicleIndicator, isDark && styles.vehicleIndicatorDark, { gap: 8 }]}>
+                                <BrandLogo
+                                    brand={vehicles.find(v => v.id === selectedVehicleId)?.brand || ''}
+                                    variant="icon"
+                                    size={20}
+                                    color={isDark ? '#1C1C1E' : '#1C1C1E'}
+                                />
+                                <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 16, color: '#1C1C1E' }}>
                                     {vehicles.find(v => v.id === selectedVehicleId)?.brand} {vehicles.find(v => v.id === selectedVehicleId)?.model}
                                 </Text>
                             </View>
@@ -458,57 +678,79 @@ const WalletScreen = ({ documents, vehicles }: { documents: Document[], vehicles
 
                         <ScrollView showsVerticalScrollIndicator={false}>
                             {legalDocs.length > 0 && (
-                                <View className="mb-6">
-                                    <Text className="text-text-secondary text-xs uppercase mb-3 tracking-widest font-bold">{t('wallet.section.legal')}</Text>
+                                <View style={{ marginBottom: 24 }}>
+                                    <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>{t('wallet.section.legal')}</Text>
                                     {legalDocs.map(renderDocItem)}
                                 </View>
                             )}
 
                             {historyDocs.length > 0 && (
-                                <View className="mb-6">
-                                    <Text className="text-text-secondary text-xs uppercase mb-3 tracking-widest font-bold">{t('wallet.section.history')}</Text>
+                                <View style={{ marginBottom: 24 }}>
+                                    <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>{t('wallet.section.history')}</Text>
                                     {historyDocs.map(renderDocItem)}
                                 </View>
                             )}
 
                             {filteredDocs.length === 0 && (
-                                <View className="items-center justify-center py-20 px-10">
-                                    <View className="bg-surface-highlight w-20 h-20 rounded-full items-center justify-center mb-6 shadow-sm">
+                                <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 80, paddingHorizontal: 40 }}>
+                                    <View style={[styles.emptyStateIcon, isDark && styles.emptyStateIconDark]}>
                                         <FolderOpen size={40} color="#9CA3AF" />
                                     </View>
-                                    <Text className="text-text font-heading text-xl text-center mb-2">{t('wallet.no_documents')}</Text>
-                                    <Text className="text-text-secondary font-body text-center text-lg">{t('wallet.no_documents_desc')}</Text>
+                                    <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 20, color: isDark ? '#FDFCF8' : '#1C1C1E', textAlign: 'center', marginBottom: 8 }}>{t('wallet.no_documents')}</Text>
+                                    <Text style={{ fontFamily: 'WorkSans_400Regular', fontSize: 16, color: '#666660', textAlign: 'center' }}>{t('wallet.no_documents_desc')}</Text>
                                 </View>
                             )}
                         </ScrollView>
                     </>
                 ) : (
                     <ScrollView showsVerticalScrollIndicator={false}>
-                        <Text className="text-text-secondary mb-6 text-lg">{t('wallet.select_bike_desc_full')}</Text>
+                        <Text style={{ fontFamily: 'WorkSans_400Regular', fontSize: 18, color: '#666660', marginBottom: 24 }}>{t('wallet.select_bike_desc_full')}</Text>
                         {vehicles.map(v => (
                             <Pressable
                                 key={v.id}
                                 onPress={() => setSelectedVehicleId(v.id)}
                                 style={[styles.vehicleCard, isDark && styles.vehicleCardDark]}
                             >
-                                <View className="bg-primary/10 w-14 h-14 rounded-full items-center justify-center mr-4">
-                                    <Bike size={30} color="#EAB308" />
+                                <View style={[styles.vehicleIconContainer, isDark && styles.vehicleIconContainerDark]}>
+                                    <BrandLogo brand={v.brand} variant="icon" size={24} color={isDark ? '#FDFCF8' : '#1C1C1E'} />
                                 </View>
-                                <View className="flex-1">
-                                    <Text className="text-text font-heading text-xl">{v.brand} {v.model}</Text>
-                                    <Text className="text-text-secondary font-body text-sm">{v.year} • {v.currentMileage.toLocaleString()} km</Text>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 18, color: isDark ? '#FDFCF8' : '#1C1C1E' }}>{v.brand} {v.model}</Text>
+                                    <Text style={{ fontFamily: 'WorkSans_400Regular', fontSize: 14, color: '#666660' }}>{v.year} • {v.currentMileage.toLocaleString()} km</Text>
                                 </View>
-                                <ChevronRight size={24} color="#9CA3AF" />
+                                <ChevronRight size={20} color="#9CA3AF" />
                             </Pressable>
                         ))}
                         {vehicles.length === 0 && (
-                            <View className="items-center justify-center py-20">
+                            <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 80 }}>
                                 <Bike size={60} color="#9CA3AF" />
-                                <Text className="text-text-secondary font-body mt-4 text-center">{t('garage.no_vehicles')}</Text>
+                                <Text style={{ fontFamily: 'WorkSans_400Regular', fontSize: 16, color: '#666660', marginTop: 16, textAlign: 'center' }}>{t('garage.no_vehicles')}</Text>
                             </View>
                         )}
                     </ScrollView>
                 )}
+
+                <DocumentViewModal
+                    visible={viewModalVisible}
+                    onClose={() => {
+                        setViewModalVisible(false)
+                        setViewingDoc(null)
+                    }}
+                    onEdit={() => {
+                        setViewModalVisible(false)
+                        // Slight delay to allow modal transition
+                        setTimeout(() => {
+                            setEditingDoc(viewingDoc)
+                            setModalVisible(true)
+                        }, 100)
+                    }}
+                    onPreview={() => {
+                        if (viewingDoc?.localUri) {
+                            setPreviewImage(viewingDoc.localUri)
+                        }
+                    }}
+                    document={viewingDoc}
+                />
 
                 <DocumentModal
                     visible={modalVisible}
@@ -516,6 +758,7 @@ const WalletScreen = ({ documents, vehicles }: { documents: Document[], vehicles
                         setModalVisible(false)
                         setEditingDoc(null)
                     }}
+                    onPreview={(uri) => setPreviewImage(uri)}
                     document={editingDoc}
                     vehicles={vehicles}
                 />
@@ -525,12 +768,12 @@ const WalletScreen = ({ documents, vehicles }: { documents: Document[], vehicles
                     <Modal visible={!!previewImage} transparent animationType="fade">
                         <View style={styles.previewOverlay}>
                             <Pressable
-                                className="w-full h-full justify-center items-center"
+                                style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}
                                 onPress={() => setPreviewImage(null)}
                             >
                                 <Image
                                     source={{ uri: previewImage }}
-                                    className="w-full h-[80%] rounded-2xl"
+                                    style={{ width: '100%', height: '80%', borderRadius: 16 }}
                                     resizeMode="contain"
                                 />
                             </Pressable>
@@ -538,7 +781,7 @@ const WalletScreen = ({ documents, vehicles }: { documents: Document[], vehicles
                                 onPress={() => setPreviewImage(null)}
                                 style={styles.previewCloseButton}
                             >
-                                <X size={30} color="white" />
+                                <X size={24} color="#FFFFFF" />
                             </Pressable>
                         </View>
                     </Modal>

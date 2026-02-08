@@ -7,27 +7,30 @@ module.exports = {
     extend: {
       colors: {
         // Semantic colors that adapt to theme
-        background: 'var(--color-background)', // #F8FAFC
+        background: 'var(--color-background)',
         surface: 'var(--color-surface)',
         'surface-highlight': 'var(--color-surface-highlight)',
-        text: 'var(--color-text)', // #1E293B
+        text: 'var(--color-text-primary)',
         'text-secondary': 'var(--color-text-secondary)',
         border: 'var(--color-border)',
+        success: 'var(--color-success)',
+        error: 'var(--color-error)', // Renamed from danger
 
-        // Brand colors
-        primary: '#3B82F6', // Blue-500
-        secondary: '#60A5FA', // Blue-400
-        cta: '#F97316', // Orange-500
+        // Brand colors (Dynamic now)
+        primary: 'var(--color-primary)',
+        accent: 'var(--color-accent)',
+        secondary: 'var(--color-text-secondary)', // Mapping secondary to text-secondary for now
       },
       fontFamily: {
         heading: ['Outfit_700Bold'],
         body: ['WorkSans_400Regular'],
+        mono: ['SpaceMono'],
       },
       boxShadow: {
         sm: '0 1px 2px rgba(0,0,0,0.05)',
-        md: '0 4px 6px rgba(0,0,0,0.1)',
-        lg: '0 10px 15px rgba(0,0,0,0.1)',
-        xl: '0 20px 25px rgba(0,0,0,0.15)',
+        md: '0 4px 6px rgba(0,0,0,0.05)', // Softer shadows
+        lg: '0 10px 15px rgba(0,0,0,0.05)',
+        'card': '0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05)', // Minimalist
       }
     },
   },

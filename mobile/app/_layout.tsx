@@ -41,7 +41,8 @@ function RootLayoutNav() {
             } else if (user) {
                 // If user is logged in, and we are either in auth, or at root, or not in tabs/onboarding/intro
                 // properly route them.
-                const needsRouting = inAuthGroup || segments[0] === 'intro' || (!isOnboarding && segments[0] !== '(tabs)')
+                const inLegalGroup = segments[0] === 'legal'
+                const needsRouting = inAuthGroup || segments[0] === 'intro' || (!isOnboarding && !inLegalGroup && segments[0] !== '(tabs)')
 
                 if (needsRouting) {
                     setIsNavigating(true)
@@ -86,6 +87,7 @@ function RootLayoutNav() {
             <Stack.Screen name="auth" options={{ headerShown: false }} />
             <Stack.Screen name="onboarding" options={{ headerShown: false }} />
             <Stack.Screen name="intro" options={{ headerShown: false }} />
+            <Stack.Screen name="legal" options={{ headerShown: false }} />
         </Stack>
     )
 }
@@ -118,7 +120,9 @@ export default function RootLayout() {
         <AuthProvider>
             <LanguageProvider>
                 <ThemeProvider>
-                    <RootLayoutNav />
+                    <VehicleProvider>
+                        <RootLayoutNav />
+                    </VehicleProvider>
                 </ThemeProvider>
             </LanguageProvider>
         </AuthProvider>

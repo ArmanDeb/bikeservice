@@ -1,8 +1,6 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import {
-    documentDirectory,
-    cacheDirectory,
     readAsStringAsync,
     EncodingType,
     getInfoAsync,
@@ -13,8 +11,41 @@ import Vehicle from '../database/models/Vehicle';
 import MaintenanceLog from '../database/models/MaintenanceLog';
 import Document from '../database/models/Document';
 import { Alert, Platform } from 'react-native';
+import { BRAND_LOGOS } from '../data/brandLogos';
 
 const SAVED_DIRECTORY_KEY = '@BikeService:savedPdfDirectory';
+
+/**
+ * Helper to get data URI for brand logo
+ * Uses simple URL encoding for maximum compatibility and minimal risk of encoding errors.
+ */
+const getBrandLogoUri = (brand: string): string | null => {
+    if (!brand) return null;
+
+    try {
+        // Normalize to match keys in brandLogos.ts (snake_case)
+        let key = brand.toLowerCase().trim().replace(/\s+/g, '_').replace(/-/g, '_');
+
+        // Handle aliases
+        if (key === 'harley') key = 'harley_davidson';
+
+        const svgContent = BRAND_LOGOS[key];
+
+        if (!svgContent) {
+            console.warn(`[PDFService] No logo found for brand: ${brand} (key: ${key})`);
+            return null;
+        }
+
+        // Use direct UTF-8 encoding which is often more robust for simple SVGs in WebViews than Base64
+        // We use encodeURIComponent to ensure special characters don't break the URI
+        const encodedSvg = encodeURIComponent(svgContent);
+        return `data:image/svg+xml;charset=utf-8,${encodedSvg}`;
+
+    } catch (e: any) {
+        console.warn('[PDFService] Failed to encode SVG logo:', e.message);
+        return null;
+    }
+};
 
 /**
  * Builds the HTML content for the PDF report.
@@ -24,7 +55,8 @@ const buildHtml = (
     logs: MaintenanceLog[],
     invoiceDocs: { type: string; reference?: string; base64?: string }[],
     language: 'fr' | 'en' = 'fr',
-    summary?: string
+    summary?: string,
+    brandLogoUri?: string | null
 ) => {
     const totalCost = logs.reduce((sum, log) => sum + log.cost, 0);
     const dateLocale = language === 'fr' ? 'fr-FR' : 'en-US';
@@ -63,6 +95,7 @@ const buildHtml = (
                 body { font-family: 'Helvetica', 'Arial', sans-serif; color: #333; line-height: 1.4; margin: 0; padding: 20px; background-color: #fff; }
                 .header { text-align: center; border-bottom: 2px solid #facc15; padding-bottom: 15px; margin-bottom: 20px; }
                 .header h1 { margin: 0; color: #000; font-size: 24px; text-transform: uppercase; }
+                .brand-logo { height: 80px; margin-bottom: 15px; display: block; margin-left: auto; margin-right: auto; object-fit: contain; }
                 
                 .section { margin-bottom: 20px; }
                 .section-title { font-size: 16px; font-weight: bold; color: #000; border-left: 5px solid #facc15; padding-left: 10px; margin-bottom: 10px; text-transform: uppercase; }
@@ -90,6 +123,7 @@ const buildHtml = (
         </head>
         <body>
             <div class="header">
+                ${brandLogoUri ? `<img src="${brandLogoUri}" class="brand-logo" alt="${vehicle.brand}" />` : ''}
                 <h1>${labels.title} : ${vehicle.brand} ${vehicle.model}</h1>
                 <p>${labels.generated} ${dateStr}</p>
             </div>
@@ -244,14 +278,20 @@ export const PDFService = {
         summary?: string
     ) => {
         try {
-            console.log('[PDFService] Processing', documents.length, 'documents...');
+            console.log('[PDFService] Starting generateReport...');
+
+            // Normalize brand logo
+            console.log('[PDFService] Processing Brand Logo...');
+            const brandLogoUri = getBrandLogoUri(vehicle.brand);
+            console.log('[PDFService] Brand Logo URI generated:', brandLogoUri ? 'YES (Length: ' + brandLogoUri.length + ')' : 'NO');
 
             // Convert local images to Base64 for reliable rendering in PDF
             const invoiceDocs: { type: string; reference?: string; base64?: string }[] = [];
 
+            console.log(`[PDFService] Processing ${documents.length} attachments...`);
+
             for (const doc of documents) {
                 if (!doc.localUri) {
-                    console.log('[PDFService] Skipping doc with no localUri');
                     continue;
                 }
 
@@ -261,11 +301,7 @@ export const PDFService = {
                         uri = 'file://' + uri;
                     }
 
-                    console.log('[PDFService] Reading image from:', uri);
-
                     const fileInfo = await getInfoAsync(uri);
-                    console.log('[PDFService] File exists:', fileInfo.exists);
-
                     const justificatifLabel = language === 'fr' ? 'Justificatif' : 'Supporting Doc';
 
                     if (!fileInfo.exists) {
@@ -278,8 +314,6 @@ export const PDFService = {
                         encoding: EncodingType.Base64,
                     });
 
-                    console.log('[PDFService] Successfully read image, base64 length:', base64.length);
-
                     invoiceDocs.push({
                         type: doc.type || justificatifLabel,
                         reference: doc.reference,
@@ -291,39 +325,41 @@ export const PDFService = {
                 }
             }
 
-            console.log('[PDFService] Building HTML with', invoiceDocs.length, 'attachments...');
-            const html = buildHtml(vehicle, logs, invoiceDocs, language, summary);
+            console.log('[PDFService] Building HTML...');
+            const html = buildHtml(vehicle, logs, invoiceDocs, language, summary, brandLogoUri);
 
-            console.log('[PDFService] Generating PDF file...');
+            console.log('[PDFService] Calling Print.printToFileAsync...');
             const { uri } = await Print.printToFileAsync({
                 html,
                 base64: false,
             });
 
-            console.log('[PDFService] PDF generated at:', uri);
+            console.log('[PDFService] PDF generated successfully at:', uri);
 
             const reportPrefix = language === 'fr' ? 'Rapport' : 'Report';
             const fileName = `${reportPrefix}_${vehicle.brand}_${vehicle.model}_${new Date().toISOString().split('T')[0]}.pdf`;
 
             // On Android, save to Downloads folder automatically
             if (Platform.OS === 'android') {
-                console.log('[PDFService] Android detected, saving to Downloads...');
+                console.log('[PDFService] Android detected, trying to save to Downloads...');
 
                 try {
                     const saved = await saveToDirectory(uri, fileName);
 
                     if (saved) {
-                        const alertTitle = language === 'fr' ? "Rapport Enregistré ✅" : "Report Saved ✅";
-                        const alertDesc = language === 'fr'
-                            ? `"${fileName}" a été enregistré dans vos Téléchargements.`
-                            : `"${fileName}" has been saved to your Downloads.`;
-                        const btnText = language === 'fr' ? "Super !" : "Great !";
-
-                        Alert.alert(alertTitle, alertDesc, [{ text: btnText }]);
-                        return;
+                        return {
+                            success: true,
+                            title: language === 'fr' ? "Rapport Enregistré ✅" : "Report Saved ✅",
+                            message: language === 'fr'
+                                ? `"${fileName}" a été enregistré dans vos Téléchargements.`
+                                : `"${fileName}" has been saved to your Downloads.`,
+                            buttonText: language === 'fr' ? "Super !" : "Great !"
+                        };
+                    } else {
+                        console.log('[PDFService] Save canceled or failed, falling back to Share...');
                     }
                 } catch (safError: any) {
-                    console.error('[PDFService] Save Error:', safError.message);
+                    console.error('[PDFService] Save Error, using fallback:', safError.message);
                 }
             }
 
@@ -335,8 +371,15 @@ export const PDFService = {
                 UTI: 'com.adobe.pdf',
             });
 
-        } catch (error) {
-            console.error('PDF Generation Failed:', error);
+            return {
+                success: true,
+                title: language === 'fr' ? "Rapport Généré" : "Report Generated",
+                message: null,
+                buttonText: "OK"
+            };
+
+        } catch (error: any) {
+            console.error('[PDFService] CRITICAL FAILURE:', error);
             throw error;
         }
     }

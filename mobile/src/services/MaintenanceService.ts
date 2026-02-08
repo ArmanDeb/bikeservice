@@ -55,9 +55,12 @@ export const MaintenanceService = {
 
         // 2. Atomic Transaction (Create Log + Update Vehicle + Create Document)
         await database.write(async () => {
+            // Re-fetch vehicle to ensure we have the latest state (fix for stale mileage check)
+            const freshVehicle = await database.collections.get<Vehicle>(TableName.VEHICLES).find(vehicle.id)
+
             // Create the log
             const newLog = await database.collections.get<MaintenanceLog>(TableName.MAINTENANCE_LOGS).create(log => {
-                log.vehicle.set(vehicle) // Set relation
+                log.vehicle.set(freshVehicle) // Set relation
                 log.title = title
                 log.type = type
                 log.cost = cost
@@ -67,8 +70,8 @@ export const MaintenanceService = {
             })
 
             // Update the vehicle's mileage ONLY if the new log represents an increase.
-            if (mileageAtLog > vehicle.currentMileage) {
-                await vehicle.update(v => {
+            if (mileageAtLog > freshVehicle.currentMileage) {
+                await freshVehicle.update(v => {
                     v.currentMileage = mileageAtLog
                 })
             }
@@ -78,11 +81,9 @@ export const MaintenanceService = {
                 const docCollection = database.collections.get(TableName.DOCUMENTS)
                 await docCollection.create(doc => {
                     // @ts-ignore
-                    doc.vehicle.set(vehicle)
+                    doc.vehicle.set(freshVehicle)
                     // @ts-ignore
-                    doc._raw.log_id = newLog.id // Direct ID set for optional relation if wrapper missing
-                    // Or if relation exists: doc.maintenanceLog.set(newLog) - checking schema first might be safer but _raw is robust
-
+                    doc._raw.log_id = newLog.id
                     // @ts-ignore
                     doc.type = 'invoice'
                     // @ts-ignore
@@ -144,13 +145,15 @@ export const MaintenanceService = {
             })
 
             // Check if this new mileage is the new highest for the vehicle
-            // This is a naive check. A robust system would recalculate max from all logs.
-            // For now, if user corrects a log to a higher mileage, we bump the vehicle.
-            if (mileageAtLog && mileageAtLog > (await log.vehicle).currentMileage) {
-                const vehicle = await log.vehicle
-                await vehicle.update(v => {
-                    v.currentMileage = mileageAtLog
-                })
+            if (mileageAtLog) {
+                const currentVehicle = await log.vehicle
+                const freshVehicle = await database.collections.get<Vehicle>(TableName.VEHICLES).find(currentVehicle.id)
+
+                if (mileageAtLog > freshVehicle.currentMileage) {
+                    await freshVehicle.update(v => {
+                        v.currentMileage = mileageAtLog
+                    })
+                }
             }
         })
         sync()

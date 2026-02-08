@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, Dimensions, Animated, StatusBar, Image } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Dimensions, Animated, StatusBar, ScrollView, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,18 +33,17 @@ const FeatureCard = ({ icon, title, desc, delay, isDark }: any) => {
 
     return (
         <Animated.View
-            style={{
+            style={[{
                 opacity: fadeAnim,
                 transform: [{ translateY: slideAnim }],
-            }}
-            className={`flex-row items-center p-4 mb-4 rounded-xl ${isDark ? 'bg-zinc-800/50' : 'bg-white/60'} border ${isDark ? 'border-zinc-700' : 'border-gray-200'}`}
+            }, isDark ? styles.cardDark : styles.cardLight]}
         >
-            <View className={`p-3 rounded-full mr-4 ${isDark ? 'bg-indigo-500/10' : 'bg-indigo-100'}`}>
-                <Ionicons name={icon} size={24} color={isDark ? '#818cf8' : '#4f46e5'} />
+            <View style={[styles.iconContainer, isDark ? styles.iconContainerDark : styles.iconContainerLight]}>
+                <Ionicons name={icon} size={24} color={isDark ? '#E5E5E0' : '#4A4A45'} />
             </View>
-            <View className="flex-1">
-                <Text className={`font-bold text-lg mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>{title}</Text>
-                <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{desc}</Text>
+            <View style={{ flex: 1 }}>
+                <Text style={[styles.cardTitle, isDark && styles.cardTitleDark]}>{title}</Text>
+                <Text style={[styles.cardDesc, isDark && styles.cardDescDark]}>{desc}</Text>
             </View>
         </Animated.View>
     );
@@ -52,17 +51,131 @@ const FeatureCard = ({ icon, title, desc, delay, isDark }: any) => {
 
 // Styles
 const styles = StyleSheet.create({
-    actionButton: {
-        backgroundColor: '#3B82F6', // Primary Blue
-        width: '100%',
-        padding: 16,
-        borderRadius: 12,
-        shadowColor: '#6366f1',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 5,
+    container: {
+        flex: 1,
+        backgroundColor: '#FDFCF8',
+        justifyContent: 'space-between',
     },
+    containerDark: {
+        backgroundColor: '#1C1C1E',
+    },
+    header: {
+        paddingHorizontal: 24,
+        paddingTop: 40,
+    },
+    logoContainer: {
+        alignItems: 'center',
+        marginBottom: 40,
+    },
+    logoCircle: {
+        backgroundColor: '#F5F5F0',
+        padding: 24,
+        borderRadius: 9999,
+        marginBottom: 24,
+    },
+    logoCircleDark: {
+        backgroundColor: '#2C2C2E',
+    },
+    appName: {
+        fontSize: 32,
+        fontFamily: 'Outfit_700Bold',
+        textAlign: 'center',
+        color: '#1C1C1E',
+        marginBottom: 16,
+    },
+    appNameDark: {
+        color: '#FDFCF8',
+    },
+    title: {
+        fontSize: 20,
+        fontFamily: 'WorkSans_500Medium',
+        textAlign: 'center',
+        color: '#1C1C1E',
+        marginBottom: 8,
+    },
+    titleDark: {
+        color: '#E5E5E0',
+    },
+    subtitle: {
+        fontSize: 16,
+        fontFamily: 'WorkSans_400Regular',
+        textAlign: 'center',
+        color: '#666660',
+        lineHeight: 24,
+    },
+    subtitleDark: {
+        color: '#9CA3AF',
+    },
+    // Card Styles
+    cardLight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        marginBottom: 16,
+        borderRadius: 16,
+        backgroundColor: '#FFFFFF',
+        borderWidth: 1,
+        borderColor: '#E6E5E0',
+    },
+    cardDark: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        marginBottom: 16,
+        borderRadius: 16,
+        backgroundColor: '#2C2C2E',
+        borderWidth: 1,
+        borderColor: '#3A3A3C',
+    },
+    iconContainer: {
+        padding: 12,
+        borderRadius: 9999,
+        marginRight: 16,
+    },
+    iconContainerLight: {
+        backgroundColor: '#F5F5F0',
+    },
+    iconContainerDark: {
+        backgroundColor: '#3A3A3C',
+    },
+    cardTitle: {
+        fontSize: 18,
+        fontFamily: 'Outfit_700Bold',
+        color: '#1C1C1E',
+        marginBottom: 4,
+    },
+    cardTitleDark: {
+        color: '#FDFCF8',
+    },
+    cardDesc: {
+        fontSize: 14,
+        fontFamily: 'WorkSans_400Regular',
+        color: '#666660',
+    },
+    cardDescDark: {
+        color: '#9CA3AF',
+    },
+    actionButton: {
+        backgroundColor: '#1C1C1E', // Dark Stone
+        width: '100%',
+        padding: 20,
+        borderRadius: 14,
+        shadowColor: 'transparent',
+        alignItems: 'center',
+    },
+    actionButtonDark: {
+        backgroundColor: '#FDFCF8',
+    },
+    buttonText: {
+        color: '#FFFFFF',
+        fontFamily: 'Outfit_700Bold',
+        fontSize: 18,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+    },
+    buttonTextDark: {
+        color: '#1C1C1E',
+    }
 });
 
 export default function IntroScreen() {
@@ -73,66 +186,72 @@ export default function IntroScreen() {
     const finishIntro = async () => {
         try {
             await AsyncStorage.setItem('has_seen_intro', 'true');
-            router.replace('/auth');
+            router.replace('/auth/login');
         } catch (e) {
             console.error('Failed to save intro state', e);
         }
     };
 
     return (
-        <SafeAreaView className={`flex-1 ${isDark ? 'bg-black' : 'bg-[#F8F5F2]'} justify-between`}>
+        <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
             <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
-            {/* Header Content */}
-            <View className="px-6 pt-10">
-                <View className="items-center mb-10">
-                    <View className="bg-primary/20 p-6 rounded-full mb-6">
-                        <Ionicons name="speedometer" size={60} color="#FFD700" />
+            {/* Scrollable Content */}
+            <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingBottom: 40 }}
+                showsVerticalScrollIndicator={false}
+            >
+                <View style={styles.header}>
+                    <View style={styles.logoContainer}>
+                        <View style={[styles.logoCircle, isDark && styles.logoCircleDark]}>
+                            <Ionicons name="bicycle" size={60} color={isDark ? "#E5E5E0" : "#4A4A45"} />
+                        </View>
+                        <Text style={[styles.appName, isDark && styles.appNameDark]}>
+                            Bike Service
+                        </Text>
+                        <Text style={[styles.title, isDark && styles.titleDark]}>
+                            {t('intro.title')}
+                        </Text>
+                        <Text style={[styles.subtitle, isDark && styles.subtitleDark]}>
+                            {t('intro.subtitle')}
+                        </Text>
                     </View>
-                    <Text className={`text-3xl font-bold text-center mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                        Bike Service
-                    </Text>
-                    <Text className={`text-xl font-medium text-center mb-2 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-                        {t('intro.title')}
-                    </Text>
-                    <Text className={`text-center leading-6 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                        {t('intro.subtitle')}
-                    </Text>
-                </View>
 
-                {/* Features */}
-                <View>
-                    <FeatureCard
-                        icon="build"
-                        title={t('intro.feature1.title')}
-                        desc={t('intro.feature1.desc')}
-                        delay={300}
-                        isDark={isDark}
-                    />
-                    <FeatureCard
-                        icon="scan-circle"
-                        title={t('intro.feature2.title')}
-                        desc={t('intro.feature2.desc')}
-                        delay={600}
-                        isDark={isDark}
-                    />
-                    <FeatureCard
-                        icon="wallet"
-                        title={t('intro.feature3.title')}
-                        desc={t('intro.feature3.desc')}
-                        delay={900}
-                        isDark={isDark}
-                    />
+                    {/* Features */}
+                    <View>
+                        <FeatureCard
+                            icon="build-outline"
+                            title={t('intro.feature1.title')}
+                            desc={t('intro.feature1.desc')}
+                            delay={300}
+                            isDark={isDark}
+                        />
+                        <FeatureCard
+                            icon="scan-outline"
+                            title={t('intro.feature2.title')}
+                            desc={t('intro.feature2.desc')}
+                            delay={600}
+                            isDark={isDark}
+                        />
+                        <FeatureCard
+                            icon="wallet-outline"
+                            title={t('intro.feature3.title')}
+                            desc={t('intro.feature3.desc')}
+                            delay={900}
+                            isDark={isDark}
+                        />
+                    </View>
                 </View>
-            </View>
+            </ScrollView>
 
             {/* Bottom Action */}
-            <View className="p-6 mb-4">
+            <View style={{ padding: 24, paddingBottom: 40 }}>
                 <Pressable
                     onPress={finishIntro}
-                    style={styles.actionButton}
+                    style={[styles.actionButton, isDark && styles.actionButtonDark]}
                 >
-                    <Text className="text-black text-center font-bold text-lg uppercase tracking-wider">
+                    <Text style={[styles.buttonText, isDark && styles.buttonTextDark]}>
                         {t('intro.button')}
                     </Text>
                 </Pressable>

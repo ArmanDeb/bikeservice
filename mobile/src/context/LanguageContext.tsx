@@ -45,6 +45,9 @@ export const translations: Translations = {
     'common.edit': { fr: 'Modifier', en: 'Edit' },
     'common.version': { fr: 'Version', en: 'Version' },
     'common.powered_by': { fr: 'Propulsé par', en: 'Powered by' },
+    'common.close': { fr: 'Fermer', en: 'Close' },
+    'common.ok': { fr: 'OK', en: 'OK' },
+    'common.confirm': { fr: 'Confirmer', en: 'Confirm' },
 
     // Garage Screen
     'garage.title': { fr: 'Garage', en: 'Garage' },
@@ -133,6 +136,7 @@ export const translations: Translations = {
     'wallet.modal.delete': { fr: 'Supprimer', en: 'Delete' },
     'wallet.modal.delete_confirm_title': { fr: 'Supprimer le document', en: 'Delete Document' },
     'wallet.modal.delete_confirm_desc': { fr: 'Voulez-vous vraiment supprimer ce document ?', en: 'Are you sure you want to delete this document?' },
+    'wallet.modal.delete_confirm_desc_maintenance': { fr: 'Ce document est lié à une maintenance. En le supprimant, la maintenance n\'aura plus de pièce jointe, mais l\'entretien restera visible.', en: 'This document is linked to a maintenance log. Deleting it will remove the attachment, but the maintenance record will remain.' },
     'wallet.select_bike_title': { fr: 'Mon Portefeuille', en: 'My Wallet' },
     'wallet.select_bike_desc_full': { fr: 'Choisissez une moto pour gérer ses documents (Carte grise, assurance, etc).', en: 'Choose a bike to manage its documents (Registration, insurance, etc).' },
 
@@ -181,9 +185,15 @@ export const translations: Translations = {
     'settings.suggest_idea': { fr: 'Suggérer une idée', en: 'Suggest an Idea' },
     'settings.about': { fr: 'À propos', en: 'About' },
     'settings.danger_zone': { fr: 'Zone de Danger', en: 'Danger Zone' },
-    'settings.reset_data': { fr: 'Réinitialiser les données locales', en: 'Reset Local Data' },
-    'settings.reset_data_desc': { fr: 'Cette action effacera toutes les données locales pour forcer une resynchronisation propre. Irréversible.', en: 'This will erase all local data to force a clean re-sync. Irreversible.' },
-    'settings.reset_data_success': { fr: 'Base de données réinitialisée. Veuillez redémarrer l\'application.', en: 'Database reset. Please restart the application.' },
+    'settings.delete_account': { fr: 'Supprimer mon compte', en: 'Delete Account' },
+    'settings.delete_account_desc': { fr: 'Cette action est irréversible. Toutes vos données seront effacées définitivement.', en: 'This action is irreversible. All your data will be permanently deleted.' },
+    'settings.delete_account_success': { fr: 'Compte supprimé. Au revoir !', en: 'Account deleted. Goodbye!' },
+    'settings.legal': { fr: 'Mentions Légales', en: 'Legal' },
+    'settings.privacy_policy': { fr: 'Politique de Confidentialité', en: 'Privacy Policy' },
+    'settings.terms_of_service': { fr: 'Conditions d\'Utilisation', en: 'Terms of Service' },
+    'settings.sync_error': { fr: 'Erreur de synchronisation', en: 'Sync Error' },
+    'settings.link_error': { fr: 'Impossible d\'ouvrir le lien', en: 'Cannot open link' },
+    'settings.syncing': { fr: 'Synchronisation...', en: 'Syncing...' },
 
     // Intro
     'intro.title': { fr: 'Gérez votre garage comme un pro', en: 'Manage your garage like a pro' },
@@ -208,7 +218,7 @@ export const translations: Translations = {
     'onboarding.buttons.next': { fr: 'Suivant', en: 'Next' },
     'onboarding.buttons.back': { fr: 'Retour', en: 'Back' },
     'onboarding.buttons.finish': { fr: 'Terminer', en: 'Finish' },
-    'onboarding.success.title': { fr: 'Gaz ! ✌️', en: 'Ride on! ✌️' },
+    'onboarding.success.title': { fr: 'Configuration terminée', en: 'Setup Complete' },
     'onboarding.success.subtitle': { fr: 'Votre garage est prêt.', en: 'Your garage is ready.' },
 };
 

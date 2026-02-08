@@ -9,6 +9,7 @@ type AuthContextType = {
     session: Session | null;
     isLoading: boolean;
     signOut: () => Promise<void>;
+    deleteAccount: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -107,8 +108,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Trigger localized wipe here later if needed, but onAuthStateChange handles most
     };
 
+    const deleteAccount = async () => {
+        if (!user) return;
+
+        try {
+            // 1. Delete Documents first (references both Vehicles and Logs)
+            // We use neq '0' to match all rows visible to this user via RLS
+            const { error: dError } = await supabase
+                .from('documents')
+                .delete()
+                .neq('id', '00000000-0000-0000-0000-000000000000');
+
+            if (dError) console.error('Error deleting documents:', dError);
+
+            // 2. Delete Maintenance Logs (references Vehicles)
+            const { error: lError } = await supabase
+                .from('maintenance_logs')
+                .delete()
+                .neq('id', '00000000-0000-0000-0000-000000000000');
+
+            if (lError) console.error('Error deleting logs:', lError);
+
+            // 3. Delete Vehicles (Root)
+            const { error: vError } = await supabase
+                .from('vehicles')
+                .delete()
+                .neq('id', '00000000-0000-0000-0000-000000000000');
+
+            if (vError) {
+                console.error('Error deleting vehicles:', vError);
+                throw new Error(vError.message);
+            }
+
+            // 4. Delete Auth Account (via RPC)
+            const { error: uError } = await supabase.rpc('delete_user');
+            if (uError) {
+                console.error('Error deleting auth user:', uError);
+                throw new Error('Failed to delete user account: ' + uError.message);
+            }
+
+            // 5. Sign Out (triggers local wipe)
+            await signOut();
+
+        } catch (e) {
+            console.error('Delete account failed', e);
+            throw e;
+        }
+    };
+
     return (
-        <AuthContext.Provider value={{ user, session, isLoading, signOut }}>
+        <AuthContext.Provider value={{ user, session, isLoading, signOut, deleteAccount }}>
             {children}
         </AuthContext.Provider>
     );

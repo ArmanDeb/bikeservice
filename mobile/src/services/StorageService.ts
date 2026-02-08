@@ -1,5 +1,5 @@
 import { supabase } from './Supabase'
-import * as FileSystem from 'expo-file-system'
+import * as FileSystem from 'expo-file-system/legacy'
 import { decode } from 'base64-arraybuffer'
 
 export const StorageService = {
@@ -8,13 +8,13 @@ export const StorageService = {
             // Extract filename and extension
             const filename = localUri.split('/').pop() || `doc_${Date.now()}.jpg`
             const extension = filename.split('.').pop()?.toLowerCase() || 'jpg'
-            
+
             // Generate path: user_id/timestamp_filename
             const filePath = `${userId}/${Date.now()}_${filename}`
 
             // Read file as base64
             const base64 = await FileSystem.readAsStringAsync(localUri, {
-                encoding: FileSystem.EncodingType.Base64,
+                encoding: 'base64',
             })
 
             // Determine content type

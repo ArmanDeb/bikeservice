@@ -17,18 +17,63 @@ import { AIService } from '../../src/services/AIService'
 import { DocumentService } from '../../src/services/DocumentService'
 import { VehicleService } from '../../src/services/VehicleService'
 import { sync } from '../../src/services/SyncService'
+import { BrandLogo } from '../../src/components/common/BrandLogo'
+import { ConfirmationModal } from '../../src/components/common/ConfirmationModal'
+import { LoadingModal } from '../../src/components/common/LoadingModal'
 
 // Styles definition
 const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#FDFCF8',
+    },
+    containerDark: {
+        backgroundColor: '#1C1C1E',
+    },
     // Modal Styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(28, 28, 30, 0.4)', // Warm overlay
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: '#FFFFFF',
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
+        borderWidth: 1,
+        borderColor: '#E6E5E0',
+        maxHeight: '90%',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 10,
+    },
+    modalContentDark: {
+        backgroundColor: '#2C2C2E',
+        borderColor: '#3A3A3C',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24,
+        paddingHorizontal: 24,
+        paddingTop: 24,
+    },
     aiScanButton: {
-        backgroundColor: 'rgba(59, 130, 246, 0.2)', // primary/20
-        padding: 12,
+        backgroundColor: 'rgba(74, 74, 69, 0.1)', // Stone tint
+        paddingHorizontal: 16,
+        paddingVertical: 10,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: 'rgba(59, 130, 246, 0.3)', // primary/30
+        borderColor: 'rgba(74, 74, 69, 0.2)',
         flexDirection: 'row',
         alignItems: 'center',
+    },
+    aiScanButtonDark: {
+        backgroundColor: 'rgba(229, 229, 224, 0.1)',
+        borderColor: 'rgba(229, 229, 224, 0.2)',
     },
     typeButton: {
         flex: 1,
@@ -36,81 +81,61 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         borderWidth: 1,
         alignItems: 'center',
-        backgroundColor: '#F1F5F9',
-        borderColor: '#E2E8F0',
+        backgroundColor: '#F5F5F0',
+        borderColor: '#E6E5E0',
     },
     typeButtonDark: {
-        backgroundColor: '#334155',
-        borderColor: '#475569',
+        backgroundColor: '#3A3A3C',
+        borderColor: '#4B5563',
     },
     typeButtonSelected: {
-        backgroundColor: '#3B82F6',
-        borderColor: '#3B82F6',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
+        backgroundColor: '#4A4A45', // Dark Stone
+        borderColor: '#4A4A45',
+        shadowColor: 'transparent',
     },
     submitButton: {
-        backgroundColor: '#3B82F6',
+        backgroundColor: '#1C1C1E', // Dark Stone
         padding: 16,
-        borderRadius: 12,
+        borderRadius: 14,
         alignItems: 'center',
         marginBottom: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
     },
     deleteButton: {
-        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        backgroundColor: 'transparent',
         borderWidth: 1,
-        borderColor: 'rgba(239, 68, 68, 0.5)',
+        borderColor: '#BA4444',
         padding: 16,
-        borderRadius: 12,
+        borderRadius: 14,
         alignItems: 'center',
         marginBottom: 12,
     },
     cancelButton: {
         padding: 12,
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: 8,
     },
     // Screen Styles
     addButton: {
-        backgroundColor: '#3B82F6',
-        padding: 8,
+        backgroundColor: '#1C1C1E',
         borderRadius: 9999,
-        width: 40,
-        height: 40,
+        width: 44,
+        height: 44,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: '#3B82F6',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
+        borderColor: '#1C1C1E',
     },
     backButton: {
         backgroundColor: '#FFFFFF',
         padding: 8,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: 'rgba(226, 232, 240, 0.5)',
+        borderColor: '#E6E5E0',
         marginRight: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
     },
     backButtonDark: {
-        backgroundColor: '#1E293B',
-        borderColor: 'rgba(51, 65, 85, 0.5)',
+        backgroundColor: '#2C2C2E',
+        borderColor: '#3A3A3C',
     },
     logItem: {
         backgroundColor: '#FFFFFF',
@@ -118,18 +143,19 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         marginBottom: 16,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
+        borderColor: '#E6E5E0',
         flexDirection: 'row',
         alignItems: 'center',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.05,
         shadowRadius: 2,
-        elevation: 2,
+        elevation: 1,
     },
     logItemDark: {
-        backgroundColor: '#1E293B',
-        borderColor: '#334155',
+        backgroundColor: '#2C2C2E',
+        borderColor: '#3A3A3C',
+        shadowOpacity: 0.2,
     },
     vehicleCard: {
         backgroundColor: '#FFFFFF',
@@ -137,19 +163,222 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         marginBottom: 16,
         borderWidth: 1,
-        borderColor: 'rgba(226, 232, 240, 0.5)',
+        borderColor: '#E6E5E0',
         flexDirection: 'row',
         alignItems: 'center',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
     },
     vehicleCardDark: {
-        backgroundColor: '#1E293B',
-        borderColor: 'rgba(51, 65, 85, 0.5)',
-    }
+        backgroundColor: '#2C2C2E',
+        borderColor: '#3A3A3C',
+        shadowOpacity: 0.2,
+    },
+    vehicleSelect: {
+        backgroundColor: '#F5F5F0',
+        padding: 16,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: '#E6E5E0',
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    vehicleSelectDark: {
+        backgroundColor: '#3A3A3C',
+        borderColor: '#4B5563',
+    },
+    datePicker: {
+        backgroundColor: '#F5F5F0',
+        padding: 16,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: '#E6E5E0',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    datePickerDark: {
+        backgroundColor: '#3A3A3C',
+        borderColor: '#4B5563',
+    },
+    input: {
+        backgroundColor: '#FDFCF8',
+        color: '#1C1C1E',
+        padding: 16,
+        borderRadius: 14,
+        marginBottom: 16,
+        fontSize: 16,
+        borderWidth: 1,
+        borderColor: '#E6E5E0',
+        fontFamily: 'WorkSans_400Regular',
+    },
+    inputDark: {
+        backgroundColor: '#1C1C1E',
+        color: '#E5E5E0',
+        borderColor: '#3A3A3C',
+    },
+    sortDropdown: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        width: '75%',
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: '#E6E5E0',
+    },
+    sortDropdownDark: {
+        backgroundColor: '#2C2C2E',
+        borderColor: '#3A3A3C',
+    },
+    headerTitle: {
+        fontSize: 30,
+        fontFamily: 'Outfit_700Bold',
+        color: '#1C1C1E',
+    },
+    headerTitleDark: {
+        color: '#E5E5E0',
+    },
+    vehicleIndicator: {
+        backgroundColor: '#F5F5F0', // Light Stone
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        borderRadius: 9999,
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#E6E5E0'
+    },
+    sortModalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(28,28,30,0.4)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    inputRowContainer: {
+        backgroundColor: '#FDFCF8',
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: '#E6E5E0',
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+    },
+    inputRowContainerDark: {
+        backgroundColor: '#1C1C1E',
+        borderColor: '#3A3A3C',
+    },
+    inputInside: {
+        flex: 1,
+        fontFamily: 'WorkSans_400Regular',
+        fontSize: 16,
+        color: '#1C1C1E',
+        paddingVertical: 16,
+    },
+    inputInsideDark: {
+        color: '#E5E5E0',
+    },
+    suffixText: {
+        fontFamily: 'WorkSans_500Medium',
+        fontSize: 16,
+        color: '#666660',
+        marginLeft: 4,
+    },
+    suffixTextDark: {
+        color: '#9CA3AF',
+    },
+    logIconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 16,
+    },
+    logTagContainer: {
+        backgroundColor: '#F5F5F0',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 4,
+        borderWidth: 1,
+        borderColor: '#E6E5E0',
+    },
+    logTagContainerDark: {
+        backgroundColor: '#3A3A3C',
+        borderColor: '#4B5563',
+    },
+    logTagText: {
+        fontSize: 10,
+        fontFamily: 'Outfit_700Bold',
+        color: '#666660',
+        textTransform: 'uppercase',
+    },
+    logTagTextDark: {
+        color: '#9CA3AF',
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 80,
+        paddingHorizontal: 40,
+    },
+    emptyIconContainer: {
+        backgroundColor: '#F5F5F0',
+        width: 80,
+        height: 80,
+        borderRadius: 9999,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 24,
+    },
+    emptyIconContainerDark: {
+        backgroundColor: '#3A3A3C',
+    },
+    sortButton: {
+        backgroundColor: '#F5F5F0',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E6E5E0',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    sortButtonDark: {
+        backgroundColor: '#3A3A3C',
+        borderColor: '#4B5563',
+    },
+    sortIconContainer: {
+        backgroundColor: '#F5F5F0',
+        width: 48,
+        height: 48,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E6E5E0',
+    },
+    sortIconContainerDark: {
+        backgroundColor: '#3A3A3C',
+        borderColor: '#4B5563',
+    },
+    sortOption: {
+        padding: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        borderBottomWidth: 1,
+        borderBottomColor: '#E6E5E0',
+    },
+    sortOptionDark: {
+        borderBottomColor: '#3A3A3C',
+    },
+    sortOptionActive: {
+        backgroundColor: 'rgba(74, 74, 69, 0.05)',
+    },
+
 });
 
 // Maintenance Modal Component
@@ -168,28 +397,62 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
     const [showDatePicker, setShowDatePicker] = useState(false)
     const [scannedDocumentUri, setScannedDocumentUri] = useState<string | null>(null)
 
+    // Alert state
+    const [alertVisible, setAlertVisible] = useState(false)
+    const [alertTitle, setAlertTitle] = useState('')
+    const [alertMessage, setAlertMessage] = useState('')
+    const [alertOnConfirm, setAlertOnConfirm] = useState<(() => void) | undefined>()
+    const [alertOnSecondary, setAlertOnSecondary] = useState<(() => void) | undefined>()
+    const [alertConfirmText, setAlertConfirmText] = useState<string | undefined>()
+    const [alertSecondaryText, setAlertSecondaryText] = useState<string | undefined>()
+    const [alertVariant, setAlertVariant] = useState<'default' | 'danger'>('default')
+
+    // Initialize vehicleId when modal opens or selectedVehicleId changes
     useEffect(() => {
         if (visible) {
             if (log) {
+                // For edit mode, use the log's vehicle
+                setVehicleId(log.vehicleId)
                 setTitle(log.title)
                 setCost(log.cost.toString())
-                setMileageAtLog(log.mileageAtLog.toString())
+                setMileageAtLog(log.mileageAtLog?.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") || '')
                 setNotes(log.notes || '')
-                setType(log.type)
-                setVehicleId(log.vehicleId)
-                setDate(log.date)
+                setType(log.type as 'periodic' | 'repair' | 'modification')
+                setDate(new Date(log.date))
             } else {
+                // For new log, use selectedVehicleId or first vehicle
+                setVehicleId(selectedVehicleId || (vehicles.length > 0 ? vehicles[0].id : ''))
                 setTitle('')
                 setCost('')
                 setMileageAtLog('')
                 setNotes('')
                 setType('periodic')
-                setVehicleId(selectedVehicleId || (vehicles.length > 0 ? vehicles[0].id : ''))
                 setDate(new Date())
                 setScannedDocumentUri(null)
             }
         }
     }, [visible, log, selectedVehicleId, vehicles])
+
+    const showAlert = (
+        title: string,
+        message: string,
+        options?: {
+            onConfirm?: () => void;
+            onSecondary?: () => void;
+            confirmText?: string;
+            secondaryText?: string;
+            variant?: 'default' | 'danger';
+        }
+    ) => {
+        setAlertTitle(title)
+        setAlertMessage(message)
+        setAlertOnConfirm(() => options?.onConfirm || (() => setAlertVisible(false)))
+        setAlertOnSecondary(() => options?.onSecondary)
+        setAlertConfirmText(options?.confirmText)
+        setAlertSecondaryText(options?.secondaryText)
+        setAlertVariant(options?.variant || 'default')
+        setAlertVisible(true)
+    }
 
     const performAIScan = async (source: 'camera' | 'library') => {
         const { status } = source === 'camera'
@@ -197,7 +460,7 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
             : await ImagePicker.requestMediaLibraryPermissionsAsync()
 
         if (status !== 'granted') {
-            Alert.alert(t('alert.error'), `Permission to access ${source === 'camera' ? 'camera' : 'gallery'} was denied`)
+            showAlert(t('alert.error'), `Permission to access ${source === 'camera' ? 'camera' : 'gallery'} was denied`)
             return
         }
 
@@ -218,15 +481,15 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                 if (data.cost) setCost(data.cost.toString())
                 if (data.type) setType(data.type as any)
                 if (data.notes) setNotes(data.notes)
-                if (data.mileage) setMileageAtLog(data.mileage.toString())
+                if (data.mileage) setMileageAtLog(data.mileage.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."))
                 if (data.date) setDate(data.date)
 
                 // Store document URI for later - will be linked to the log when form is submitted
                 setScannedDocumentUri(result.assets[0].uri)
 
-                Alert.alert(t('maintenance.alert.ia_success'), t('maintenance.alert.ia_success_desc'))
+                showAlert(t('maintenance.alert.ia_success'), t('maintenance.alert.ia_success_desc'))
             } catch (err: any) {
-                Alert.alert(t('maintenance.alert.ia_error'), t('maintenance.alert.ia_error_desc'))
+                showAlert(t('maintenance.alert.ia_error'), t('maintenance.alert.ia_error_desc'))
             } finally {
                 setIsScanning(false)
             }
@@ -234,62 +497,63 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
     }
 
     const handleAIScanOptions = () => {
-        Alert.alert(
+        showAlert(
             t('maintenance.assistant_ia'),
             language === 'fr' ? 'Choisissez une source pour l\'analyse' : 'Choose a source for analysis',
-            [
-                { text: language === 'fr' ? 'Appareil Photo' : 'Camera', onPress: () => performAIScan('camera') },
-                { text: language === 'fr' ? 'Galerie Photo' : 'Gallery', onPress: () => performAIScan('library') },
-                { text: t('common.cancel'), style: 'cancel' }
-            ]
+            {
+                confirmText: language === 'fr' ? 'Galerie Photo' : 'Gallery',
+                onConfirm: () => {
+                    setAlertVisible(false)
+                    performAIScan('library')
+                },
+                secondaryText: language === 'fr' ? 'Appareil Photo' : 'Camera',
+                onSecondary: () => {
+                    setAlertVisible(false)
+                    performAIScan('camera')
+                }
+            }
         )
     }
 
     const handleSubmit = async () => {
         if (!title || !cost || !mileageAtLog || !vehicleId) {
-            Alert.alert(t('alert.error'), 'Please fill in all required fields')
+            showAlert(t('alert.error'), 'Please fill in all required fields')
             return
         }
 
         const selectedVehicle = vehicles.find(v => v.id === vehicleId)
         if (!selectedVehicle) {
-            Alert.alert(t('alert.error'), 'Vehicle not found')
+            showAlert(t('alert.error'), 'Vehicle not found')
             return
         }
 
         if (log) {
             // updateLog: (log, title, type, cost, date, notes?, mileageAtLog?)
-            await MaintenanceService.updateLog(log, title, type, parseFloat(cost), date, notes || undefined, parseInt(mileageAtLog))
+            await MaintenanceService.updateLog(log, title, type, parseFloat(cost), date, notes || undefined, parseInt(mileageAtLog.replace(/\./g, '')))
         } else {
             // createLog: (vehicle, title, type, cost, mileageAtLog, date, notes?, documentUri?)
             // Pass the scanned document URI so it gets linked to this maintenance log
-            await MaintenanceService.createLog(selectedVehicle, title, type, parseFloat(cost), parseInt(mileageAtLog), date, notes || undefined, scannedDocumentUri || undefined)
+            await MaintenanceService.createLog(selectedVehicle, title, type, parseFloat(cost), parseInt(mileageAtLog.replace(/\./g, '')), date, notes || undefined, scannedDocumentUri || undefined)
         }
         onClose()
     }
 
     return (
         <Modal visible={visible} animationType="slide" transparent>
-            <View className="flex-1 justify-end bg-black/50">
-                <View className="bg-surface p-6 rounded-t-3xl border-t border-border max-h-[90%]">
-                    <View className="flex-row justify-between items-center mb-6">
-                        <Text className="text-2xl font-heading text-text">
+            <Pressable style={styles.modalOverlay} onPress={onClose}>
+                <Pressable onPress={(e) => e.stopPropagation()} style={[styles.modalContent, isDark && styles.modalContentDark]}>
+                    <View style={styles.modalHeader}>
+                        <Text style={{ fontSize: 24, fontFamily: 'Outfit_700Bold', color: isDark ? '#FDFCF8' : '#1C1C1E' }}>
                             {log ? t('maintenance.modal.edit_title') : t('maintenance.modal.add_title')}
                         </Text>
                         <Pressable
                             onPress={handleAIScanOptions}
                             disabled={isScanning}
-                            style={styles.aiScanButton}
+                            style={[styles.aiScanButton, isDark && styles.aiScanButtonDark]}
                         >
-                            {isScanning ? (
-                                <ActivityIndicator size="small" color="#EAB308" />
-                            ) : (
-                                <Scan size={20} color="#EAB308" />
-                            )}
-                            <Text className="text-primary-dark font-heading ml-2">
-                                {isScanning 
-                                    ? (language === 'fr' ? 'Analyse...' : 'Scanning...') 
-                                    : (language === 'fr' ? 'Scanner facture' : 'Scan invoice')}
+                            <Scan size={20} color={isDark ? "#E5E5E0" : "#4A4A45"} />
+                            <Text style={{ color: isDark ? '#E5E5E0' : '#4A4A45', fontFamily: 'Outfit_700Bold', marginLeft: 8 }}>
+                                {language === 'fr' ? 'Scanner facture' : 'Scan invoice'}
                             </Text>
                         </Pressable>
                     </View>
@@ -297,12 +561,12 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                     <ScrollView showsVerticalScrollIndicator={false}>
                         {/* Selected Vehicle Display (ReadOnly) */}
                         {!log && (
-                            <View className="mb-4">
-                                <Text className="text-text-secondary text-xs uppercase mb-2 tracking-wider">{t('maintenance.select_vehicle')}</Text>
-                                <View className="bg-surface-highlight p-4 rounded-xl border border-border flex-row items-center opacity-80">
-                                    <Bike size={20} color={isDark ? "#EAB308" : "#3B82F6"} />
-                                    <Text className="text-text font-heading ml-3">
-                                        {vehicleId 
+                            <View style={{ marginBottom: 16 }}>
+                                <Text style={{ color: isDark ? '#9CA3AF' : '#666660', fontSize: 12, textTransform: 'uppercase', marginBottom: 8, letterSpacing: 1 }}>{t('maintenance.select_vehicle')}</Text>
+                                <View style={[styles.vehicleSelect, isDark && styles.vehicleSelectDark, { opacity: 0.8 }]}>
+                                    <Bike size={20} color={isDark ? "#E5E5E0" : "#4A4A45"} />
+                                    <Text style={{ color: isDark ? '#FDFCF8' : '#1C1C1E', fontFamily: 'Outfit_700Bold', marginLeft: 12 }}>
+                                        {vehicleId
                                             ? `${vehicles.find(v => v.id === vehicleId)?.brand} ${vehicles.find(v => v.id === vehicleId)?.model}`
                                             : (language === 'fr' ? 'Sélectionner un véhicule' : 'Select a vehicle')}
                                     </Text>
@@ -311,7 +575,7 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                         )}
 
                         {/* Type Picker */}
-                        <View className="flex-row gap-2 mb-4">
+                        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
                             {(['periodic', 'repair', 'modification'] as const).map((tType) => (
                                 <Pressable
                                     key={tType}
@@ -322,7 +586,7 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                                         type === tType && styles.typeButtonSelected
                                     ]}
                                 >
-                                    <Text className={`font-heading text-xs uppercase ${type === tType ? 'text-white' : 'text-text-secondary'}`}>
+                                    <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 12, textTransform: 'uppercase', color: type === tType ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#666660') }}>
                                         {t(`maintenance.type.${tType}`)}
                                     </Text>
                                 </Pressable>
@@ -330,17 +594,17 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                         </View>
 
                         {/* Date Picker */}
-                        <View className="mb-4">
-                            <Text className="text-text-secondary text-xs uppercase mb-2 tracking-wider">
+                        <View style={{ marginBottom: 16 }}>
+                            <Text style={{ color: isDark ? '#9CA3AF' : '#666660', fontSize: 12, textTransform: 'uppercase', marginBottom: 8, letterSpacing: 1 }}>
                                 {language === 'fr' ? 'Date de l\'intervention' : 'Service date'}
                             </Text>
                             <Pressable
                                 onPress={() => setShowDatePicker(true)}
-                                className="bg-surface-highlight p-4 rounded-xl border border-border flex-row justify-between items-center"
+                                style={[styles.datePicker, isDark && styles.datePickerDark]}
                             >
-                                <View className="flex-row items-center">
-                                    <Calendar size={20} color={isDark ? "#EAB308" : "#3B82F6"} />
-                                    <Text className="text-text font-heading ml-3">
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                    <Calendar size={20} color={isDark ? "#E5E5E0" : "#4A4A45"} />
+                                    <Text style={{ color: isDark ? '#FDFCF8' : '#1C1C1E', fontFamily: 'Outfit_700Bold', marginLeft: 12 }}>
                                         {date.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', {
                                             weekday: 'short',
                                             day: 'numeric',
@@ -354,28 +618,41 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
 
                             {/* Custom Date Picker Modal */}
                             <Modal visible={showDatePicker} transparent animationType="fade">
-                                <Pressable 
-                                    className="flex-1 bg-black/50 justify-center items-center"
+                                <Pressable
+                                    style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center' }}
                                     onPress={() => setShowDatePicker(false)}
                                 >
-                                    <Pressable 
-                                        className="bg-surface rounded-2xl w-[85%] overflow-hidden"
+                                    <Pressable
+                                        style={{
+                                            backgroundColor: isDark ? '#2C2C2E' : '#FFFFFF',
+                                            borderRadius: 16,
+                                            width: '85%',
+                                            overflow: 'hidden',
+                                            borderWidth: 1,
+                                            borderColor: isDark ? '#3A3A3C' : '#E6E5E0'
+                                        }}
                                         onPress={(e) => e.stopPropagation()}
                                     >
-                                        <View className="p-4 border-b border-border">
-                                            <Text className="text-text font-heading text-lg text-center">
+                                        <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: isDark ? '#3A3A3C' : '#E6E5E0' }}>
+                                            <Text style={{ color: isDark ? '#FDFCF8' : '#1C1C1E', fontFamily: 'Outfit_700Bold', fontSize: 18, textAlign: 'center' }}>
                                                 {language === 'fr' ? 'Choisir la date' : 'Choose date'}
                                             </Text>
                                         </View>
-                                        
-                                        <View className="p-6">
+
+                                        <View style={{ padding: 24 }}>
                                             {/* Quick date buttons */}
-                                            <View className="flex-row gap-2 mb-6">
+                                            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 24 }}>
                                                 <Pressable
                                                     onPress={() => setDate(new Date())}
-                                                    className="flex-1 bg-primary/10 p-3 rounded-xl items-center"
+                                                    style={{
+                                                        flex: 1,
+                                                        backgroundColor: 'rgba(74, 74, 69, 0.1)',
+                                                        padding: 12,
+                                                        borderRadius: 12,
+                                                        alignItems: 'center'
+                                                    }}
                                                 >
-                                                    <Text className="text-primary-dark font-heading text-sm">
+                                                    <Text style={{ color: '#4A4A45', fontFamily: 'Outfit_700Bold', fontSize: 14 }}>
                                                         {language === 'fr' ? "Aujourd'hui" : 'Today'}
                                                     </Text>
                                                 </Pressable>
@@ -385,17 +662,17 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                                                         yesterday.setDate(yesterday.getDate() - 1)
                                                         setDate(yesterday)
                                                     }}
-                                                    className="flex-1 bg-surface-highlight p-3 rounded-xl items-center border border-border"
+                                                    style={[styles.typeButton, isDark && styles.typeButtonDark, { flex: 1 }]}
                                                 >
-                                                    <Text className="text-text font-heading text-sm">
+                                                    <Text style={{ color: isDark ? '#FDFCF8' : '#1C1C1E', fontFamily: 'Outfit_700Bold', fontSize: 14 }}>
                                                         {language === 'fr' ? 'Hier' : 'Yesterday'}
                                                     </Text>
                                                 </Pressable>
                                             </View>
 
                                             {/* Date display */}
-                                            <View className="bg-surface-highlight p-4 rounded-xl mb-6 items-center border border-border">
-                                                <Text className="text-text font-heading text-xl">
+                                            <View style={[styles.vehicleSelect, isDark && styles.vehicleSelectDark, { justifyContent: 'center', marginBottom: 24 }]}>
+                                                <Text style={{ color: isDark ? '#FDFCF8' : '#1C1C1E', fontFamily: 'Outfit_700Bold', fontSize: 20 }}>
                                                     {date.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', {
                                                         day: 'numeric',
                                                         month: 'long',
@@ -405,24 +682,24 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                                             </View>
 
                                             {/* Day/Month/Year adjusters */}
-                                            <View className="flex-row gap-4">
+                                            <View style={{ flexDirection: 'row', gap: 16 }}>
                                                 {/* Day */}
-                                                <View className="flex-1 items-center">
-                                                    <Text className="text-text-secondary text-xs uppercase mb-2">
+                                                <View style={{ flex: 1, alignItems: 'center' }}>
+                                                    <Text style={{ color: isDark ? '#9CA3AF' : '#666660', fontSize: 12, textTransform: 'uppercase', marginBottom: 8 }}>
                                                         {language === 'fr' ? 'Jour' : 'Day'}
                                                     </Text>
-                                                    <View className="flex-row items-center">
+                                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                                         <Pressable
                                                             onPress={() => {
                                                                 const newDate = new Date(date)
                                                                 newDate.setDate(newDate.getDate() - 1)
                                                                 if (newDate <= new Date()) setDate(newDate)
                                                             }}
-                                                            className="w-10 h-10 bg-surface-highlight rounded-full items-center justify-center border border-border"
+                                                            style={[styles.addButton, { width: 32, height: 32, backgroundColor: isDark ? '#3A3A3C' : '#F1F5F9', borderColor: isDark ? '#475569' : '#E6E5E0' }]}
                                                         >
                                                             <Minus size={16} color="#9CA3AF" />
                                                         </Pressable>
-                                                        <Text className="text-text font-heading text-xl mx-3 w-8 text-center">
+                                                        <Text style={{ color: isDark ? '#FDFCF8' : '#1C1C1E', fontFamily: 'Outfit_700Bold', fontSize: 20, marginHorizontal: 8, width: 32, textAlign: 'center' }}>
                                                             {date.getDate()}
                                                         </Text>
                                                         <Pressable
@@ -431,7 +708,7 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                                                                 newDate.setDate(newDate.getDate() + 1)
                                                                 if (newDate <= new Date()) setDate(newDate)
                                                             }}
-                                                            className="w-10 h-10 bg-surface-highlight rounded-full items-center justify-center border border-border"
+                                                            style={[styles.addButton, { width: 32, height: 32, backgroundColor: isDark ? '#3A3A3C' : '#F1F5F9', borderColor: isDark ? '#475569' : '#E6E5E0' }]}
                                                         >
                                                             <Plus size={16} color="#9CA3AF" />
                                                         </Pressable>
@@ -439,22 +716,22 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                                                 </View>
 
                                                 {/* Month */}
-                                                <View className="flex-1 items-center">
-                                                    <Text className="text-text-secondary text-xs uppercase mb-2">
+                                                <View style={{ flex: 1, alignItems: 'center' }}>
+                                                    <Text style={{ color: isDark ? '#9CA3AF' : '#666660', fontSize: 12, textTransform: 'uppercase', marginBottom: 8 }}>
                                                         {language === 'fr' ? 'Mois' : 'Month'}
                                                     </Text>
-                                                    <View className="flex-row items-center">
+                                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                                         <Pressable
                                                             onPress={() => {
                                                                 const newDate = new Date(date)
                                                                 newDate.setMonth(newDate.getMonth() - 1)
                                                                 if (newDate <= new Date()) setDate(newDate)
                                                             }}
-                                                            className="w-10 h-10 bg-surface-highlight rounded-full items-center justify-center border border-border"
+                                                            style={[styles.addButton, { width: 32, height: 32, backgroundColor: isDark ? '#3A3A3C' : '#F1F5F9', borderColor: isDark ? '#475569' : '#E6E5E0' }]}
                                                         >
                                                             <Minus size={16} color="#9CA3AF" />
                                                         </Pressable>
-                                                        <Text className="text-text font-heading text-xl mx-3 w-8 text-center">
+                                                        <Text style={{ color: isDark ? '#FDFCF8' : '#1C1C1E', fontFamily: 'Outfit_700Bold', fontSize: 20, marginHorizontal: 8, width: 32, textAlign: 'center' }}>
                                                             {date.getMonth() + 1}
                                                         </Text>
                                                         <Pressable
@@ -463,7 +740,7 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                                                                 newDate.setMonth(newDate.getMonth() + 1)
                                                                 if (newDate <= new Date()) setDate(newDate)
                                                             }}
-                                                            className="w-10 h-10 bg-surface-highlight rounded-full items-center justify-center border border-border"
+                                                            style={[styles.addButton, { width: 32, height: 32, backgroundColor: isDark ? '#3A3A3C' : '#F1F5F9', borderColor: isDark ? '#475569' : '#E6E5E0' }]}
                                                         >
                                                             <Plus size={16} color="#9CA3AF" />
                                                         </Pressable>
@@ -471,22 +748,22 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                                                 </View>
 
                                                 {/* Year */}
-                                                <View className="flex-1 items-center">
-                                                    <Text className="text-text-secondary text-xs uppercase mb-2">
+                                                <View style={{ flex: 1, alignItems: 'center' }}>
+                                                    <Text style={{ color: isDark ? '#9CA3AF' : '#666660', fontSize: 12, textTransform: 'uppercase', marginBottom: 8 }}>
                                                         {language === 'fr' ? 'Année' : 'Year'}
                                                     </Text>
-                                                    <View className="flex-row items-center">
+                                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                                         <Pressable
                                                             onPress={() => {
                                                                 const newDate = new Date(date)
                                                                 newDate.setFullYear(newDate.getFullYear() - 1)
                                                                 setDate(newDate)
                                                             }}
-                                                            className="w-10 h-10 bg-surface-highlight rounded-full items-center justify-center border border-border"
+                                                            style={[styles.addButton, { width: 32, height: 32, backgroundColor: isDark ? '#3A3A3C' : '#F1F5F9', borderColor: isDark ? '#475569' : '#E6E5E0' }]}
                                                         >
                                                             <Minus size={16} color="#9CA3AF" />
                                                         </Pressable>
-                                                        <Text className="text-text font-heading text-lg mx-2 w-12 text-center">
+                                                        <Text style={{ color: isDark ? '#FDFCF8' : '#1C1C1E', fontFamily: 'Outfit_700Bold', fontSize: 18, marginHorizontal: 8, width: 48, textAlign: 'center' }}>
                                                             {date.getFullYear()}
                                                         </Text>
                                                         <Pressable
@@ -495,7 +772,7 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                                                                 newDate.setFullYear(newDate.getFullYear() + 1)
                                                                 if (newDate <= new Date()) setDate(newDate)
                                                             }}
-                                                            className="w-10 h-10 bg-surface-highlight rounded-full items-center justify-center border border-border"
+                                                            style={[styles.addButton, { width: 32, height: 32, backgroundColor: isDark ? '#3A3A3C' : '#F1F5F9', borderColor: isDark ? '#475569' : '#E6E5E0' }]}
                                                         >
                                                             <Plus size={16} color="#9CA3AF" />
                                                         </Pressable>
@@ -504,12 +781,12 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                                             </View>
                                         </View>
 
-                                        <View className="p-4 border-t border-border">
+                                        <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: isDark ? '#3A3A3C' : '#E6E5E0' }}>
                                             <Pressable
                                                 onPress={() => setShowDatePicker(false)}
-                                                className="bg-primary p-4 rounded-xl items-center"
+                                                style={{ backgroundColor: '#4A4A45', padding: 16, borderRadius: 12, alignItems: 'center' }}
                                             >
-                                                <Text className="text-black font-heading text-lg">OK</Text>
+                                                <Text style={{ color: '#FFFFFF', fontFamily: 'Outfit_700Bold', fontSize: 18 }}>OK</Text>
                                             </Pressable>
                                         </View>
                                     </Pressable>
@@ -520,28 +797,41 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                         <TextInput
                             placeholder={t('maintenance.field.title')}
                             placeholderTextColor="#9CA3AF"
-                            className="bg-surface-highlight text-text p-4 rounded-xl mb-4 text-lg border border-border"
+                            style={[styles.input, isDark && styles.inputDark]}
                             value={title}
                             onChangeText={setTitle}
                         />
 
-                        <View className="flex-row gap-4 mb-4">
-                            <TextInput
-                                placeholder={t('maintenance.field.cost')}
-                                placeholderTextColor="#9CA3AF"
-                                keyboardType="numeric"
-                                className="bg-surface-highlight text-text p-4 rounded-xl text-lg flex-1 border border-border"
-                                value={cost}
-                                onChangeText={setCost}
-                            />
-                            <TextInput
-                                placeholder={t('maintenance.field.mileage')}
-                                placeholderTextColor="#9CA3AF"
-                                keyboardType="numeric"
-                                className="bg-surface-highlight text-text p-4 rounded-xl text-lg flex-1 border border-border"
-                                value={mileageAtLog}
-                                onChangeText={setMileageAtLog}
-                            />
+                        <View style={{ flexDirection: 'row', gap: 16, marginBottom: 16 }}>
+                            <View style={[styles.inputRowContainer, isDark && styles.inputRowContainerDark, { flex: 1 }]}>
+                                <TextInput
+                                    placeholder={t('maintenance.field.cost')}
+                                    placeholderTextColor="#9CA3AF"
+                                    keyboardType="numeric"
+                                    style={[styles.inputInside, isDark && styles.inputInsideDark]}
+                                    value={cost}
+                                    onChangeText={setCost}
+                                />
+                                <Text style={[styles.suffixText, isDark && styles.suffixTextDark]}>€</Text>
+                            </View>
+
+                            <View style={[styles.inputRowContainer, isDark && styles.inputRowContainerDark, { flex: 1 }]}>
+                                <TextInput
+                                    placeholder={t('maintenance.field.mileage')}
+                                    placeholderTextColor="#9CA3AF"
+                                    keyboardType="numeric"
+                                    style={[styles.inputInside, isDark && styles.inputInsideDark]}
+                                    value={mileageAtLog}
+                                    onChangeText={(text) => {
+                                        // Remove non-numeric characters first
+                                        const numeric = text.replace(/[^0-9]/g, '');
+                                        // Format with dots
+                                        const formatted = numeric.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                                        setMileageAtLog(formatted);
+                                    }}
+                                />
+                                <Text style={[styles.suffixText, isDark && styles.suffixTextDark]}>km</Text>
+                            </View>
                         </View>
 
                         <TextInput
@@ -549,14 +839,13 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                             placeholderTextColor="#9CA3AF"
                             multiline
                             numberOfLines={3}
-                            className="bg-surface-highlight text-text p-4 rounded-xl mb-6 text-lg border border-border"
-                            style={{ textAlignVertical: 'top' }}
+                            style={[styles.input, isDark && styles.inputDark, { textAlignVertical: 'top', height: 100, marginBottom: 24 }]}
                             value={notes}
                             onChangeText={setNotes}
                         />
 
                         <Pressable onPress={handleSubmit} style={styles.submitButton}>
-                            <Text className="text-white font-heading text-lg">
+                            <Text style={{ color: '#FFFFFF', fontFamily: 'Outfit_700Bold', fontSize: 18 }}>
                                 {log ? t('maintenance.modal.submit_edit') : t('maintenance.modal.submit_add')}
                             </Text>
                         </Pressable>
@@ -569,76 +858,88 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                                         .get(TableName.DOCUMENTS)
                                         .query(Q.where('log_id', log.id))
                                         .fetch()
-                                    
+
                                     const hasLinkedDocument = linkedDocuments.length > 0
-                                    
+
                                     if (hasLinkedDocument) {
                                         // Show choice: delete both or keep document
-                                        Alert.alert(
+                                        showAlert(
                                             t('maintenance.modal.delete_confirm_title'),
                                             language === 'fr'
                                                 ? 'Cet entretien a un document lié (facture). Voulez-vous aussi supprimer le document du portefeuille ?'
                                                 : 'This maintenance log has a linked document (invoice). Do you also want to delete the document from your wallet?',
-                                            [
-                                                { text: t('common.cancel'), style: 'cancel' },
-                                                {
-                                                    text: language === 'fr' ? 'Garder le document' : 'Keep document',
-                                                    onPress: async () => {
-                                                        // Unlink document first, then delete log only
-                                                        await database.write(async () => {
-                                                            for (const doc of linkedDocuments) {
-                                                                await doc.update(d => {
-                                                                    // @ts-ignore - clear the log_id link
-                                                                    d._raw.log_id = null
-                                                                })
-                                                            }
-                                                            await log.markAsDeleted()
-                                                        })
-                                                        sync() // Sync changes to cloud
-                                                        onClose()
-                                                    }
+                                            {
+                                                secondaryText: language === 'fr' ? 'Garder le document' : 'Keep document',
+                                                onSecondary: async () => {
+                                                    // Unlink document first, then delete log only
+                                                    await database.write(async () => {
+                                                        for (const doc of linkedDocuments) {
+                                                            await doc.update(d => {
+                                                                // @ts-ignore - clear the log_id link
+                                                                d._raw.log_id = null
+                                                            })
+                                                        }
+                                                        await log.markAsDeleted()
+                                                    })
+                                                    sync() // Sync changes to cloud
+                                                    setAlertVisible(false)
+                                                    onClose()
                                                 },
-                                                {
-                                                    text: language === 'fr' ? 'Tout supprimer' : 'Delete all',
-                                                    style: 'destructive',
-                                                    onPress: async () => {
-                                                        await MaintenanceService.deleteLog(log)
-                                                        onClose()
-                                                    }
+                                                confirmText: language === 'fr' ? 'Tout supprimer' : 'Delete all',
+                                                variant: 'danger',
+                                                onConfirm: async () => {
+                                                    await MaintenanceService.deleteLog(log)
+                                                    setAlertVisible(false)
+                                                    onClose()
                                                 }
-                                            ]
+                                            }
                                         )
                                     } else {
                                         // No linked document, simple confirmation
-                                        Alert.alert(
+                                        showAlert(
                                             t('maintenance.modal.delete_confirm_title'),
                                             t('maintenance.modal.delete_confirm_desc'),
-                                            [
-                                                { text: t('common.cancel'), style: 'cancel' },
-                                                {
-                                                    text: t('common.delete'),
-                                                    style: 'destructive',
-                                                    onPress: async () => {
-                                                        await MaintenanceService.deleteLog(log)
-                                                        onClose()
-                                                    }
+                                            {
+                                                confirmText: t('common.delete'),
+                                                variant: 'danger',
+                                                onConfirm: async () => {
+                                                    await MaintenanceService.deleteLog(log)
+                                                    setAlertVisible(false)
+                                                    onClose()
                                                 }
-                                            ]
+                                            }
                                         )
                                     }
                                 }}
                                 style={styles.deleteButton}
                             >
-                                <Text className="text-red-500 font-bold text-lg">{t('maintenance.modal.delete')}</Text>
+                                <Text style={{ color: '#BA4444', fontFamily: 'Outfit_700Bold', fontSize: 18 }}>{t('maintenance.modal.delete')}</Text>
                             </Pressable>
                         )}
 
                         <Pressable onPress={onClose} style={styles.cancelButton}>
-                            <Text className="text-text-secondary font-bold">{t('common.cancel')}</Text>
+                            <Text style={{ color: isDark ? '#9CA3AF' : '#666660', fontFamily: 'WorkSans_500Medium', fontSize: 16, fontWeight: '500' }}>{t('common.cancel')}</Text>
                         </Pressable>
                     </ScrollView>
-                </View>
-            </View>
+                </Pressable>
+            </Pressable>
+
+            <ConfirmationModal
+                visible={alertVisible}
+                title={alertTitle}
+                description={alertMessage}
+                onConfirm={alertOnConfirm || (() => setAlertVisible(false))}
+                onSecondary={alertOnSecondary}
+                onCancel={() => setAlertVisible(false)}
+                confirmText={alertConfirmText || t('common.ok')}
+                secondaryText={alertSecondaryText}
+                variant={alertVariant}
+            />
+
+            <LoadingModal
+                visible={isScanning}
+                message={language === 'fr' ? 'Analyse de votre facture...' : 'Analyzing your invoice...'}
+            />
         </Modal>
     )
 }
@@ -676,17 +977,17 @@ const MaintenanceScreen = ({ logs, vehicles }: { logs: MaintenanceLog[], vehicle
             const bTime = b.createdAt?.getTime() || b.date.getTime()
             diff = aTime - bTime
         }
-        
+
         return sortOrder === 'asc' ? diff : -diff
     })
 
     return (
-        <SafeAreaView className="flex-1 bg-background">
+        <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
             <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-            <View className="flex-1 p-6">
+            <View style={{ flex: 1, padding: 24 }}>
                 {/* Header Contextuel */}
-                <View className="flex-row justify-between items-center mb-6">
-                    <Text className="text-3xl font-heading text-text">
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                    <Text style={[styles.headerTitle, isDark && styles.headerTitleDark]}>
                         {selectedVehicleId ? t('maintenance.title') : t('maintenance.select_bike_title')}
                     </Text>
                     {selectedVehicleId && (
@@ -700,147 +1001,163 @@ const MaintenanceScreen = ({ logs, vehicles }: { logs: MaintenanceLog[], vehicle
                 </View>
 
                 {selectedVehicleId ? (
-                    <>
-                        {/* Vehicle Indicator (Dashboard Style) */}
-                        <View className="mb-6 items-start">
-                            <View className="bg-primary px-5 py-3 rounded-full flex-row items-center shadow-sm">
-                                <Bike size={20} color="white" />
-                                <Text className="text-white font-heading text-base ml-3">
-                                    {vehicles.find(v => v.id === selectedVehicleId)?.brand} {vehicles.find(v => v.id === selectedVehicleId)?.model}
-                                </Text>
-                            </View>
-                        </View>
-
-                        {/* Sort Controls */}
-                        <View className="mb-4 flex-row gap-2">
-                            <Pressable
-                                onPress={() => setShowSortDropdown(true)}
-                                className="bg-surface-highlight px-4 py-3 rounded-xl border border-border flex-row justify-between items-center flex-1"
-                            >
-                                <View className="flex-row items-center">
-                                    <ArrowUpDown size={16} color={isDark ? "#EAB308" : "#3B82F6"} />
-                                    <Text className="text-text font-heading ml-2 text-sm">
-                                        {language === 'fr' 
-                                            ? sortOptions.find(o => o.key === sortBy)?.labelFr 
-                                            : sortOptions.find(o => o.key === sortBy)?.labelEn}
-                                    </Text>
+                    (() => {
+                        const activeVehicle = vehicles.find(v => v.id === selectedVehicleId);
+                        return (
+                            <>
+                                {/* Vehicle Indicator (Dashboard Style) */}
+                                <View style={{ marginBottom: 24, alignItems: 'flex-start' }}>
+                                    <View style={[styles.vehicleIndicator, isDark && { backgroundColor: '#FDFCF8' }, { gap: 8 }]}>
+                                        {activeVehicle && (
+                                            <BrandLogo
+                                                brand={activeVehicle.brand}
+                                                variant="icon"
+                                                size={20}
+                                                color={isDark ? '#1C1C1E' : '#1C1C1E'}
+                                            />
+                                        )}
+                                        <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 16, color: isDark ? '#1C1C1E' : '#1C1C1E' }}>
+                                            {activeVehicle ? `${activeVehicle.brand} ${activeVehicle.model}` : (language === 'fr' ? 'Tous les véhicules' : 'All Vehicles')}
+                                        </Text>
+                                    </View>
                                 </View>
-                                <ChevronDown size={16} color="#9CA3AF" className="ml-2" />
-                            </Pressable>
 
-                            <Pressable
-                                onPress={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
-                                className="bg-surface-highlight w-12 items-center justify-center rounded-xl border border-border"
-                            >
-                                {sortOrder === 'desc' ? (
-                                    <ArrowDown size={20} color={isDark ? "#EAB308" : "#3B82F6"} />
-                                ) : (
-                                    <ArrowUp size={20} color={isDark ? "#EAB308" : "#3B82F6"} />
-                                )}
-                            </Pressable>
-                        </View>
-
-                        {/* Sort Dropdown Modal */}
-                            <Modal visible={showSortDropdown} transparent animationType="fade">
-                                <Pressable 
-                                    className="flex-1 bg-black/50 justify-center items-center"
-                                    onPress={() => setShowSortDropdown(false)}
-                                >
-                                    <View className="bg-surface rounded-2xl w-[75%] overflow-hidden">
-                                        <View className="p-4 border-b border-border">
-                                            <Text className="text-text font-heading text-lg text-center">
-                                                {language === 'fr' ? 'Trier par' : 'Sort by'}
+                                {/* Sort Controls */}
+                                <View style={{ marginBottom: 16, flexDirection: 'row', gap: 8 }}>
+                                    <Pressable
+                                        onPress={() => setShowSortDropdown(true)}
+                                        style={[styles.sortButton, isDark && styles.sortButtonDark, { flex: 1 }]}
+                                    >
+                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                            <ArrowUpDown size={16} color={isDark ? "#E5E5E0" : "#4A4A45"} />
+                                            <Text style={{ color: isDark ? '#FDFCF8' : '#1C1C1E', fontFamily: 'Outfit_700Bold', marginLeft: 8, fontSize: 14 }}>
+                                                {language === 'fr'
+                                                    ? sortOptions.find(o => o.key === sortBy)?.labelFr
+                                                    : sortOptions.find(o => o.key === sortBy)?.labelEn}
                                             </Text>
                                         </View>
-                                        {sortOptions.map((option) => (
-                                            <Pressable
-                                                key={option.key}
-                                                onPress={() => {
-                                                    setSortBy(option.key)
-                                                    setShowSortDropdown(false)
-                                                }}
-                                                className={`p-4 flex-row items-center justify-between border-b border-border/50 ${sortBy === option.key ? 'bg-primary/10' : ''}`}
-                                            >
-                                                <Text className={`font-heading ${sortBy === option.key ? 'text-primary-dark' : 'text-text'}`}>
-                                                    {language === 'fr' ? option.labelFr : option.labelEn}
-                                                </Text>
-                                                {sortBy === option.key && (
-                                                    <Check size={20} color="#EAB308" />
-                                                )}
-                                            </Pressable>
-                                        ))}
-                                    </View>
-                                </Pressable>
-                            </Modal>
+                                        <ChevronDown size={16} color="#9CA3AF" style={{ marginLeft: 8 }} />
+                                    </Pressable>
 
-                        <FlatList
-                            data={sortedLogs}
-                            keyExtractor={item => item.id}
-                            showsVerticalScrollIndicator={false}
-                            renderItem={({ item }) => (
-                                <Pressable
-                                    onPress={() => {
-                                        setEditingLog(item)
-                                        setModalVisible(true)
-                                    }}
-                                    style={[styles.logItem, isDark && styles.logItemDark]}
-                                >
-                                    <View className={`w-12 h-12 rounded-xl items-center justify-center mr-4 ${item.type === 'periodic' ? 'bg-blue-500/10' : item.type === 'repair' ? 'bg-red-500/10' : 'bg-purple-500/10'}`}>
-                                        {item.type === 'periodic' && <Calendar size={24} color='#3B82F6' />}
-                                        {item.type === 'repair' && <Wrench size={24} color='#EF4444' />}
-                                        {item.type === 'modification' && <FlaskConical size={24} color='#A855F7' />}
-                                    </View>
-                                    <View className="flex-1">
-                                        <View className="flex-row justify-between items-start mb-1">
-                                            <Text className="text-text font-heading text-lg flex-1 mr-2">{item.title}</Text>
-                                            <Text className="text-primary-dark font-heading text-lg">{item.cost} €</Text>
-                                        </View>
-                                        <View className="flex-row justify-between items-center">
-                                            <View>
-                                                <Text className="text-text-secondary font-body text-sm">{item.date.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US')}</Text>
-                                                <Text className="text-text-secondary font-body text-sm font-medium">{item.mileageAtLog.toLocaleString()} km</Text>
-                                            </View>
-                                            <View className="bg-surface-highlight px-2 py-0.5 rounded border border-border/50">
-                                                <Text className="text-[10px] font-heading text-text-secondary uppercase">{t(`maintenance.type.${item.type}`)}</Text>
-                                            </View>
-                                        </View>
-                                    </View>
-                                </Pressable>
-                            )}
-                            ListEmptyComponent={
-                                <View className="items-center justify-center py-20 px-10">
-                                    <View className="bg-surface-highlight w-20 h-20 rounded-full items-center justify-center mb-6 shadow-sm">
-                                        <FileText size={40} color="#9CA3AF" />
-                                    </View>
-                                    <Text className="text-text font-heading text-xl text-center mb-2">{t('maintenance.no_logs')}</Text>
-                                    <Text className="text-text-secondary font-body text-center text-lg">{t('maintenance.no_logs_desc')}</Text>
+                                    <Pressable
+                                        onPress={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                                        style={[styles.sortIconContainer, isDark && styles.sortIconContainerDark]}
+                                    >
+                                        {sortOrder === 'desc' ? (
+                                            <ArrowDown size={20} color={isDark ? "#E5E5E0" : "#4A4A45"} />
+                                        ) : (
+                                            <ArrowUp size={20} color={isDark ? "#E5E5E0" : "#4A4A45"} />
+                                        )}
+                                    </Pressable>
                                 </View>
-                            }
-                        />
-                    </>
+
+                                {/* Sort Dropdown Modal */}
+                                <Modal visible={showSortDropdown} transparent animationType="fade">
+                                    <Pressable
+                                        style={styles.sortModalOverlay}
+                                        onPress={() => setShowSortDropdown(false)}
+                                    >
+                                        <View style={[styles.sortDropdown, isDark && styles.sortDropdownDark]}>
+                                            <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: isDark ? '#3A3A3C' : '#E6E5E0' }}>
+                                                <Text style={{ color: isDark ? '#FDFCF8' : '#1C1C1E', fontFamily: 'Outfit_700Bold', fontSize: 18, textAlign: 'center' }}>
+                                                    {language === 'fr' ? 'Trier par' : 'Sort by'}
+                                                </Text>
+                                            </View>
+                                            {sortOptions.map((option) => (
+                                                <Pressable
+                                                    key={option.key}
+                                                    onPress={() => {
+                                                        setSortBy(option.key)
+                                                        setShowSortDropdown(false)
+                                                    }}
+                                                    style={[styles.sortOption, isDark && styles.sortOptionDark, sortBy === option.key && styles.sortOptionActive]}
+                                                >
+                                                    <Text style={{ fontFamily: 'Outfit_700Bold', color: sortBy === option.key ? '#4A4A45' : (isDark ? '#FDFCF8' : '#1C1C1E') }}>
+                                                        {language === 'fr' ? option.labelFr : option.labelEn}
+                                                    </Text>
+                                                    {sortBy === option.key && (
+                                                        <Check size={20} color="#E5E5E0" />
+                                                    )}
+                                                </Pressable>
+                                            ))}
+                                        </View>
+                                    </Pressable>
+                                </Modal>
+
+                                <FlatList
+                                    data={sortedLogs}
+                                    keyExtractor={item => item.id}
+                                    showsVerticalScrollIndicator={false}
+                                    renderItem={({ item }) => (
+                                        <Pressable
+                                            onPress={() => {
+                                                setEditingLog(item)
+                                                setModalVisible(true)
+                                            }}
+                                            style={[styles.logItem, isDark && styles.logItemDark]}
+                                        >
+                                            <View style={[styles.logIconContainer, {
+                                                backgroundColor: isDark
+                                                    ? (item.type === 'periodic' ? 'rgba(156, 163, 175, 0.2)' : item.type === 'repair' ? 'rgba(186, 68, 68, 0.2)' : 'rgba(156, 163, 175, 0.2)')
+                                                    : (item.type === 'periodic' ? 'rgba(74, 74, 69, 0.1)' : item.type === 'repair' ? 'rgba(186, 68, 68, 0.1)' : 'rgba(133, 127, 114, 0.1)')
+                                            }]}>
+                                                {item.type === 'periodic' && <Calendar size={24} color={isDark ? '#9CA3AF' : '#4A4A45'} />}
+                                                {item.type === 'repair' && <Wrench size={24} color={isDark ? '#EF6B6B' : '#BA4444'} />}
+                                                {item.type === 'modification' && <FlaskConical size={24} color={isDark ? '#9CA3AF' : '#857F72'} />}
+                                            </View>
+                                            <View style={{ flex: 1 }}>
+                                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                                                    <Text style={{ color: isDark ? '#FDFCF8' : '#1C1C1E', fontFamily: 'Outfit_700Bold', fontSize: 18, flex: 1, marginRight: 8 }}>{item.title}</Text>
+                                                    <Text style={{ color: isDark ? '#E5E5E0' : '#4A4A45', fontFamily: 'Outfit_700Bold', fontSize: 18 }}>{item.cost} €</Text>
+                                                </View>
+                                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <View>
+                                                        <Text style={{ color: isDark ? '#9CA3AF' : '#666660', fontFamily: 'WorkSans_400Regular', fontSize: 14 }}>{item.date.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US')}</Text>
+                                                        <Text style={{ color: isDark ? '#9CA3AF' : '#666660', fontFamily: 'WorkSans_500Medium', fontSize: 14 }}>{item.mileageAtLog.toLocaleString()} km</Text>
+                                                    </View>
+                                                    <View style={[styles.logTagContainer, isDark && styles.logTagContainerDark]}>
+                                                        <Text style={[styles.logTagText, isDark && styles.logTagTextDark]}>{t(`maintenance.type.${item.type}`)}</Text>
+                                                    </View>
+                                                </View>
+                                            </View>
+                                        </Pressable>
+                                    )}
+                                    ListEmptyComponent={
+                                        <View style={styles.emptyContainer}>
+                                            <View style={[styles.emptyIconContainer, isDark && styles.emptyIconContainerDark]}>
+                                                <FileText size={40} color="#9CA3AF" />
+                                            </View>
+                                            <Text style={{ color: isDark ? '#FDFCF8' : '#1C1C1E', fontFamily: 'Outfit_700Bold', fontSize: 20, textAlign: 'center', marginBottom: 8 }}>{t('maintenance.no_logs')}</Text>
+                                            <Text style={{ color: isDark ? '#9CA3AF' : '#666660', fontFamily: 'WorkSans_400Regular', fontSize: 18, textAlign: 'center' }}>{t('maintenance.no_logs_desc')}</Text>
+                                        </View>
+                                    }
+                                />
+                            </>
+                        );
+                    })()
                 ) : (
                     <ScrollView showsVerticalScrollIndicator={false}>
-                        <Text className="text-text-secondary mb-6 text-lg">{t('maintenance.select_bike_desc_full')}</Text>
+                        <Text style={{ color: isDark ? '#9CA3AF' : '#666660', marginBottom: 24, fontSize: 18, fontFamily: 'WorkSans_400Regular' }}>{t('maintenance.select_bike_desc_full')}</Text>
                         {vehicles.map(v => (
                             <Pressable
                                 key={v.id}
                                 onPress={() => setSelectedVehicleId(v.id)}
                                 style={[styles.vehicleCard, isDark && styles.vehicleCardDark]}
                             >
-                                <View className="bg-primary/10 w-14 h-14 rounded-full items-center justify-center mr-4">
-                                    <Bike size={30} color="#EAB308" />
+                                <View style={{ backgroundColor: isDark ? 'rgba(253, 252, 248, 0.1)' : 'rgba(74, 74, 69, 0.1)', width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+                                    <BrandLogo brand={v.brand} variant="icon" size={30} color={isDark ? '#FDFCF8' : '#1C1C1E'} />
                                 </View>
-                                <View className="flex-1">
-                                    <Text className="text-text font-heading text-xl">{v.brand} {v.model}</Text>
-                                    <Text className="text-text-secondary font-body text-sm">{v.year} • {v.currentMileage.toLocaleString()} km</Text>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={{ color: isDark ? '#FDFCF8' : '#1C1C1E', fontFamily: 'Outfit_700Bold', fontSize: 20 }}>{v.brand} {v.model}</Text>
+                                    <Text style={{ color: isDark ? '#9CA3AF' : '#666660', fontFamily: 'WorkSans_400Regular', fontSize: 14 }}>{v.year} • {v.currentMileage.toLocaleString()} km</Text>
                                 </View>
                                 <ChevronRight size={24} color="#9CA3AF" />
                             </Pressable>
                         ))}
                         {vehicles.length === 0 && (
-                            <View className="items-center justify-center py-20">
+                            <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 80 }}>
                                 <Bike size={60} color="#9CA3AF" />
-                                <Text className="text-text-secondary font-body mt-4 text-center">{t('garage.no_vehicles')}</Text>
+                                <Text style={{ color: isDark ? '#9CA3AF' : '#666660', fontFamily: 'WorkSans_400Regular', marginTop: 16, textAlign: 'center', fontSize: 16 }}>{t('garage.no_vehicles')}</Text>
                             </View>
                         )}
                     </ScrollView>

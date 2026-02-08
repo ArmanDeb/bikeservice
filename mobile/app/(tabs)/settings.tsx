@@ -1,21 +1,82 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Switch, StatusBar, Alert, Linking, Modal, FlatList, StyleSheet, Pressable } from 'react-native'
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/context/AuthContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useLanguage, Language } from '../../src/context/LanguageContext';
-import { User, Globe, Moon, Sun, BookOpen, LogOut, Bug, Lightbulb, Trash2, Check, Cloud, Bell, ChevronRight } from 'lucide-react-native';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LAST_SYNC_KEY } from '../../src/services/SyncService';
 import { database } from '../../src/database';
+import { ConfirmationModal } from '../../src/components/common/ConfirmationModal';
+import { sync } from '../../src/services/SyncService';
+import {
+    User, Globe, Moon, Sun, BookOpen, LogOut, Bug, Lightbulb, Trash2, Check, Cloud, Bell, ChevronRight, Info,
+    Shield, FileText, RefreshCw
+} from 'lucide-react-native';
 
 export default function SettingsScreen() {
-    const { user, signOut } = useAuth();
+    const { user, signOut, deleteAccount } = useAuth();
     const { theme, toggleTheme, isDark } = useTheme();
     const { language, setLanguage, t } = useLanguage();
+    const router = useRouter();
     const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
     const [languageModalVisible, setLanguageModalVisible] = useState(false);
+
+    // Alert state
+    const [alertVisible, setAlertVisible] = useState(false)
+    const [alertTitle, setAlertTitle] = useState('')
+    const [alertMessage, setAlertMessage] = useState('')
+    const [alertOnConfirm, setAlertOnConfirm] = useState<(() => void) | undefined>()
+    const [alertConfirmText, setAlertConfirmText] = useState<string | undefined>()
+    const [alertVariant, setAlertVariant] = useState<'default' | 'danger'>('default')
+    const [isSyncing, setIsSyncing] = useState(false);
+
+    const handleSync = async () => {
+        setIsSyncing(true);
+        try {
+            await sync();
+            const now = Date.now();
+            setLastSyncTime(now);
+            await AsyncStorage.setItem(LAST_SYNC_KEY, now.toString());
+        } catch (error: any) {
+            showAlert(t('alert.error'), t('settings.sync_error') + ': ' + error.message);
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
+    const openLink = async (url: string) => {
+        try {
+            const supported = await Linking.canOpenURL(url);
+            if (supported) {
+                await Linking.openURL(url);
+            } else {
+                showAlert(t('alert.error'), t('settings.link_error'));
+            }
+        } catch (error) {
+            showAlert(t('alert.error'), t('settings.link_error'));
+        }
+    };
+
+    const showAlert = (
+        title: string,
+        message: string,
+        options?: {
+            onConfirm?: () => void;
+            confirmText?: string;
+            variant?: 'default' | 'danger';
+        }
+    ) => {
+        setAlertTitle(title)
+        setAlertMessage(message)
+        setAlertOnConfirm(() => options?.onConfirm || (() => setAlertVisible(false)))
+        setAlertConfirmText(options?.confirmText)
+        setAlertVariant(options?.variant || 'default')
+        setAlertVisible(true)
+    }
 
     // Load last sync time on mount and refresh periodically
     useEffect(() => {
@@ -33,7 +94,7 @@ export default function SettingsScreen() {
         return () => clearInterval(interval);
     }, []);
 
-    const iconColor = isDark ? '#ffffff' : '#2D2A26';
+    const iconColor = isDark ? '#E5E5E0' : '#1C1C1E';
     const chevronColor = isDark ? '#525252' : '#9CA3AF';
 
     /**
@@ -80,69 +141,139 @@ export default function SettingsScreen() {
     const currentLanguageObj = languages.find(l => l.code === language) || languages[0];
 
     const styles = StyleSheet.create({
+        container: {
+            backgroundColor: isDark ? '#1C1C1E' : '#FDFCF8',
+        },
+        title: {
+            fontSize: 32,
+            fontFamily: 'Outfit_700Bold',
+            color: isDark ? '#FDFCF8' : '#1C1C1E',
+            marginBottom: 32,
+        },
+        sectionTitle: {
+            fontSize: 12,
+            fontFamily: 'Outfit_700Bold',
+            color: isDark ? '#9CA3AF' : '#666660',
+            textTransform: 'uppercase',
+            letterSpacing: 1,
+            marginBottom: 12,
+        },
+        sectionCard: {
+            backgroundColor: isDark ? '#2C2C2E' : '#FFFFFF',
+            borderRadius: 16,
+            marginBottom: 24,
+            borderWidth: 1,
+            borderColor: isDark ? '#3A3A3C' : '#E6E5E0',
+            overflow: 'hidden',
+        },
         menuItem: {
             padding: 16,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
         },
+        menuItemBorder: {
+            borderBottomWidth: 1,
+            borderBottomColor: isDark ? '#3A3A3C' : '#E6E5E0',
+        },
+        iconContainer: {
+            width: 40,
+            height: 40,
+            borderRadius: 12,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginRight: 16,
+            backgroundColor: isDark ? '#3A3A3C' : '#F5F5F0',
+        },
+        iconContainerGreen: {
+            backgroundColor: 'rgba(34, 197, 94, 0.1)', // green-500/10
+        },
+        iconContainerActive: {
+            backgroundColor: isDark ? '#FDFCF8' : '#1C1C1E',
+        },
         dangerItem: {
             padding: 16,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: 'rgba(239, 68, 68, 0.1)', // bg-red-500/10
+            backgroundColor: isDark ? 'rgba(186, 68, 68, 0.1)' : '#FEF2F2',
+        },
+        dangerZoneCard: {
+            borderColor: '#BA4444',
         },
         modalOverlay: {
             flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            justifyContent: 'center',
-            alignItems: 'center',
+            backgroundColor: 'rgba(28, 28, 30, 0.4)',
+            justifyContent: 'flex-end',
         },
         modalContent: {
-            // Styles handled by tailwind classes + this for safety if needed
+            backgroundColor: isDark ? '#2C2C2E' : '#FFFFFF',
+            borderTopLeftRadius: 32,
+            borderTopRightRadius: 32,
+            padding: 24,
+            width: '100%',
+            borderWidth: 1,
+            borderColor: isDark ? '#3A3A3C' : '#E6E5E0',
         },
         languageItem: {
             padding: 16,
-            borderRadius: 12,
+            borderRadius: 14,
             marginBottom: 12,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
             borderWidth: 1,
+            backgroundColor: isDark ? '#323234' : '#F5F5F0',
+            borderColor: isDark ? '#3A3A3C' : '#E6E5E0',
         },
         languageItemActive: {
-            backgroundColor: 'rgba(59, 130, 246, 0.2)', // bg-primary/20
-            borderColor: 'rgba(59, 130, 246, 0.5)',
-        },
-        languageItemInactive: {
-            backgroundColor: isDark ? '#27272a' : '#f1f5f9', // bg-surface-highlight approx
-            borderColor: isDark ? '#3f3f46' : '#e2e8f0', // border-border
+            backgroundColor: isDark ? '#3A3A3C' : '#FFFFFF',
+            borderColor: isDark ? '#FDFCF8' : '#1C1C1E',
         },
         cancelButton: {
             marginTop: 16,
-            padding: 8,
+            padding: 12,
             alignItems: 'center'
+        },
+        badgeAuto: {
+            backgroundColor: '#F0FDF4',
+            borderColor: '#BBF7D0',
+            borderWidth: 1,
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+            borderRadius: 8,
+        },
+        menuText: {
+            fontFamily: 'Outfit_700Bold',
+            fontSize: 16,
+            color: isDark ? '#FDFCF8' : '#1C1C1E',
+        },
+        menuSubText: {
+            fontFamily: 'WorkSans_400Regular',
+            fontSize: 14,
+            color: isDark ? '#9CA3AF' : '#666660',
         }
     });
 
     return (
-        <SafeAreaView className="flex-1 bg-background">
+        <SafeAreaView style={{ flex: 1, ...styles.container }} edges={['top']}>
             <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-            <ScrollView contentContainerStyle={{ padding: 24 }}>
-                <Text className="text-4xl font-heading text-text mb-8">{t('settings.title')}</Text>
+            <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+                <Text style={styles.title}>{t('settings.title')}</Text>
 
                 {/* Account Section */}
-                <View className="mb-8">
-                    <Text className="text-text-secondary font-heading uppercase tracking-wider text-sm mb-4">{t('settings.account')}</Text>
-                    <View className="bg-surface rounded-xl overflow-hidden shadow-sm border border-border/50">
-                        <View className="p-4 border-b border-border/50 flex-row items-center">
-                            <View className="bg-surface-highlight w-10 h-10 rounded-full items-center justify-center mr-4">
-                                <User size={24} color={iconColor} />
-                            </View>
-                            <View>
-                                <Text className="text-text font-heading text-lg">{t('settings.user')}</Text>
-                                <Text className="text-text-secondary font-body">{user?.email}</Text>
+                <View style={{ marginBottom: 0 }}>
+                    <Text style={styles.sectionTitle}>{t('settings.account')}</Text>
+                    <View style={styles.sectionCard}>
+                        <View style={[styles.menuItem, styles.menuItemBorder]}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <View style={styles.iconContainer}>
+                                    <User size={20} color={iconColor} />
+                                </View>
+                                <View>
+                                    <Text style={styles.menuText}>{t('settings.user')}</Text>
+                                    <Text style={styles.menuSubText}>{user?.email}</Text>
+                                </View>
                             </View>
                         </View>
 
@@ -150,9 +281,9 @@ export default function SettingsScreen() {
                             onPress={signOut}
                             style={styles.menuItem}
                         >
-                            <View className="flex-row items-center">
-                                <LogOut size={20} color="#ef4444" style={{ marginRight: 12 }} />
-                                <Text className="text-red-500 font-heading text-lg">{t('settings.logout')}</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <LogOut size={20} color="#BA4444" style={{ marginRight: 16 }} />
+                                <Text style={[styles.menuText, { color: '#BA4444' }]}>{t('settings.logout')}</Text>
                             </View>
                             <ChevronRight size={20} color={chevronColor} />
                         </Pressable>
@@ -160,64 +291,64 @@ export default function SettingsScreen() {
                 </View>
 
                 {/* Appearance Section */}
-                <View className="mb-8">
-                    <Text className="text-text-secondary font-heading uppercase tracking-wider text-sm mb-4">{t('settings.appearance')}</Text>
-                    <View className="bg-surface rounded-xl overflow-hidden shadow-sm border border-border/50">
+                <View style={{ marginBottom: 0, marginTop: 8 }}>
+                    <Text style={styles.sectionTitle}>{t('settings.appearance')}</Text>
+                    <View style={styles.sectionCard}>
                         <Pressable
                             onPress={toggleTheme}
                             style={styles.menuItem}
                         >
-                            <View className="flex-row items-center">
-                                <View className={`w-10 h-10 rounded-full items-center justify-center mr-4 ${theme === 'paper' ? 'bg-primary/20' : 'bg-surface-highlight'}`}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <View style={[styles.iconContainer, theme === 'paper' && styles.iconContainerActive]}>
                                     {theme === 'dark' ? (
                                         <Moon size={20} color={iconColor} />
                                     ) : theme === 'paper' ? (
-                                        <BookOpen size={20} color='#CA8A04' />
+                                        <BookOpen size={20} color='#FFFFFF' />
                                     ) : (
                                         <Sun size={20} color={iconColor} />
                                     )}
                                 </View>
                                 <View>
-                                    <Text className="text-text font-heading text-lg">{t('settings.readingMode')}</Text>
-                                    <Text className="text-text-secondary font-body text-sm">
-                                        {theme === 'paper' ? t('settings.readingMode.on') : t('settings.readingMode.off')}
+                                    <Text style={styles.menuText}>{t('settings.readingMode')}</Text>
+                                    <Text style={styles.menuSubText}>
+                                        {theme === 'paper' ? t('settings.readingMode.on') : (theme === 'dark' ? 'Dark Mode' : 'Light Mode')}
                                     </Text>
                                 </View>
                             </View>
                             <Switch
                                 value={theme === 'paper'}
                                 onValueChange={toggleTheme}
-                                trackColor={{ false: '#525252', true: '#FACC15' }}
-                                thumbColor={theme === 'paper' ? '#FFFFFF' : '#f4f3f4'}
+                                trackColor={{ false: '#E6E5E0', true: '#1C1C1E' }}
+                                thumbColor={'#FFFFFF'}
                             />
                         </Pressable>
                     </View>
                 </View>
 
                 {/* Language Section (Updated to Dropdown/List) */}
-                <View className="mb-8">
-                    <Text className="text-text-secondary font-heading uppercase tracking-wider text-sm mb-4">{t('settings.language')}</Text>
-                    <View className="bg-surface rounded-xl overflow-hidden shadow-sm border border-border/50">
+                <View style={{ marginBottom: 0, marginTop: 8 }}>
+                    <Text style={styles.sectionTitle}>{t('settings.language')}</Text>
+                    <View style={styles.sectionCard}>
                         <Pressable
                             onPress={() => setLanguageModalVisible(true)}
                             style={styles.menuItem}
                         >
-                            <View className="flex-row items-center">
-                                <View className="bg-surface-highlight w-10 h-10 rounded-full items-center justify-center mr-4">
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <View style={styles.iconContainer}>
                                     <Globe size={20} color={iconColor} />
                                 </View>
                                 <View>
-                                    <Text className="text-text font-heading text-lg">
+                                    <Text style={styles.menuText}>
                                         {currentLanguageObj.label}
                                     </Text>
-                                    <Text className="text-text-secondary font-body text-sm">
+                                    <Text style={styles.menuSubText}>
                                         {t('settings.language.current')}
                                     </Text>
                                 </View>
                             </View>
-                            <View className="flex-row items-center">
-                                <View className="bg-surface-highlight px-3 py-1 rounded-full border border-border mr-2">
-                                    <Text className="text-text font-heading">{language.toUpperCase()}</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <View style={{ paddingHorizontal: 12, paddingVertical: 4, borderRadius: 8, borderWidth: 1, marginRight: 8, backgroundColor: isDark ? '#323234' : '#F5F5F0', borderColor: isDark ? '#3A3A3C' : '#E6E5E0' }}>
+                                    <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 12, color: isDark ? '#FDFCF8' : '#1C1C1E' }}>{language.toUpperCase()}</Text>
                                 </View>
                                 <ChevronRight size={20} color={chevronColor} style={{ transform: [{ rotate: '90deg' }] }} />
                             </View>
@@ -226,81 +357,116 @@ export default function SettingsScreen() {
                 </View>
 
                 {/* Sync Section */}
-                <View className="mb-8">
-                    <Text className="text-text-secondary uppercase tracking-wider text-sm mb-4">{t('settings.data')}</Text>
-                    <View className="bg-surface rounded-xl overflow-hidden shadow-sm">
-                        <View className="p-4 flex-row items-center justify-between">
-                            <View className="flex-row items-center">
-                                <View className="bg-green-500/20 w-10 h-10 rounded-full items-center justify-center mr-4">
-                                    <Cloud size={20} color="#22c55e" />
+                <View style={{ marginBottom: 0, marginTop: 8 }}>
+                    <Text style={styles.sectionTitle}>{t('settings.data')}</Text>
+                    <View style={styles.sectionCard}>
+                        <Pressable
+                            style={styles.menuItem}
+                            onPress={handleSync}
+                            disabled={isSyncing}
+                        >
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <View style={[styles.iconContainer, styles.iconContainerGreen]}>
+                                    {isSyncing ? (
+                                        <RefreshCw size={20} color="#22c55e" style={{ opacity: 0.5 }} />
+                                    ) : (
+                                        <Cloud size={20} color="#22c55e" />
+                                    )}
                                 </View>
                                 <View>
-                                    <Text className="text-text font-heading">{t('settings.sync')}</Text>
-                                    <Text className="text-text-secondary font-body text-sm">{formatLastSync(lastSyncTime)}</Text>
+                                    <Text style={styles.menuText}>
+                                        {isSyncing ? t('settings.syncing') : t('settings.sync')}
+                                    </Text>
+                                    <Text style={styles.menuSubText}>
+                                        {isSyncing ? t('common.loading') : formatLastSync(lastSyncTime)}
+                                    </Text>
                                 </View>
                             </View>
-                            {lastSyncTime && (
-                                <View className="bg-green-500/10 px-2 py-1 rounded-full border border-green-500/20">
-                                    <Text className="text-green-600 text-xs font-bold">AUTO</Text>
+                            {isSyncing ? (
+                                <View style={styles.badgeAuto}>
+                                    <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 10, color: '#166534' }}>SYNCING</Text>
                                 </View>
+                            ) : (
+                                <RefreshCw size={20} color={chevronColor} />
                             )}
-                        </View>
+                        </Pressable>
                     </View>
                 </View>
 
                 {/* Notifications Section */}
-                <View className="mb-8">
-                    <Text className="text-text-secondary uppercase tracking-wider text-sm mb-4">{t('settings.notifications')}</Text>
-                    <View className="bg-surface rounded-xl overflow-hidden shadow-sm">
-                        <View className="p-4 flex-row items-center justify-between">
-                            <View className="flex-row items-center">
-                                <View className={`w-10 h-10 rounded-full items-center justify-center mr-4 ${notificationsEnabled ? 'bg-primary/20' : 'bg-surface-highlight'}`}>
-                                    <Bell size={20} color={notificationsEnabled ? '#FACC15' : iconColor} />
+                <View style={{ marginBottom: 0, marginTop: 8 }}>
+                    <Text style={styles.sectionTitle}>{t('settings.notifications')}</Text>
+                    <View style={styles.sectionCard}>
+                        <View style={styles.menuItem}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 16 }}>
+                                <View style={[styles.iconContainer, notificationsEnabled && styles.iconContainerActive]}>
+                                    <Bell size={20} color={notificationsEnabled ? (isDark ? '#1C1C1E' : '#FFFFFF') : iconColor} />
                                 </View>
-                                <View>
-                                    <Text className="text-text font-heading text-lg">{t('settings.maintenance_reminders')}</Text>
-                                    <Text className="text-text-secondary font-body text-sm">{t('settings.maintenance_reminders_desc')}</Text>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.menuText}>{t('settings.maintenance_reminders')}</Text>
+                                    <Text style={styles.menuSubText}>{t('settings.maintenance_reminders_desc')}</Text>
                                 </View>
                             </View>
                             <Switch
                                 value={notificationsEnabled}
                                 onValueChange={setNotificationsEnabled}
-                                trackColor={{ false: '#525252', true: '#FACC15' }}
-                                thumbColor={notificationsEnabled ? '#FFFFFF' : '#f4f3f4'}
+                                trackColor={{ false: '#E6E5E0', true: '#1C1C1E' }}
+                                thumbColor={'#FFFFFF'}
                             />
                         </View>
                     </View>
                 </View>
 
                 {/* Support Section */}
-                <View className="mb-8">
-                    <Text className="text-text-secondary font-heading uppercase tracking-wider text-sm mb-4">{t('settings.support')}</Text>
-                    <View className="bg-surface rounded-xl overflow-hidden shadow-sm border border-border/50">
+                <View style={{ marginBottom: 0, marginTop: 8 }}>
+                    <Text style={styles.sectionTitle}>{t('settings.support')}</Text>
+                    <View style={styles.sectionCard}>
                         <Pressable
-                            onPress={() => Linking.openURL('mailto:support@bikeservice.app?subject=Bug Report')}
-                            style={[styles.menuItem, { borderBottomWidth: 1, borderBottomColor: isDark ? '#3f3f46' : '#e2e8f0' }]}
+                            onPress={() => openLink('mailto:support@bikeservice.app?subject=Bug Report')}
+                            style={styles.menuItem}
                         >
-                            <View className="flex-row items-center">
-                                <View className="bg-surface-highlight w-10 h-10 rounded-full items-center justify-center mr-4">
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <View style={styles.iconContainer}>
                                     <Bug size={20} color={iconColor} />
                                 </View>
                                 <View>
-                                    <Text className="text-text font-heading text-lg">{t('settings.report_bug')}</Text>
+                                    <Text style={styles.menuText}>{t('settings.report_bug')}</Text>
+                                </View>
+                            </View>
+                            <ChevronRight size={20} color={chevronColor} />
+                        </Pressable>
+                    </View>
+                </View>
+
+                {/* Legal Section */}
+                <View style={{ marginBottom: 0, marginTop: 8 }}>
+                    <Text style={styles.sectionTitle}>{t('settings.legal')}</Text>
+                    <View style={styles.sectionCard}>
+                        <Pressable
+                            onPress={() => router.push('/legal/privacy')}
+                            style={[styles.menuItem, styles.menuItemBorder]}
+                        >
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <View style={styles.iconContainer}>
+                                    <Shield size={20} color={iconColor} />
+                                </View>
+                                <View>
+                                    <Text style={styles.menuText}>{t('settings.privacy_policy')}</Text>
                                 </View>
                             </View>
                             <ChevronRight size={20} color={chevronColor} />
                         </Pressable>
 
                         <Pressable
-                            onPress={() => Linking.openURL('mailto:support@bikeservice.app?subject=Feature Request')}
+                            onPress={() => router.push('/legal/terms')}
                             style={styles.menuItem}
                         >
-                            <View className="flex-row items-center">
-                                <View className="bg-surface-highlight w-10 h-10 rounded-full items-center justify-center mr-4">
-                                    <Lightbulb size={20} color={iconColor} />
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <View style={styles.iconContainer}>
+                                    <FileText size={20} color={iconColor} />
                                 </View>
                                 <View>
-                                    <Text className="text-text font-heading text-lg">{t('settings.suggest_idea')}</Text>
+                                    <Text style={styles.menuText}>{t('settings.terms_of_service')}</Text>
                                 </View>
                             </View>
                             <ChevronRight size={20} color={chevronColor} />
@@ -309,64 +475,59 @@ export default function SettingsScreen() {
                 </View>
 
                 {/* App Info */}
-                <View>
-                    <Text className="text-text-secondary font-heading uppercase tracking-wider text-sm mb-4">{t('settings.about')}</Text>
-                    <View className="bg-surface rounded-xl p-4 shadow-sm border border-border/50">
-                        <View className="flex-row justify-between py-2 border-b border-border/50">
-                            <Text className="text-text font-body">{t('common.version')}</Text>
-                            <Text className="text-text-secondary font-body">1.0.0 (Alpha)</Text>
-                        </View>
-                        <View className="flex-row justify-between py-2">
-                            <Text className="text-text font-body">{t('common.powered_by')}</Text>
-                            <Text className="text-text-secondary font-body">Antigravity Kit ⚡</Text>
+                <View style={{ marginTop: 8 }}>
+                    <View style={[styles.sectionCard, { padding: 20 }]}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
+                            <Text style={styles.menuText}>BikeService</Text>
+                            <Text style={[styles.menuSubText, { marginLeft: 8 }]}>v1.0.0 (Alpha)</Text>
                         </View>
                     </View>
                 </View>
 
                 {/* Danger Zone */}
-                <View className="mt-8 mb-12">
-                    <Text className="text-red-500 font-heading uppercase tracking-wider text-sm mb-4">{t('settings.danger_zone')}</Text>
-                    <View className="bg-surface rounded-xl overflow-hidden shadow-sm border border-red-500/20">
+                <View style={{ marginTop: 24, marginBottom: 40 }}>
+                    <Text style={[styles.sectionTitle, { color: '#BA4444' }]}>{t('settings.danger_zone')}</Text>
+                    <View style={[styles.sectionCard, styles.dangerZoneCard]}>
                         <Pressable
                             onPress={() => {
-                                Alert.alert(
-                                    t('alert.confirm'),
-                                    t('settings.reset_data_desc'),
-                                    [
-                                        { text: t('alert.cancel'), style: "cancel" },
-                                        {
-                                            text: t('settings.reset_data'),
-                                            style: "destructive",
-                                            onPress: async () => {
-                                                try {
-                                                    await database.write(async () => {
-                                                        await database.unsafeResetDatabase()
-                                                    })
-                                                    Alert.alert(t('alert.success'), t('settings.reset_data_success'))
-                                                } catch (e: any) {
-                                                    Alert.alert(t('alert.error'), e.message)
-                                                }
+                                showAlert(
+                                    t('settings.danger_zone'),
+                                    t('settings.delete_account_desc'),
+                                    {
+                                        confirmText: t('settings.delete_account'),
+                                        variant: 'danger',
+                                        onConfirm: async () => {
+                                            try {
+                                                await deleteAccount();
+                                                setAlertVisible(false)
+                                            } catch (e: any) {
+                                                setAlertVisible(false) // Close confirmation
+                                                setTimeout(() => {
+                                                    // Simple error alert uses just 2 args (options is optional)
+                                                    // But typescript might complain if options is mandatory? No, options?: ...
+                                                    showAlert(t('alert.error'), e.message)
+                                                }, 500)
                                             }
                                         }
-                                    ]
+                                    }
                                 )
                             }}
                             style={styles.dangerItem}
                         >
-                            <Trash2 size={20} color="#ef4444" style={{ marginRight: 8 }} />
-                            <Text className="text-red-500 font-heading text-lg">{t('settings.reset_data')}</Text>
+                            <Trash2 size={20} color="#BA4444" style={{ marginRight: 8 }} />
+                            <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 18, color: '#BA4444' }}>{t('settings.delete_account')}</Text>
                         </Pressable>
                     </View>
                 </View>
 
                 {/* Language Selection Modal */}
-                <Modal visible={languageModalVisible} transparent animationType="fade">
+                <Modal visible={languageModalVisible} transparent animationType="slide">
                     <Pressable
                         style={styles.modalOverlay}
                         onPress={() => setLanguageModalVisible(false)}
                     >
-                        <View className="bg-surface rounded-3xl p-6 w-[80%] border border-border">
-                            <Text className="text-2xl font-bold text-text mb-6 text-center">{t('settings.language')}</Text>
+                        <Pressable onPress={(e) => e.stopPropagation()} style={styles.modalContent}>
+                            <Text style={[styles.title, { fontSize: 24, textAlign: 'center' }]}>{t('settings.language')}</Text>
                             <FlatList
                                 data={languages}
                                 keyExtractor={item => item.code}
@@ -378,17 +539,17 @@ export default function SettingsScreen() {
                                         }}
                                         style={[
                                             styles.languageItem,
-                                            language === item.code ? styles.languageItemActive : styles.languageItemInactive
+                                            language === item.code && (isDark ? styles.languageItemActive : styles.languageItemActive)
                                         ]}
                                     >
-                                        <View className="flex-row items-center">
-                                            <Text className="text-lg font-bold mr-4 text-text">{item.icon}</Text>
-                                            <Text className={`text-lg font-medium ${language === item.code ? 'text-primary-dark font-bold' : 'text-text'}`}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                            <Text style={{ fontSize: 24, marginRight: 16 }}>{item.icon}</Text>
+                                            <Text style={[styles.menuText, language !== item.code && { fontFamily: 'WorkSans_400Regular' }]}>
                                                 {item.label}
                                             </Text>
                                         </View>
                                         {language === item.code && (
-                                            <Check size={24} color={isDark ? "#FACC15" : "#CA8A04"} />
+                                            <Check size={24} color={isDark ? "#FDFCF8" : "#1C1C1E"} />
                                         )}
                                     </Pressable>
                                 )}
@@ -397,13 +558,23 @@ export default function SettingsScreen() {
                                 onPress={() => setLanguageModalVisible(false)}
                                 style={styles.cancelButton}
                             >
-                                <Text className="text-text-secondary font-heading text-lg">{t('common.cancel')}</Text>
+                                <Text style={styles.menuSubText}>{t('common.cancel')}</Text>
                             </Pressable>
-                        </View>
+                        </Pressable>
                     </Pressable>
                 </Modal>
 
             </ScrollView>
+
+            <ConfirmationModal
+                visible={alertVisible}
+                title={alertTitle}
+                description={alertMessage}
+                onConfirm={alertOnConfirm || (() => setAlertVisible(false))}
+                onCancel={() => setAlertVisible(false)}
+                confirmText={alertConfirmText || t('common.ok')}
+                variant={alertVariant}
+            />
         </SafeAreaView>
     );
 }

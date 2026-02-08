@@ -4,26 +4,33 @@
 
 @layer base {
   :root {
-    --color-primary: #3B82F6;
-    --color-secondary: #60A5FA;
-    --color-cta: #F97316;
-    --color-background: #F8FAFC;
+    /* Light Mode - Calm/Paper */
+    --color-background: #FDFCF8;
     --color-surface: #FFFFFF;
-    --color-surface-highlight: #F1F5F9;
-    --color-text: #1E293B;
-    --color-text-secondary: #64748B;
-    --color-border: #E2E8F0;
+    --color-surface-highlight: #F5F5F0;
+    --color-text-primary: #1C1C1E;
+    --color-text-secondary: #666660;
+    --color-border: #E6E5E0;
+    --color-primary: #4A4A45;
+    /* Dark Stone */
+    --color-accent: #D4D4CE;
+    /* Technical Beige */
+
+    /* Status */
+    --color-success: #587058;
+    --color-error: #BA4444;
   }
 
   .dark {
-    --color-primary: #60A5FA;
-    --color-secondary: #3B82F6;
-    --color-cta: #FB923C;
-    --color-background: #0F172A;
-    --color-surface: #1E293B;
-    --color-surface-highlight: #334155;
+
     --color-text: #F8FAFC;
+    /* Slate-50 */
     --color-text-secondary: #94A3B8;
-    --color-border: #334155;
+    /* Slate-400 */
+    --color-border: #1E293B;
+    /* Slate-800 - Subtle border */
+
+    --color-success: #10B981;
+    --color-danger: #EF4444;
   }
 }

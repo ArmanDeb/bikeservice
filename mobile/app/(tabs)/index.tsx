@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { View, Text, FlatList, Pressable, StatusBar, Modal, TextInput, Alert, useColorScheme, StyleSheet } from 'react-native'
+import { View, Text, FlatList, Pressable, StatusBar, Modal, TextInput, Alert, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { withObservables } from '@nozbe/watermelondb/react'
 import { VehicleService } from '../../src/services/VehicleService'
@@ -14,6 +14,61 @@ import { Grid, Plus, Edit2, Trash2, X } from 'lucide-react-native'
 import { AutocompleteInput } from '../../src/components/common/AutocompleteInput'
 
 // Reusable Vehicle Modal for Add & Edit
+import { BrandLogo } from '../../src/components/common/BrandLogo'
+import { ConfirmationModal } from '../../src/components/common/ConfirmationModal'
+
+// Observer wrapper for individual list item to ensure reactivity
+const VehicleListItem = withObservables(['vehicle'], ({ vehicle }) => ({
+    vehicle: vehicle.observe()
+}))(({ vehicle, isDark, onPress, onEdit, isSelected }: { vehicle: Vehicle, isDark: boolean, onPress: () => void, onEdit: () => void, isSelected: boolean }) => {
+    return (
+        <View style={styles.itemContainer}>
+            <View style={[
+                styles.card,
+                isDark ? styles.cardDark : styles.cardLight,
+                isSelected && styles.cardSelected
+            ]}>
+                <Pressable
+                    onPress={onPress}
+                    style={styles.pressableArea}
+                >
+                    <View style={styles.cardContent}>
+                        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                            <BrandLogo brand={vehicle.brand} variant="icon" size={32} color={isDark ? '#FDFCF8' : '#1C1C1E'} />
+                            <View style={{ flex: 1 }}>
+                                <Text style={[styles.vehicleName, isDark ? styles.vehicleNameDark : styles.vehicleNameLight]}>{vehicle.brand} {vehicle.model}</Text>
+                                <Text style={[styles.vehicleDetails, isDark ? styles.vehicleDetailsDark : styles.vehicleDetailsLight, { marginTop: 4 }]}>
+                                    {vehicle.year ? `${vehicle.year}` : ''}
+                                    {vehicle.year && vehicle.vin ? ' • ' : ''}
+                                    {vehicle.vin ? vehicle.vin : ''}
+                                </Text>
+                            </View>
+                        </View>
+                        <View style={[styles.badge, isDark ? styles.badgeDark : styles.badgeLight]}>
+                            <Text style={isDark ? styles.badgeTextDark : styles.badgeTextLight}>
+                                {vehicle.currentMileage.toLocaleString()} km
+                            </Text>
+                        </View>
+                    </View>
+                </Pressable>
+            </View>
+            {isSelected && (
+                <View style={[
+                    styles.editButtonContainer,
+                    isDark ? styles.editButtonContainerDark : styles.editButtonContainerLight
+                ]}>
+                    <Pressable
+                        onPress={onEdit}
+                        style={styles.editButton}
+                    >
+                        <Edit2 size={16} color={isDark ? '#F8FAFC' : '#1E293B'} />
+                    </Pressable>
+                </View>
+            )}
+        </View>
+    )
+})
+
 const VehicleModal = ({ visible, onClose, vehicle }: { visible: boolean, onClose: () => void, vehicle?: Vehicle | null }) => {
     const [brand, setBrand] = useState('')
     const [model, setModel] = useState('')
@@ -21,6 +76,18 @@ const VehicleModal = ({ visible, onClose, vehicle }: { visible: boolean, onClose
     const [mileage, setMileage] = useState('')
     const [vin, setVin] = useState('')
     const { t } = useLanguage();
+    const { isDark } = useTheme();
+
+    // Alert state for errors/info
+    const [alertVisible, setAlertVisible] = useState(false)
+    const [alertTitle, setAlertTitle] = useState('')
+    const [alertMessage, setAlertMessage] = useState('')
+
+    const showAlert = (title: string, message: string) => {
+        setAlertTitle(title)
+        setAlertMessage(message)
+        setAlertVisible(true)
+    }
 
     // Get available models for selected brand (check both exact match and partial)
     const getModelsForBrand = () => {
@@ -40,7 +107,7 @@ const VehicleModal = ({ visible, onClose, vehicle }: { visible: boolean, onClose
                 setBrand(vehicle.brand)
                 setModel(vehicle.model)
                 setYear(vehicle.year?.toString() || '')
-                setMileage(vehicle.currentMileage.toString())
+                setMileage(vehicle.currentMileage.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."))
                 setVin(vehicle.vin || '')
             } else {
                 setBrand('')
@@ -63,51 +130,45 @@ const VehicleModal = ({ visible, onClose, vehicle }: { visible: boolean, onClose
 
     const handleSubmit = async () => {
         if (!brand || !model || !mileage) {
-            Alert.alert(t('alert.error'), t('garage.missing_info'))
+            showAlert(t('alert.error'), t('garage.missing_info'))
             return
         }
 
         const yearInt = parseInt(year) || new Date().getFullYear()
 
         if (vehicle) {
-            await VehicleService.updateVehicle(vehicle, brand, model, yearInt, vin || undefined, parseInt(mileage))
+            await VehicleService.updateVehicle(vehicle, brand, model, yearInt, vin || undefined, parseInt(mileage.replace(/\./g, '')))
         } else {
-            await VehicleService.createVehicle(brand, model, yearInt, vin || undefined, parseInt(mileage))
+            await VehicleService.createVehicle(brand, model, yearInt, vin || undefined, parseInt(mileage.replace(/\./g, '')))
         }
 
         onClose()
     }
 
+    const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false)
+
     const handleDelete = () => {
         if (!vehicle) return
+        setDeleteConfirmVisible(true)
+    }
 
-        Alert.alert(
-            t('garage.modal.delete_confirm_title'),
-            t('garage.modal.delete_confirm_desc'),
-            [
-                { text: t('common.cancel'), style: "cancel" },
-                {
-                    text: t('common.delete'),
-                    style: "destructive",
-                    onPress: async () => {
-                        await VehicleService.deleteVehicle(vehicle)
-                        onClose() // Ensure modal closes
-                    }
-                }
-            ]
-        )
+    const confirmDelete = async () => {
+        if (!vehicle) return
+        await VehicleService.deleteVehicle(vehicle)
+        setDeleteConfirmVisible(false)
+        onClose()
     }
 
     return (
         <Modal visible={visible} animationType="slide" transparent>
-            <View className="flex-1 justify-end bg-black/50">
-                <View className="bg-surface p-6 rounded-t-3xl border-t border-border/50 shadow-lg max-h-[90%]">
-                    <View className="flex-row justify-between items-center mb-4">
-                        <Text className="text-2xl font-heading text-text">
+            <Pressable style={styles.modalOverlay} onPress={onClose}>
+                <Pressable onPress={(e) => e.stopPropagation()} style={[styles.modalContent, isDark ? styles.modalContentDark : styles.modalContentLight]}>
+                    <View style={styles.modalHeader}>
+                        <Text style={[styles.modalTitle, isDark ? styles.modalTitleDark : styles.modalTitleLight]}>
                             {vehicle ? t('garage.modal.edit_title') : t('garage.modal.add_title')}
                         </Text>
-                        <Pressable onPress={onClose}>
-                            <X size={24} color="#9CA3AF" />
+                        <Pressable onPress={onClose} style={styles.closeButton}>
+                            <X size={24} color={isDark ? "#94A3B8" : "#9CA3AF"} />
                         </Pressable>
                     </View>
 
@@ -116,13 +177,13 @@ const VehicleModal = ({ visible, onClose, vehicle }: { visible: boolean, onClose
                         label={t('garage.modal.brand')}
                         value={brand}
                         onChangeText={setBrand}
-                        options={BRANDS.filter(b => b !== 'Other')} // Exclude "Other" from suggestions
+                        options={BRANDS.filter(b => b !== 'Other')}
                         onSelect={handleBrandSelect}
                         placeholder={t('garage.modal.brand_placeholder')}
                         filterMode="startsWith"
                     />
 
-                    {/* Model Autocomplete - shows after brand is selected */}
+                    {/* Model Autocomplete */}
                     <AutocompleteInput
                         label={t('garage.modal.model')}
                         value={model}
@@ -133,12 +194,12 @@ const VehicleModal = ({ visible, onClose, vehicle }: { visible: boolean, onClose
                     />
 
                     {/* Year and Mileage */}
-                    <View className="flex-row gap-4 mb-3 mt-3">
+                    <View style={styles.inputRow}>
                         <TextInput
                             placeholder={t('garage.modal.year')}
                             placeholderTextColor="#9CA3AF"
                             keyboardType="numeric"
-                            className="bg-surface-highlight text-text font-body p-3 rounded-xl text-lg flex-1 border border-border/50"
+                            style={[styles.input, isDark ? styles.inputDark : styles.inputLight]}
                             value={year}
                             onChangeText={setYear}
                         />
@@ -146,35 +207,59 @@ const VehicleModal = ({ visible, onClose, vehicle }: { visible: boolean, onClose
                             placeholder={t('garage.modal.mileage')}
                             placeholderTextColor="#9CA3AF"
                             keyboardType="numeric"
-                            className="bg-surface-highlight text-text font-body p-3 rounded-xl text-lg flex-1 border border-border/50"
+                            style={[styles.input, isDark ? styles.inputDark : styles.inputLight]}
                             value={mileage}
-                            onChangeText={setMileage}
+                            onChangeText={(text) => {
+                                const numeric = text.replace(/[^0-9]/g, '');
+                                const formatted = numeric.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                                setMileage(formatted);
+                            }}
                         />
                     </View>
 
                     <TextInput
                         placeholder={t('garage.modal.vin')}
                         placeholderTextColor="#9CA3AF"
-                        className="bg-surface-highlight text-text font-body p-3 rounded-xl mb-4 text-lg border border-border/50"
+                        style={[styles.input, isDark ? styles.inputDark : styles.inputLight, { marginBottom: 24 }]}
                         value={vin}
                         onChangeText={setVin}
                     />
 
                     <Pressable onPress={handleSubmit} style={styles.primaryButton}>
-                        <Text className="text-black font-heading text-lg">
+                        <Text style={styles.primaryButtonText}>
                             {vehicle ? t('garage.modal.submit_edit') : t('garage.modal.submit_add')}
                         </Text>
                     </Pressable>
 
                     {vehicle && (
                         <Pressable onPress={handleDelete} style={styles.deleteButton}>
-                            <Trash2 size={20} color="#ef4444" style={{ marginRight: 8 }} />
-                            <Text className="text-red-500 font-heading text-lg">{t('garage.modal.delete')}</Text>
+                            <Trash2 size={20} color="#ef4444" />
+                            <Text style={styles.deleteButtonText}>{t('garage.modal.delete')}</Text>
                         </Pressable>
                     )}
-                </View>
-            </View>
-        </Modal>
+                </Pressable>
+            </Pressable>
+
+
+            <ConfirmationModal
+                visible={deleteConfirmVisible}
+                title={t('garage.modal.delete_confirm_title')}
+                description={t('garage.modal.delete_confirm_desc')}
+                onConfirm={confirmDelete}
+                onCancel={() => setDeleteConfirmVisible(false)}
+                variant="danger"
+                confirmText={t('common.delete')}
+                cancelText={t('common.cancel')}
+            />
+
+            <ConfirmationModal
+                visible={alertVisible}
+                title={alertTitle}
+                description={alertMessage}
+                onConfirm={() => setAlertVisible(false)}
+                confirmText={t('common.ok')}
+            />
+        </Modal >
     )
 }
 
@@ -199,12 +284,12 @@ const GarageScreen = ({ vehicles }: { vehicles: Vehicle[] }) => {
     }
 
     return (
-        <SafeAreaView className="flex-1 bg-background">
+        <SafeAreaView style={[styles.container, isDark ? styles.containerDark : styles.containerLight]} edges={['top', 'left', 'right']}>
             <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-            <View className="p-6">
-                <View className="flex-row justify-between items-center mb-8">
-                    <Text className="text-3xl font-heading text-text">{t('garage.title')}</Text>
-                    <View className="flex-row gap-2">
+            <View style={styles.content}>
+                <View style={styles.header}>
+                    <Text style={[styles.headerTitle, isDark ? styles.headerTitleDark : styles.headerTitleLight]}>{t('garage.title')}</Text>
+                    <View style={styles.headerActions}>
                         <Pressable
                             onPress={() => setSelectedVehicleId(null)}
                             style={[
@@ -214,7 +299,7 @@ const GarageScreen = ({ vehicles }: { vehicles: Vehicle[] }) => {
                                     : (isDark ? styles.iconButtonSurfaceDark : styles.iconButtonSurfaceLight)
                             ]}
                         >
-                            <Grid size={20} color={selectedVehicleId === null ? 'black' : isDark ? 'white' : 'black'} />
+                            <Grid size={20} color={selectedVehicleId === null ? '#FFFFFF' : isDark ? '#F8FAFC' : '#1E293B'} />
                         </Pressable>
                         <Pressable
                             onPress={openAddModal}
@@ -223,7 +308,7 @@ const GarageScreen = ({ vehicles }: { vehicles: Vehicle[] }) => {
                                 isDark ? styles.iconButtonSurfaceDark : styles.iconButtonSurfaceLight
                             ]}
                         >
-                            <Plus size={24} color={isDark ? 'white' : 'black'} />
+                            <Plus size={24} color={isDark ? '#F97316' : '#F97316'} />
                         </Pressable>
                     </View>
                 </View>
@@ -231,54 +316,21 @@ const GarageScreen = ({ vehicles }: { vehicles: Vehicle[] }) => {
                 <FlatList
                     data={vehicles}
                     keyExtractor={item => item.id}
-                    renderItem={({ item }) => {
-                        const isSelected = selectedVehicleId === item.id;
-                        return (
-                            <View style={styles.itemContainer}>
-                                <View style={[
-                                    styles.card,
-                                    isDark ? styles.cardDark : styles.cardLight,
-                                    isSelected && styles.cardSelected
-                                ]}>
-                                    <Pressable
-                                        onPress={() => setSelectedVehicleId(item.id)}
-                                        style={styles.pressableArea}
-                                    >
-                                        <View style={styles.cardContent}>
-                                            <View>
-                                                <Text className="text-xl font-bold text-text">{item.brand} {item.model}</Text>
-                                                <Text className="text-text-secondary text-sm">
-                                                    {item.year ? `${item.year}` : ''}
-                                                    {item.year && item.vin ? ' • ' : ''}
-                                                    {item.vin ? item.vin : ''}
-                                                </Text>
-                                            </View>
-                                            <View className="bg-primary/10 px-3 py-1 rounded-full">
-                                                <Text className="text-primary-dark font-bold">{item.currentMileage.toLocaleString()} km</Text>
-                                            </View>
-                                        </View>
-                                    </Pressable>
-                                </View>
-                                {isSelected && (
-                                    <View style={[
-                                        styles.editButtonContainer,
-                                        isDark ? styles.editButtonContainerDark : styles.editButtonContainerLight
-                                    ]}>
-                                        <Pressable
-                                            onPress={() => openEditModal(item)}
-                                            style={styles.editButton}
-                                        >
-                                            <Edit2 size={16} color={isDark ? 'white' : 'black'} />
-                                        </Pressable>
-                                    </View>
-                                )}
-                            </View>
-                        );
-                    }}
+                    contentContainerStyle={{ paddingBottom: 100 }}
+                    renderItem={({ item }) => (
+                        <VehicleListItem
+                            vehicle={item}
+                            isDark={isDark}
+                            onPress={() => setSelectedVehicleId(item.id)}
+                            onEdit={() => openEditModal(item)}
+                            isSelected={selectedVehicleId === item.id}
+                        />
+                    )}
                     ListEmptyComponent={
-                        <View className="items-center justify-center py-20">
-                            <Text className="text-text-secondary font-heading text-lg">{t('garage.no_motorcycles')}</Text>
-                            <Text className="text-text-secondary font-body text-sm mt-2">{t('garage.no_motorcycles_desc')}</Text>
+                        <View style={styles.emptyState}>
+                            <Grid size={48} color={isDark ? '#334155' : '#CBD5E1'} />
+                            <Text style={[styles.emptyStateText, isDark ? { color: '#94A3B8' } : { color: '#64748B' }]}>{t('garage.no_motorcycles')}</Text>
+                            <Text style={[styles.emptyStateDesc, isDark ? { color: '#94A3B8' } : { color: '#64748B' }]}>{t('garage.no_motorcycles_desc')}</Text>
                         </View>
                     }
                 />
@@ -298,125 +350,283 @@ const enhance = withObservables([], () => ({
 }))
 
 const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+    },
+    containerLight: {
+        backgroundColor: '#FDFCF8',
+    },
+    containerDark: {
+        backgroundColor: '#1C1C1E', // Warm dark gray
+    },
+    content: {
+        flex: 1,
+        paddingHorizontal: 24,
+        paddingTop: 24,
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 32,
+    },
+    headerTitle: {
+        fontSize: 32,
+        fontFamily: 'Outfit_700Bold',
+        letterSpacing: -0.5,
+    },
+    headerTitleLight: {
+        color: '#1C1C1E',
+    },
+    headerTitleDark: {
+        color: '#E5E5E0',
+    },
+    headerActions: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    vehicleName: {
+        fontSize: 22,
+        fontFamily: 'Outfit_700Bold',
+        marginBottom: 4,
+    },
+    vehicleNameLight: {
+        color: '#1C1C1E',
+    },
+    vehicleNameDark: {
+        color: '#E5E5E0',
+    },
+    vehicleDetails: {
+        fontSize: 14,
+        fontFamily: 'WorkSans_400Regular',
+    },
+    vehicleDetailsLight: {
+        color: '#666660',
+    },
+    vehicleDetailsDark: {
+        color: '#9CA3AF',
+    },
     itemContainer: {
-        marginBottom: 16,
-        borderRadius: 12,
+        marginBottom: 20,
+        borderRadius: 20,
         position: 'relative',
     },
     card: {
-        borderRadius: 12,
+        borderRadius: 20, // Slightly less rounded than Pro Max
         borderWidth: 1,
     },
     cardLight: {
         backgroundColor: '#FFFFFF',
-        borderColor: '#E2E8F0',
+        borderColor: '#E6E5E0',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2, // Minimal shadow
+        elevation: 1,
     },
     cardDark: {
-        backgroundColor: '#1E293B',
-        borderColor: '#334155',
-    },
-    cardSelected: {
-        borderWidth: 2,
-        borderColor: '#3B82F6',
-        // Shadow for iOS
+        backgroundColor: '#2C2C2E',
+        borderColor: '#3A3A3C',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.2,
         shadowRadius: 4,
-        // Elevation for Android
-        elevation: 3,
+        elevation: 2,
+    },
+    cardSelected: {
+        borderColor: '#4A4A45', // Dark Stone
+        borderWidth: 2,
     },
     pressableArea: {
-        padding: 16,
+        padding: 24,
     },
     cardContent: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
     },
+    badge: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
+    },
+    badgeLight: {
+        backgroundColor: '#F5F5F0',
+    },
+    badgeDark: {
+        backgroundColor: '#3A3A3C',
+    },
+    badgeTextLight: {
+        color: '#4A4A45',
+        fontWeight: '600',
+        fontSize: 13,
+        fontFamily: 'WorkSans_400Regular',
+    },
+    badgeTextDark: {
+        color: '#D4D4CE',
+        fontWeight: '600',
+        fontSize: 13,
+        fontFamily: 'WorkSans_400Regular',
+    },
     editButtonContainer: {
         position: 'absolute',
-        top: 8,
-        right: 8,
-        borderRadius: 8,
+        top: 16,
+        right: 16,
+        borderRadius: 12,
         borderWidth: 1,
         zIndex: 10,
-        // Shadow
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
     },
     editButtonContainerLight: {
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-        borderColor: 'rgba(226, 232, 240, 0.5)',
+        backgroundColor: '#FFFFFF',
+        borderColor: '#E6E5E0',
     },
     editButtonContainerDark: {
-        backgroundColor: 'rgba(30, 41, 59, 0.9)',
-        borderColor: 'rgba(51, 65, 85, 0.5)',
+        backgroundColor: '#3A3A3C',
+        borderColor: '#4B5563',
     },
     editButton: {
-        padding: 8,
+        padding: 10,
     },
-    // New styles for Modal and Header
-    primaryButton: {
-        backgroundColor: '#3B82F6',
-        padding: 16,
-        borderRadius: 12,
+    iconButton: {
+        padding: 0,
+        borderRadius: 14,
+        width: 48,
+        height: 48,
         alignItems: 'center',
-        marginBottom: 12,
+        justifyContent: 'center',
+        borderWidth: 1,
+    },
+    iconButtonPrimary: {
+        backgroundColor: '#1C1C1E', // Dark for primary action
+        borderColor: '#1C1C1E',
+    },
+    iconButtonSurfaceLight: {
+        backgroundColor: '#FFFFFF',
+        borderColor: '#E6E5E0',
+    },
+    iconButtonSurfaceDark: {
+        backgroundColor: '#2C2C2E',
+        borderColor: '#3A3A3C',
+    },
+    emptyState: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 100,
+        opacity: 0.8,
+    },
+    emptyStateText: {
+        fontSize: 18,
+        fontFamily: 'Outfit_700Bold',
+        marginTop: 16,
+    },
+    emptyStateDesc: {
+        fontSize: 14,
+        fontFamily: 'WorkSans_400Regular',
+        marginTop: 8,
+        textAlign: 'center',
+        paddingHorizontal: 32,
+    },
+    // Modal Styles
+    modalOverlay: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        backgroundColor: 'rgba(28, 28, 30, 0.4)', // Warm overlay
+    },
+    modalContent: {
+        padding: 32,
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
+        borderTopWidth: 1,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: -4 },
         shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        shadowRadius: 12,
+        elevation: 10,
+        maxHeight: '90%',
+    },
+    modalContentLight: {
+        backgroundColor: '#FFFFFF',
+        borderColor: '#E6E5E0',
+    },
+    modalContentDark: {
+        backgroundColor: '#2C2C2E',
+        borderColor: '#3A3A3C',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    modalTitle: {
+        fontSize: 24,
+        fontFamily: 'Outfit_700Bold',
+    },
+    modalTitleLight: {
+        color: '#1C1C1E',
+    },
+    modalTitleDark: {
+        color: '#E5E5E0',
+    },
+    input: {
+        fontFamily: 'WorkSans_400Regular',
+        padding: 18,
+        borderRadius: 14,
+        fontSize: 16,
+        flex: 1,
+        borderWidth: 1,
+    },
+    inputLight: {
+        backgroundColor: '#FDFCF8',
+        color: '#1C1C1E',
+        borderColor: '#E6E5E0',
+    },
+    inputDark: {
+        backgroundColor: '#1C1C1E',
+        color: '#E5E5E0',
+        borderColor: '#3A3A3C',
+    },
+    inputRow: {
+        flexDirection: 'row',
+        gap: 16,
+        marginBottom: 16,
+        marginTop: 12,
+    },
+    primaryButton: {
+        backgroundColor: '#1C1C1E', // Dark Stone
+        padding: 20,
+        borderRadius: 14,
+        alignItems: 'center',
+        marginBottom: 16,
+        marginTop: 12,
+    },
+    primaryButtonText: {
+        color: '#FFFFFF',
+        fontFamily: 'Outfit_700Bold',
+        fontSize: 18,
     },
     deleteButton: {
-        backgroundColor: 'rgba(239, 68, 68, 0.1)', // red-500/10
+        backgroundColor: 'transparent',
         borderWidth: 1,
-        borderColor: 'rgba(239, 68, 68, 0.5)', // red-500/50
+        borderColor: '#BA4444',
         padding: 16,
-        borderRadius: 12,
+        borderRadius: 14,
         alignItems: 'center',
         marginBottom: 12,
         flexDirection: 'row',
         justifyContent: 'center',
     },
-    iconButton: {
-        padding: 8,
-        borderRadius: 9999,
-        width: 40,
-        height: 40,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
-    },
-    iconButtonPrimary: {
-        backgroundColor: '#3B82F6',
-        borderColor: '#3B82F6',
-    },
-    iconButtonSurfaceLight: {
-        backgroundColor: '#FFFFFF',
-        borderColor: 'rgba(226, 232, 240, 0.5)',
-    },
-    iconButtonSurfaceDark: {
-        backgroundColor: '#1E293B',
-        borderColor: 'rgba(51, 65, 85, 0.5)',
+    deleteButtonText: {
+        color: '#BA4444',
+        fontFamily: 'Outfit_700Bold',
+        fontSize: 18,
+        marginLeft: 8,
     },
     closeButton: {
         padding: 8,
-        borderRadius: 9999,
-        width: 40,
-        height: 40,
-        alignItems: 'center',
-        justifyContent: 'center',
-    }
+        backgroundColor: 'rgba(0,0,0,0.05)',
+        borderRadius: 999,
+    },
 });
 
 export default enhance(GarageScreen)

@@ -174,6 +174,33 @@ Cette section retrace l'évolution du projet au jour le jour, mes hésitations e
     *   **Suppression propre :** Quand un utilisateur supprime un document (ou un entretien lié), l'application envoie une commande pour supprimer également le fichier sur le Cloud.
     *   **Résultat :** Plus de fichiers orphelins sur le serveur et une synchronisation parfaite entre l'état local et distant.
 
+### 3 Février 2026 : Optimisations UX/UI en temps réel et Raffinement Visuel
+*   **Synchronisation Temps Réel (Garage) :**
+    *   **Problème :** Le kilométrage sur l'écran Garage ne se mettait pas à jour immédiatement après l'ajout d'un entretien.
+    *   **Solution Technique :** Refonte de la liste des véhicules avec le pattern `withObservables` de WatermelonDB. Chaque item de la liste observe désormais ses propres changements, garantissant une mise à jour instantanée de l'interface sans rechargement.
+    *   **Fiabilité des Données :** Correction d'un bug critique dans `MaintenanceService` où la comparaison du kilométrage utilisait parfois des données obsolètes. Force-fetch du véhicule avant toute mise à jour.
+*   **Expérience Saisie (UX) :**
+    *   **Formatage Intelligent :** Ajout de séparateurs de milliers (ex: 12.000) en temps réel sur tous les champs kilométriques pour une meilleure lisibilité.
+    *   **Unités Persistantes :** Intégration visuelle des unités "**€**" et "**km**" directement dans les champs de formulaire (Maintenance). Elles restent visibles pendant la saisie pour lever toute ambiguïté.
+*   **Harmonisation Visuelle :**
+    *   Ajustement de l'alignement des éléments sur le Dashboard (Bouton PDF, Pastille Véhicule).
+    *   Intégration d'un **Switch de Thème (Dark/Light)** fluide sur les écrans d'authentification.
+
+---
+
+### 5 Février 2026 : Finitions "Production-Ready" & Brand Safety
+*   **Onboarding & Saisie :**
+    *   **Sécurisation des inputs :** Année et Kilométrage restreints strictement aux chiffres (clavier numérique forcé, filtrage regex).
+    *   **Formatage visuel :** Ajout automatique de séparateurs de milliers (ex: 12.000) dans le flow d'onboarding pour une meilleure lisibilité.
+    *   **Tone of Voice :** Remplacement des messages familiers (ex: "Gaz ! ✌️") par des formulations professionnelles ("Configuration terminée"), adaptées à une audience plus large.
+*   **Danger Zone & Gestion Compte :**
+    *   **Clarification :** Remplacement de la fonction technique "Reset Data" par une véritable fonctionnalité "Supprimer mon compte" (Delete Account).
+    *   **Logique de suppression :** Implémentation complète : suppression des données utilisateur sur Supabase (Cascade) + Wipe de la base locale (`unsafeResetDatabase`) + Redirection vers l'authentification.
+*   **Conformité & Pages Légales :**
+    *   **Intégration In-App :** Développement des écrans `Privacy` et `Terms` en natif dans l'application. Cela évite les redirections vers un site web externe non configuré (erreurs SSL) et maintient l'utilisateur dans l'écosystème de l'app.
+    *   **Routage Sécurisé :** Modification critique du `_layout.tsx` pour "whitelister" la route `/legal`. Le garde-fou de navigation (qui redirige vers le Garage si connecté) bloquait auparavant l'accès à ces pages.
+    *   **Settings Polish :** Nettoyage de l'interface Réglages (suppression des boutons "Suggérer une idée", "Powered by Antigravity") pour un rendu White Label professionnel v1.0.
+
 ---
 
 *(Note : Ce document est mis à jour à chaque étape clé du développement.)*
