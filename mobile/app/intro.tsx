@@ -206,7 +206,7 @@ export default function IntroScreen() {
                     <View style={styles.logoContainer}>
                         <View style={[styles.logoCircle, isDark && styles.logoCircleDark]}>
                             <Image
-                                source={require('../../assets/logo.png')}
+                                source={require('../assets/logo.png')}
                                 style={{ width: 80, height: 80 }}
                                 resizeMode="contain"
                             />
