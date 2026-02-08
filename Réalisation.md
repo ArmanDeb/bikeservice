@@ -121,7 +121,11 @@ Cette section retrace l'évolution du projet au jour le jour, mes hésitations e
 | **Date AI ignorée dans formulaire** | Stockage de l'URI du document scanné puis liaison au log lors de la soumission, permettant à la date extraite de pré-remplir le champ. |
 | **Suppression entretien bloque sur FK** | Migration Supabase : `ON DELETE SET NULL` sur `documents.log_id` + choix utilisateur (garder ou supprimer le document lié). |
 | **Perte images (changement téléphone)** | Activation de **Supabase Storage** : upload automatique des photos dans un bucket sécurisé (RLS) pour une sauvegarde cloud pérenne. |
-| **Fichiers orphelins (Cloud)** | Implémentation d'une suppression propre : supprimer un document dans l'app supprime aussi le fichier distant sur Supabase. |
+| **Fichiers orphelins (Cloud)** | Implémentation d'un **Trigger SQL automatique** : la suppression d'une ligne document entraîne la suppression physique du fichier sur le Storage. |
+| **Fichiers accessibles en clair** | Migration de l'Auth vers **expo-secure-store** : les jetons de session sont maintenant chiffrés sur le matériel mobile. |
+| **Désordre dans le garage** | Ajout d'une fonctionnalité de réorganisation par **Drag & Drop** avec persistance de l'ordre de tri. |
+| **Instabilité Réseau** | Intégration de `NetInfo` pour bloquer les actions critiques hors-ligne et déclencher une synchronisation automatique au retour du signal. |
+| **Lisibilité Mode Sombre** | Audit et correction des contrastes sur les formulaires d'authentification et d'onboarding. |
 
 ### 1er Février 2026 (après-midi) : UX Garage & Wallet
 *   **Amélioration Garage :** Refonte complète de la sélection marque/modèle.
@@ -200,6 +204,25 @@ Cette section retrace l'évolution du projet au jour le jour, mes hésitations e
     *   **Intégration In-App :** Développement des écrans `Privacy` et `Terms` en natif dans l'application. Cela évite les redirections vers un site web externe non configuré (erreurs SSL) et maintient l'utilisateur dans l'écosystème de l'app.
     *   **Routage Sécurisé :** Modification critique du `_layout.tsx` pour "whitelister" la route `/legal`. Le garde-fou de navigation (qui redirige vers le Garage si connecté) bloquait auparavant l'accès à ces pages.
     *   **Settings Polish :** Nettoyage de l'interface Réglages (suppression des boutons "Suggérer une idée", "Powered by Antigravity") pour un rendu White Label professionnel v1.0.
+
+### 8 Février 2026 : Robustesse Offline, Sécurité et Glisser-Déposer (Phase Finale MVP)
+
+*   **Gestion de la Connectivité (Robustesse) :** 
+    *   **Problème :** L'application pouvait tenter des synchronisations ou des actions réseau (Auth) alors que le tunnel internet était coupé, provoquant des crashs silencieux ou des états incohérents.
+    *   **Solution :** Intégration de `@react-native-community/netinfo` via un `NetworkProvider`. L'application détecte maintenant en temps réel les changements d'état réseau.
+    *   **Auto-Sync :** Une synchronisation est automatiquement déclenchée dès que la connexion est rétablie, assurant que les données saisies "au fond du garage" remontent sur le cloud sans action utilisateur.
+*   **Sécurité et Protection des Données (Hardening) :**
+    *   **Migration vers SecureStore :** Pour passer d'un prototype à une application "production-ready", j'ai remplacé `AsyncStorage` par `expo-secure-store` pour le stockage des jetons de session Supabase. Les données sensibles sont désormais chiffrées au niveau de l'OS (Keychain sur iOS / Keystore sur Android).
+    *   **Audit RLS (Supabase) :** Vérification et renforcement des politiques de sécurité au niveau de la base de données. Chaque table (`vehicles`, `logs`, `documents`) est verrouillée par des règles PostgreSQL garantissant qu'un utilisateur ne peut accéder qu'aux lignes dont il est le propriétaire (`auth.uid() = user_id`).
+*   **Nettoyage Automatisé du Cloud (Storage Integrity) :**
+    *   **Défi :** Lorsqu'un utilisateur supprimait une facture dans l'appli, le fichier restait parfois "orphelin" sur Supabase Storage si la requête réseau de suppression échouait ou était oubliée.
+    *   **Solution :** Implémentation d'un **Trigger SQL** sur Supabase. Désormais, c'est la base de données elle-même qui ordonne la suppression physique du fichier dans le bucket dès que la ligne correspondante est supprimée dans la table `documents`. C'est une garantie absolue de propreté et de conformité RGPD.
+*   **Expérience "Premium" (Garage Reordering) :**
+    *   **Fonctionnalité :** Ajout de la possibilité de réorganiser ses motos par simple **glisser-déposer (Drag & Drop)**.
+    *   **Technique :** Utilisation de `react-native-draggable-flatlist` couplé à `react-native-gesture-handler`.
+    *   **Persistance :** Ajout d'une colonne `display_order` dans WatermelonDB et Supabase. L'ordre est mis à jour en "batch" (lot) pour économiser de la batterie et de la bande passante.
+*   **Polissage UI (Dark Mode & Accessibilité) :**
+    *   Correction systématique des contrastes (textes blancs sur fond blanc) dans les écrans d'authentification et d'onboarding lors de l'utilisation du mode sombre.
 
 ---
 
