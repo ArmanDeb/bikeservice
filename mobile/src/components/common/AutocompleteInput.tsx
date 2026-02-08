@@ -11,6 +11,8 @@ interface AutocompleteInputProps {
     filterMode?: 'startsWith' | 'includes';
 }
 
+import { useTheme } from '../../context/ThemeContext';
+
 export const AutocompleteInput = ({
     label,
     value,
@@ -21,6 +23,7 @@ export const AutocompleteInput = ({
     filterMode = 'includes'
 }: AutocompleteInputProps) => {
     const [isFocused, setIsFocused] = useState(false);
+    const { isDark } = useTheme();
 
     const filteredOptions = value
         ? options.filter(opt =>
@@ -34,11 +37,11 @@ export const AutocompleteInput = ({
 
     return (
         <View className="mb-3 z-10">
-            <Text className="text-text-secondary text-xs uppercase mb-2 tracking-wider">{label}</Text>
+            <Text className={`text-xs uppercase mb-2 tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{label}</Text>
             <TextInput
                 placeholder={placeholder}
-                placeholderTextColor="#9CA3AF"
-                className={`bg-surface-highlight text-text p-3 rounded-xl text-lg ${showDropdown ? 'rounded-b-none border-b-0' : ''} border border-border`}
+                placeholderTextColor={isDark ? "#6B7280" : "#9CA3AF"}
+                className={`p-3 rounded-xl text-lg ${showDropdown ? 'rounded-b-none border-b-0' : ''} border ${isDark ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-gray-100 border-gray-200 text-gray-900'}`}
                 value={value}
                 onChangeText={(text) => {
                     onChangeText(text);
@@ -50,7 +53,7 @@ export const AutocompleteInput = ({
                 onBlur={() => setTimeout(() => setIsFocused(false), 200)}
             />
             {showDropdown && (
-                <View className="bg-surface border border-border border-t-0 rounded-b-xl max-h-64 overflow-hidden">
+                <View className={`border border-t-0 rounded-b-xl max-h-64 overflow-hidden ${isDark ? 'bg-neutral-900 border-neutral-700' : 'bg-white border-gray-200'}`}>
                     <FlatList
                         data={filteredOptions.slice(0, 20)}
                         keyExtractor={item => item}
@@ -63,9 +66,9 @@ export const AutocompleteInput = ({
                                     onSelect(item);
                                     setIsFocused(false);
                                 }}
-                                className="px-4 py-3 border-b border-border/50"
+                                className={`px-4 py-3 border-b ${isDark ? 'border-neutral-800' : 'border-gray-100'}`}
                             >
-                                <Text className="text-text text-base">{item}</Text>
+                                <Text className={`text-base ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>{item}</Text>
                             </TouchableOpacity>
                         )}
                     />

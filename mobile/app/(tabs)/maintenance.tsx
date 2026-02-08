@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
         borderColor: '#3A3A3C',
     },
     headerTitle: {
-        fontSize: 30,
+        fontSize: 26,
         fontFamily: 'Outfit_700Bold',
         color: '#1C1C1E',
     },
@@ -396,6 +396,7 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
     const [isScanning, setIsScanning] = useState(false)
     const [showDatePicker, setShowDatePicker] = useState(false)
     const [scannedDocumentUri, setScannedDocumentUri] = useState<string | null>(null)
+    const [submitting, setSubmitting] = useState(false)
 
     // Alert state
     const [alertVisible, setAlertVisible] = useState(false)
@@ -516,6 +517,8 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
     }
 
     const handleSubmit = async () => {
+        if (submitting) return
+
         if (!title || !cost || !mileageAtLog || !vehicleId) {
             showAlert(t('alert.error'), 'Please fill in all required fields')
             return
@@ -527,15 +530,24 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
             return
         }
 
-        if (log) {
-            // updateLog: (log, title, type, cost, date, notes?, mileageAtLog?)
-            await MaintenanceService.updateLog(log, title, type, parseFloat(cost), date, notes || undefined, parseInt(mileageAtLog.replace(/\./g, '')))
-        } else {
-            // createLog: (vehicle, title, type, cost, mileageAtLog, date, notes?, documentUri?)
-            // Pass the scanned document URI so it gets linked to this maintenance log
-            await MaintenanceService.createLog(selectedVehicle, title, type, parseFloat(cost), parseInt(mileageAtLog.replace(/\./g, '')), date, notes || undefined, scannedDocumentUri || undefined)
+        setSubmitting(true)
+
+        try {
+            if (log) {
+                // updateLog: (log, title, type, cost, date, notes?, mileageAtLog?)
+                await MaintenanceService.updateLog(log, title, type, parseFloat(cost), date, notes || undefined, parseInt(mileageAtLog.replace(/\./g, '')))
+            } else {
+                // createLog: (vehicle, title, type, cost, mileageAtLog, date, notes?, documentUri?)
+                // Pass the scanned document URI so it gets linked to this maintenance log
+                await MaintenanceService.createLog(selectedVehicle, title, type, parseFloat(cost), parseInt(mileageAtLog.replace(/\./g, '')), date, notes || undefined, scannedDocumentUri || undefined)
+            }
+            onClose()
+        } catch (error: any) {
+            console.error('Error submitting log:', error)
+            showAlert(t('alert.error'), 'Failed to save maintenance log')
+        } finally {
+            setSubmitting(false)
         }
-        onClose()
     }
 
     return (
@@ -844,10 +856,21 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                             onChangeText={setNotes}
                         />
 
-                        <Pressable onPress={handleSubmit} style={styles.submitButton}>
-                            <Text style={{ color: '#FFFFFF', fontFamily: 'Outfit_700Bold', fontSize: 18 }}>
-                                {log ? t('maintenance.modal.submit_edit') : t('maintenance.modal.submit_add')}
-                            </Text>
+                        <Pressable
+                            onPress={handleSubmit}
+                            disabled={submitting}
+                            style={[
+                                styles.submitButton,
+                                submitting && { opacity: 0.7 }
+                            ]}
+                        >
+                            {submitting ? (
+                                <ActivityIndicator color="#FFFFFF" />
+                            ) : (
+                                <Text style={{ color: '#FFFFFF', fontFamily: 'Outfit_700Bold', fontSize: 18 }}>
+                                    {log ? t('maintenance.modal.submit_edit') : t('maintenance.modal.submit_add')}
+                                </Text>
+                            )}
                         </Pressable>
 
                         {log && (

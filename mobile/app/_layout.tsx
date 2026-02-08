@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from '../src/context/AuthContext'
 import { VehicleProvider } from '../src/context/VehicleContext'
 import { ThemeProvider, useTheme } from '../src/context/ThemeContext'
 import { LanguageProvider } from '../src/context/LanguageContext'
+import { NetworkProvider, useNetwork } from '../src/context/NetworkContext'
 import { sync } from '../src/services/SyncService'
 import { View, ActivityIndicator, Text } from 'react-native'
 import '../global.css'
@@ -19,6 +20,7 @@ function RootLayoutNav() {
     const { isDark } = useTheme()
     const segments = useSegments()
     const router = useRouter()
+    const { isConnected } = useNetwork()
     const [isNavigating, setIsNavigating] = useState(false)
 
     useEffect(() => {
@@ -47,9 +49,13 @@ function RootLayoutNav() {
                 if (needsRouting) {
                     setIsNavigating(true)
                     try {
-                        console.log('🔄 Performing Initial Sync...')
-                        await sync() // Wait for sync to populate DB
-                        console.log('✅ Initial Sync Done.')
+                        if (isConnected) {
+                            console.log('🔄 Performing Initial Sync...')
+                            await sync() // Wait for sync to populate DB
+                            console.log('✅ Initial Sync Done.')
+                        } else {
+                            console.log('⚠️ Offline: Skipping Initial Sync')
+                        }
                     } catch (e) {
                         console.error('❌ Initial sync failed:', e)
                     }
@@ -69,7 +75,7 @@ function RootLayoutNav() {
         }
 
         handleNavigation()
-    }, [user, isLoading, segments])
+    }, [user, isLoading, segments, isConnected])
 
 
     if (isLoading || isNavigating) {
@@ -118,13 +124,15 @@ export default function RootLayout() {
 
     return (
         <AuthProvider>
-            <LanguageProvider>
-                <ThemeProvider>
-                    <VehicleProvider>
-                        <RootLayoutNav />
-                    </VehicleProvider>
-                </ThemeProvider>
-            </LanguageProvider>
+            <NetworkProvider>
+                <LanguageProvider>
+                    <ThemeProvider>
+                        <VehicleProvider>
+                            <RootLayoutNav />
+                        </VehicleProvider>
+                    </ThemeProvider>
+                </LanguageProvider>
+            </NetworkProvider>
         </AuthProvider>
     )
 }
