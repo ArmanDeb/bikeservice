@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, TextInput, Animated, Dimensions, StatusBar, Alert, StyleSheet, Pressable } from 'react-native';
+import { View, Text, SafeAreaView, TouchableOpacity, TextInput, Animated, Dimensions, StatusBar, Alert, StyleSheet, Pressable, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../src/context/LanguageContext';
@@ -250,7 +250,11 @@ const OnboardingScreen = () => {
                 return (
                     <View style={styles.stepContainer}>
                         <View style={[styles.iconCircle, isDark && styles.iconCircleDark]}>
-                            <Ionicons name="bicycle" size={80} color={isDark ? "#E5E5E0" : "#4A4A45"} />
+                            <Image
+                                source={require('../assets/logo.png')}
+                                style={{ width: 100, height: 100 }}
+                                resizeMode="contain"
+                            />
                         </View>
                         <Text style={[styles.title, isDark && styles.titleDark]}>
                             {t('onboarding.welcome.title')}

@@ -5,6 +5,7 @@ import { supabase } from '../../src/services/Supabase';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { useTheme } from '../../src/context/ThemeContext';
+import { useNetwork } from '../../src/context/NetworkContext';
 import { Sun, Moon } from 'lucide-react-native';
 import { ConfirmationModal } from '../../src/components/common/ConfirmationModal';
 
@@ -19,7 +20,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#1C1C1E',
     },
     title: {
-        fontSize: 40,
+        fontSize: 32,
         fontFamily: 'Outfit_700Bold',
         color: '#1C1C1E',
         marginBottom: 8,
@@ -28,7 +29,7 @@ const styles = StyleSheet.create({
         color: '#FDFCF8',
     },
     subtitle: {
-        fontSize: 18,
+        fontSize: 16,
         fontFamily: 'WorkSans_400Regular',
         color: '#666660',
         marginBottom: 48,
@@ -61,7 +62,7 @@ const styles = StyleSheet.create({
     inputDark: {
         backgroundColor: '#2C2C2E',
         borderColor: '#3A3A3C',
-        color: '#FDFCF8',
+        color: '#FFFFFF',
     },
     primaryButton: {
         backgroundColor: '#1C1C1E', // Dark Stone
@@ -89,6 +90,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'center',
         marginTop: 32,
+        flexWrap: 'wrap',
+        alignItems: 'center',
     },
     footerText: {
         color: '#666660',
@@ -102,7 +105,7 @@ const styles = StyleSheet.create({
         marginLeft: 4,
     },
     footerLinkDark: {
-        color: '#FDFCF8',
+        color: '#FFFFFF',
     },
     themeToggle: {
         position: 'absolute',
@@ -114,15 +117,10 @@ const styles = StyleSheet.create({
         backgroundColor: '#F5F5F0',
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 4,
+        // Removed elevation and shadow to fix "square shadow" issue
     },
     themeToggleDark: {
         backgroundColor: '#2C2C2E',
-        shadowColor: '#000', // Stronger shadow in dark mode? Or just border?
         borderWidth: 1,
         borderColor: '#3A3A3C',
     }
@@ -135,6 +133,7 @@ export default function AuthScreen() {
     const router = useRouter();
     const { t } = useLanguage();
     const { isDark, toggleTheme } = useTheme();
+    const { isConnected } = useNetwork();
 
     // Alert state
     const [alertVisible, setAlertVisible] = useState(false);
@@ -142,6 +141,13 @@ export default function AuthScreen() {
     const [alertMessage, setAlertMessage] = useState('');
 
     async function signUpWithEmail() {
+        if (!isConnected) {
+            setAlertTitle(t('alert.no_internet') || 'No Internet Connection');
+            setAlertMessage(t('alert.no_internet_desc') || 'Please check your internet connection and try again.');
+            setAlertVisible(true);
+            return;
+        }
+
         setLoading(true);
         const { data, error } = await supabase.auth.signUp({
             email,
@@ -202,12 +208,18 @@ export default function AuthScreen() {
                     <Pressable
                         onPress={signUpWithEmail}
                         disabled={loading}
-                        style={[styles.primaryButton, isDark && styles.primaryButtonDark, loading && styles.primaryButtonDisabled]}
+                        style={[
+                            styles.primaryButton,
+                            isDark && styles.primaryButtonDark,
+                            loading && styles.primaryButtonDisabled
+                        ]}
                     >
                         {loading ? (
                             <ActivityIndicator color={isDark ? "#1C1C1E" : "#FFFFFF"} />
                         ) : (
-                            <Text style={[styles.buttonText, isDark && styles.buttonTextDark]}>{t('auth.sign_up')}</Text>
+                            <Text style={[styles.buttonText, isDark && styles.buttonTextDark]}>
+                                {t('auth.sign_up')}
+                            </Text>
                         )}
                     </Pressable>
 

@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#2C2C2E',
     },
     appName: {
-        fontSize: 32,
+        fontSize: 28,
         fontFamily: 'Outfit_700Bold',
         textAlign: 'center',
         color: '#1C1C1E',
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
         color: '#FDFCF8',
     },
     title: {
-        fontSize: 20,
+        fontSize: 18,
         fontFamily: 'WorkSans_500Medium',
         textAlign: 'center',
         color: '#1C1C1E',
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#3A3A3C',
     },
     cardTitle: {
-        fontSize: 18,
+        fontSize: 16,
         fontFamily: 'Outfit_700Bold',
         color: '#1C1C1E',
         marginBottom: 4,
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     buttonText: {
         color: '#FFFFFF',
         fontFamily: 'Outfit_700Bold',
-        fontSize: 18,
+        fontSize: 16,
         textTransform: 'uppercase',
         letterSpacing: 1,
     },
