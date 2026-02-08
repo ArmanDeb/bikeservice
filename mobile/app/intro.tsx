@@ -205,7 +205,11 @@ export default function IntroScreen() {
                 <View style={styles.header}>
                     <View style={styles.logoContainer}>
                         <View style={[styles.logoCircle, isDark && styles.logoCircleDark]}>
-                            <Ionicons name="bicycle" size={60} color={isDark ? "#E5E5E0" : "#4A4A45"} />
+                            <Image
+                                source={require('../../assets/logo.png')}
+                                style={{ width: 80, height: 80 }}
+                                resizeMode="contain"
+                            />
                         </View>
                         <Text style={[styles.appName, isDark && styles.appNameDark]}>
                             Bike Service

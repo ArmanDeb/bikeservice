@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     },
     themeToggle: {
         position: 'absolute',
-        bottom: 40,
+        top: 10,
         right: 24,
         width: 52,
         height: 52,
