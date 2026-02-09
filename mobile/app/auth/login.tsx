@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, ActivityIndicator, StyleSheet, Pressable } from 'react-native';
+import { View, Text, TextInput, ActivityIndicator, StyleSheet, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../src/services/Supabase';
 import { SafeAreaView } from 'react-native-safe-area-context';

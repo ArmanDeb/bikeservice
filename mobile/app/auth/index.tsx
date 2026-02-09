@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, ActivityIndicator, StyleSheet, Pressable } from 'react-native';
+import { View, Text, TextInput, ActivityIndicator, StyleSheet, Pressable, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../src/services/Supabase';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -174,63 +174,70 @@ export default function AuthScreen() {
 
     return (
         <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
-            <View>
-                <Text style={[styles.title, isDark && styles.titleDark]}>{t('auth.register_title')}</Text>
-                <Text style={[styles.subtitle, isDark && styles.subtitleDark]}>{t('auth.register_subtitle')}</Text>
-
-                <View>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={{ flex: 1 }}
+            >
+                <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} showsVerticalScrollIndicator={false}>
                     <View>
-                        <Text style={[styles.label, isDark && styles.labelDark]}>{t('auth.email')}</Text>
-                        <TextInput
-                            onChangeText={setEmail}
-                            value={email}
-                            autoCapitalize="none"
-                            keyboardType="email-address"
-                            style={[styles.input, isDark && styles.inputDark]}
-                            placeholder="you@example.com"
-                            placeholderTextColor={isDark ? "#64748B" : "#9CA3AF"}
-                        />
-                    </View>
+                        <Text style={[styles.title, isDark && styles.titleDark]}>{t('auth.register_title')}</Text>
+                        <Text style={[styles.subtitle, isDark && styles.subtitleDark]}>{t('auth.register_subtitle')}</Text>
 
-                    <View>
-                        <Text style={[styles.label, isDark && styles.labelDark]}>{t('auth.password')}</Text>
-                        <TextInput
-                            onChangeText={setPassword}
-                            value={password}
-                            secureTextEntry={true}
-                            autoCapitalize="none"
-                            style={[styles.input, isDark && styles.inputDark]}
-                            placeholder="••••••••"
-                            placeholderTextColor={isDark ? "#64748B" : "#9CA3AF"}
-                        />
-                    </View>
+                        <View>
+                            <View>
+                                <Text style={[styles.label, isDark && styles.labelDark]}>{t('auth.email')}</Text>
+                                <TextInput
+                                    onChangeText={setEmail}
+                                    value={email}
+                                    autoCapitalize="none"
+                                    keyboardType="email-address"
+                                    style={[styles.input, isDark && styles.inputDark]}
+                                    placeholder="you@example.com"
+                                    placeholderTextColor={isDark ? "#64748B" : "#9CA3AF"}
+                                />
+                            </View>
 
-                    <Pressable
-                        onPress={signUpWithEmail}
-                        disabled={loading}
-                        style={[
-                            styles.primaryButton,
-                            isDark && styles.primaryButtonDark,
-                            loading && styles.primaryButtonDisabled
-                        ]}
-                    >
-                        {loading ? (
-                            <ActivityIndicator color={isDark ? "#1C1C1E" : "#FFFFFF"} />
-                        ) : (
-                            <Text style={[styles.buttonText, isDark && styles.buttonTextDark]}>
-                                {t('auth.sign_up')}
-                            </Text>
-                        )}
-                    </Pressable>
+                            <View>
+                                <Text style={[styles.label, isDark && styles.labelDark]}>{t('auth.password')}</Text>
+                                <TextInput
+                                    onChangeText={setPassword}
+                                    value={password}
+                                    secureTextEntry={true}
+                                    autoCapitalize="none"
+                                    style={[styles.input, isDark && styles.inputDark]}
+                                    placeholder="••••••••"
+                                    placeholderTextColor={isDark ? "#64748B" : "#9CA3AF"}
+                                />
+                            </View>
 
-                    <View style={styles.footer}>
-                        <Text style={[styles.footerText, isDark && styles.labelDark]}>{t('auth.have_account')} </Text>
-                        <Pressable onPress={() => router.push('/auth/login')}>
-                            <Text style={[styles.footerLink, isDark && styles.footerLinkDark]}>{t('auth.sign_in')}</Text>
-                        </Pressable>
+                            <Pressable
+                                onPress={signUpWithEmail}
+                                disabled={loading}
+                                style={[
+                                    styles.primaryButton,
+                                    isDark && styles.primaryButtonDark,
+                                    loading && styles.primaryButtonDisabled
+                                ]}
+                            >
+                                {loading ? (
+                                    <ActivityIndicator color={isDark ? "#1C1C1E" : "#FFFFFF"} />
+                                ) : (
+                                    <Text style={[styles.buttonText, isDark && styles.buttonTextDark]}>
+                                        {t('auth.sign_up')}
+                                    </Text>
+                                )}
+                            </Pressable>
+
+                            <View style={styles.footer}>
+                                <Text style={[styles.footerText, isDark && styles.labelDark]}>{t('auth.have_account')} </Text>
+                                <Pressable onPress={() => router.push('/auth/login')}>
+                                    <Text style={[styles.footerLink, isDark && styles.footerLinkDark]}>{t('auth.sign_in')}</Text>
+                                </Pressable>
+                            </View>
+                        </View>
                     </View>
-                </View>
-            </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
 
             <Pressable
                 onPress={toggleTheme}

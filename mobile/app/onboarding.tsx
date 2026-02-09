@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, TextInput, Animated, Dimensions, StatusBar, Alert, StyleSheet, Pressable, Image } from 'react-native';
+import { View, Text, SafeAreaView, TouchableOpacity, TextInput, Animated, Dimensions, StatusBar, Alert, StyleSheet, Pressable, Image, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../src/context/LanguageContext';
@@ -387,30 +387,40 @@ const OnboardingScreen = () => {
     return (
         <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
             <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-            <View style={styles.contentContainer}>
-                {/* Progress Bar */}
-                {step > 0 && step < 3 && (
-                    <View style={[styles.progressBarContainer, isDark && styles.progressBarContainerDark]}>
-                        <View
-                            style={[
-                                styles.progressBarFill,
-                                isDark && styles.progressBarFillDark,
-                                { width: `${(step / 2) * 100}%` }
-                            ]}
-                        />
-                    </View>
-                )}
-
-                <Animated.View
-                    style={{
-                        opacity: fadeAnim,
-                        transform: [{ translateY: slideAnim }],
-                        width: '100%'
-                    }}
+            <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={{ flex: 1 }}
+            >
+                <ScrollView
+                    contentContainerStyle={{ flexGrow: 1 }}
+                    showsVerticalScrollIndicator={false}
                 >
-                    {renderContent()}
-                </Animated.View>
-            </View>
+                    <View style={styles.contentContainer}>
+                        {/* Progress Bar */}
+                        {step > 0 && step < 3 && (
+                            <View style={[styles.progressBarContainer, isDark && styles.progressBarContainerDark]}>
+                                <View
+                                    style={[
+                                        styles.progressBarFill,
+                                        isDark && styles.progressBarFillDark,
+                                        { width: `${(step / 2) * 100}%` }
+                                    ]}
+                                />
+                            </View>
+                        )}
+
+                        <Animated.View
+                            style={{
+                                opacity: fadeAnim,
+                                transform: [{ translateY: slideAnim }],
+                                width: '100%'
+                            }}
+                        >
+                            {renderContent()}
+                        </Animated.View>
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
 
             <ConfirmationModal
                 visible={alertVisible}
