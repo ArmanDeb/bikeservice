@@ -41,7 +41,7 @@ const VehicleListItem = withObservables(['vehicle'], ({ vehicle }) => ({
                             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                                 <BrandLogo brand={vehicle.brand} variant="icon" size={32} color={isDark ? '#FDFCF8' : '#1C1C1E'} />
                                 <View style={{ flex: 1 }}>
-                                    <Text style={[styles.vehicleName, isDark ? styles.vehicleNameDark : styles.vehicleNameLight]}>{vehicle.brand} {vehicle.model}</Text>
+                                    <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.vehicleName, isDark ? styles.vehicleNameDark : styles.vehicleNameLight]}>{vehicle.brand} {vehicle.model}</Text>
                                     <Text style={[styles.vehicleDetails, isDark ? styles.vehicleDetailsDark : styles.vehicleDetailsLight, { marginTop: 4 }]}>
                                         {vehicle.year ? `${vehicle.year}` : ''}
                                         {vehicle.year && vehicle.vin ? ' • ' : ''}
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     vehicleName: {
-        fontSize: 22,
+        fontSize: 20,
         fontFamily: 'Outfit_700Bold',
         marginBottom: 4,
     },

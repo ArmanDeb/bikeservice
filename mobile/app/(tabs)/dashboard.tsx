@@ -361,14 +361,14 @@ const DashboardScreen = ({ vehicles, logs }: { vehicles: Vehicle[], logs: Mainte
                 </View>
                 {activeVehicle ? (
                     <View style={{ marginBottom: 24, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <View style={[styles.vehicleIndicator, isDark && { backgroundColor: '#FDFCF8' }, { gap: 8, flexDirection: 'row', alignItems: 'center' }]}>
+                        <View style={[styles.vehicleIndicator, isDark && { backgroundColor: '#FDFCF8' }, { gap: 8, flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }]}>
                             <BrandLogo
                                 brand={activeVehicle.brand}
                                 variant="icon"
                                 size={20}
                                 color={isDark ? '#1C1C1E' : '#1C1C1E'}
                             />
-                            <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 16, color: isDark ? '#1C1C1E' : '#1C1C1E' }}>
+                            <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontFamily: 'Outfit_700Bold', fontSize: 16, color: isDark ? '#1C1C1E' : '#1C1C1E', flex: 1 }}>
                                 {activeVehicle.brand} {activeVehicle.model}
                             </Text>
                         </View>

@@ -4,6 +4,7 @@ import MaintenanceLog from '../database/models/MaintenanceLog'
 import Vehicle from '../database/models/Vehicle'
 import { Q } from '@nozbe/watermelondb'
 import { sync } from './SyncService'
+import Document from '../database/models/Document'
 import { StorageService } from './StorageService'
 import { supabase } from './Supabase'
 
@@ -102,7 +103,7 @@ export const MaintenanceService = {
         await database.write(async () => {
             // 1. First, delete all documents linked to this log (Foreign Key Cascade)
             const linkedDocuments = await database.collections
-                .get(TableName.DOCUMENTS)
+                .get<Document>(TableName.DOCUMENTS)
                 .query(Q.where('log_id', log.id))
                 .fetch()
 
