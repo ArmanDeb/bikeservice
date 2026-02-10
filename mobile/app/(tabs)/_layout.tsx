@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router'
-import { View, Text } from 'react-native'
+import { View, Text, Platform } from 'react-native'
 import { useTheme } from '../../src/context/ThemeContext'
 import { useLanguage } from '../../src/context/LanguageContext'
 import { useVehicle } from '../../src/context/VehicleContext'
@@ -36,9 +36,8 @@ const GarageTabIcon = withObservables([], () => ({
 }))(GarageIconBase);
 
 export default function TabsLayout() {
-    const { theme } = useTheme();
+    const { isDark } = useTheme();
     const { t } = useLanguage();
-    const isDark = theme === 'dark';
 
     return (
         <Tabs
@@ -50,9 +49,9 @@ export default function TabsLayout() {
                     borderTopColor: isDark ? '#2C2C2E' : '#E6E5E0',
                     elevation: 0,
                     shadowOpacity: 0,
-                    height: 60,
-                    paddingBottom: 8,
                     paddingTop: 8,
+                    height: 60 + (Platform.OS === 'ios' ? 15 : 0), // Add extra height for iOS home indicator area if needed, but safe area should handle it. Better to just use a generous height.
+                    paddingBottom: Platform.OS === 'ios' ? 25 : 8,
                 },
                 tabBarActiveTintColor: isDark ? '#E5E5E0' : '#1C1C1E',
                 tabBarInactiveTintColor: isDark ? '#666660' : '#9CA3AF',
@@ -60,6 +59,7 @@ export default function TabsLayout() {
                 tabBarLabelStyle: {
                     fontFamily: 'WorkSans_500Medium',
                     fontSize: 10,
+                    marginBottom: 4,
                 }
             }}
         >

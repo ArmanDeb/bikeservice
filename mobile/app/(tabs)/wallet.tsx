@@ -1,10 +1,12 @@
 import React, { useState } from 'react'
-import { View, Text, TouchableOpacity, Modal, TextInput, Image, Alert, ScrollView, StatusBar, StyleSheet, Pressable, KeyboardAvoidingView, Platform } from 'react-native'
+import { View, Text, TouchableOpacity, Modal, Image, Alert, ScrollView, StatusBar, StyleSheet, Pressable, KeyboardAvoidingView, Platform } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { withObservables } from '@nozbe/watermelondb/react'
 import * as ImagePicker from 'expo-image-picker'
 import ImageViewing from 'react-native-image-viewing'
 import { DocumentService } from '../../src/services/DocumentService'
+import { StorageService } from '../../src/services/StorageService'
+import * as FileSystem from 'expo-file-system/legacy'
 import Document from '../../src/database/models/Document'
 import { VehicleService } from '../../src/services/VehicleService'
 import Vehicle from '../../src/database/models/Vehicle'
@@ -13,7 +15,9 @@ import { useVehicle } from '../../src/context/VehicleContext'
 import { useTheme } from '../../src/context/ThemeContext'
 import { useLanguage } from '../../src/context/LanguageContext'
 import { BrandLogo } from '../../src/components/common/BrandLogo'
+import { ModalInput } from '../../src/components/common/ModalInput'
 import { ConfirmationModal } from '../../src/components/common/ConfirmationModal'
+import { SmartImage } from '../../src/components/SmartImage'
 
 // Styles definition
 const styles = StyleSheet.create({
@@ -40,16 +44,16 @@ const styles = StyleSheet.create({
     },
     modalContent: {
         borderTopWidth: 1,
-        borderTopColor: '#E6E5E0',
+        borderTopColor: '#D6D5D0',
         padding: 24,
         borderTopLeftRadius: 32,
         borderTopRightRadius: 32,
         maxHeight: '90%',
         backgroundColor: '#FFFFFF',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: -4 },
+        shadowOffset: { width: 0, height: -6 }, // Deeper shadow
         shadowOpacity: 0.1,
-        shadowRadius: 12,
+        shadowRadius: 16,
         elevation: 10,
     },
     modalContentDark: {
@@ -65,8 +69,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 16,
-        backgroundColor: '#F5F5F0',
-        borderColor: '#E6E5E0',
+        backgroundColor: '#FFFFFF', // White background
+        borderColor: '#D6D5D0',
     },
     vehicleSelectorDark: {
         backgroundColor: '#323234',
@@ -79,8 +83,8 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         fontSize: 16,
         borderWidth: 1,
-        backgroundColor: '#F5F5F0',
-        borderColor: '#E6E5E0',
+        backgroundColor: '#FFFFFF', // White background
+        borderColor: '#D6D5D0',
         fontFamily: 'WorkSans_400Regular',
         color: '#1C1C1E',
     },
@@ -96,7 +100,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         borderWidth: 1,
         backgroundColor: '#FFFFFF',
-        borderColor: '#E6E5E0',
+        borderColor: '#D6D5D0',
         marginRight: 8,
         marginBottom: 8,
     },
@@ -130,7 +134,7 @@ const styles = StyleSheet.create({
     cameraButton: {
         backgroundColor: '#F5F5F0',
         borderWidth: 1,
-        borderColor: '#E6E5E0',
+        borderColor: '#D6D5D0',
         borderStyle: 'dashed',
         padding: 32,
         borderRadius: 16,
@@ -193,14 +197,19 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         marginBottom: 12,
         borderWidth: 1,
-        borderColor: '#E6E5E0',
+        borderColor: '#D6D5D0',
         flexDirection: 'row',
         alignItems: 'center',
-        shadowColor: 'transparent',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 }, // Added shadow
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+        elevation: 2,
     },
     docItemDark: {
         backgroundColor: '#2C2C2E',
         borderColor: '#3A3A3C',
+        shadowOpacity: 0.2, // Kept existing shadow opacity for dark mode logic if any
     },
     docIconContainer: {
         width: 48,
@@ -220,13 +229,19 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         marginBottom: 16,
         borderWidth: 1,
-        borderColor: '#E6E5E0',
+        borderColor: '#D6D5D0',
         flexDirection: 'row',
         alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 }, // Added shadow
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+        elevation: 2,
     },
     vehicleCardDark: {
         backgroundColor: '#2C2C2E',
         borderColor: '#3A3A3C',
+        shadowOpacity: 0.2,
     },
     vehicleIconContainer: {
         width: 56,
@@ -390,7 +405,7 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles }: { vi
         <Modal visible={visible} animationType="slide" transparent>
             <Pressable style={styles.modalOverlay} onPress={onClose}>
                 <KeyboardAvoidingView
-                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    behavior={Platform.OS === "ios" ? "padding" : undefined}
                     style={{ flex: 1, justifyContent: 'flex-end' }}
                 >
                     <Pressable onPress={(e) => e.stopPropagation()} style={[styles.modalContent, isDark && styles.modalContentDark]}>
@@ -400,9 +415,17 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles }: { vi
 
                         <ScrollView showsVerticalScrollIndicator={false}>
                             <View style={{ marginBottom: 16 }}>
-                                <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>{t('maintenance.select_vehicle')}</Text>
                                 <View style={[styles.vehicleSelector, vehicleSelectorStyle]}>
-                                    <Bike size={24} color={isDark ? "#E5E5E0" : "#1C1C1E"} />
+                                    {vehicleId ? (
+                                        <BrandLogo
+                                            brand={vehicles.find(v => v.id === vehicleId)?.brand || ''}
+                                            variant="icon"
+                                            size={24}
+                                            color={isDark ? "#E5E5E0" : "#1C1C1E"}
+                                        />
+                                    ) : (
+                                        <Bike size={24} color={isDark ? "#E5E5E0" : "#1C1C1E"} />
+                                    )}
                                     <Text style={{ fontFamily: 'WorkSans_500Medium', fontSize: 16, marginLeft: 12, color: isDark ? '#FDFCF8' : '#1C1C1E' }}>
                                         {vehicleId
                                             ? `${vehicles.find(v => v.id === vehicleId)?.brand} ${vehicles.find(v => v.id === vehicleId)?.model}`
@@ -432,44 +455,49 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles }: { vi
                                 ))}
                             </View>
 
-                            <TextInput
-                                placeholder={t('wallet.field.title')}
-                                placeholderTextColor="#9CA3AF"
-                                style={[styles.input, inputStyle]}
+                            <ModalInput
+                                label={t('wallet.field.title')}
                                 value={title}
                                 onChangeText={setTitle}
+                                placeholder={t('wallet.field.title')}
                             />
 
-                            <TextInput
-                                placeholder={t('wallet.field.expiry')}
-                                placeholderTextColor="#9CA3AF"
-                                style={[styles.input, inputStyle]}
+                            <ModalInput
+                                label={t('wallet.field.expiry')}
                                 value={expiryDate}
                                 onChangeText={setExpiryDate}
+                                placeholder="YYYY-MM-DD"
                             />
 
                             {/* Disable file modification in edit mode */}
-                            {!document && (
+                            {document && localUri ? (
+                                <Pressable
+                                    onPress={() => onPreview(localUri)}
+                                    style={[styles.cameraButton, isDark && styles.cameraButtonDark, { opacity: 1, padding: 0, overflow: 'hidden' }]}
+                                >
+                                    <SmartImage
+                                        localUri={localUri}
+                                        remotePath={document.remotePath}
+                                        style={{ width: '100%', height: 250, borderRadius: 12 }}
+                                        resizeMode="contain"
+                                    />
+                                </Pressable>
+                            ) : !document && localUri ? (
+                                <Pressable
+                                    onPress={() => onPreview(localUri)}
+                                    style={[styles.cameraButton, isDark && styles.cameraButtonDark, { opacity: 1, padding: 0, overflow: 'hidden' }]}
+                                >
+                                    <Image source={{ uri: localUri }} style={{ width: '100%', height: 250, borderRadius: 12 }} resizeMode="contain" />
+                                </Pressable>
+                            ) : null}
+
+                            {!document && !localUri && (
                                 <Pressable
                                     onPress={pickImage}
                                     style={[styles.cameraButton, isDark && styles.cameraButtonDark]}
                                 >
-                                    {localUri ? (
-                                        <Image source={{ uri: localUri }} style={{ width: '100%', height: 160, borderRadius: 12 }} />
-                                    ) : (
-                                        <>
-                                            <Camera size={32} color="#9CA3AF" />
-                                            <Text style={{ fontFamily: 'WorkSans_400Regular', color: '#666660', marginTop: 8 }}>{t('wallet.field.attach_photo')}</Text>
-                                        </>
-                                    )}
-                                </Pressable>
-                            )}
-                            {document && localUri && (
-                                <Pressable
-                                    onPress={() => onPreview(localUri)}
-                                    style={[styles.cameraButton, isDark && styles.cameraButtonDark, { opacity: 0.8 }]} // Increased opacity for better visibility
-                                >
-                                    <Image source={{ uri: localUri }} style={{ width: '100%', height: 250, borderRadius: 12 }} resizeMode="contain" />
+                                    <Camera size={32} color="#9CA3AF" />
+                                    <Text style={{ fontFamily: 'WorkSans_400Regular', color: '#666660', marginTop: 8 }}>{t('wallet.field.attach_photo')}</Text>
                                 </Pressable>
                             )}
 
@@ -550,20 +578,15 @@ const DocumentViewModal = ({ visible, onClose, onEdit, onPreview, document }: { 
 
                     <ScrollView showsVerticalScrollIndicator={false}>
                         <View style={{ alignItems: 'center', marginBottom: 24 }}>
-                            {document.localUri ? (
-                                <Pressable onPress={onPreview} style={{ width: '100%' }}>
-                                    <Image
-                                        source={{ uri: document.localUri }}
-                                        style={{ width: '100%', height: 400, borderRadius: 16, backgroundColor: isDark ? '#323234' : '#F5F5F0' }}
-                                        resizeMode="contain"
-                                    />
-                                </Pressable>
-                            ) : (
-                                <View style={{ width: '100%', height: 200, alignItems: 'center', justifyContent: 'center', backgroundColor: isDark ? '#323234' : '#F5F5F0', borderRadius: 16 }}>
-                                    <FileText size={48} color="#9CA3AF" />
-                                    <Text style={{ fontFamily: 'WorkSans_400Regular', color: '#666660', marginTop: 16 }}>{t('wallet.document.no_image')}</Text>
-                                </View>
-                            )}
+                            <Pressable onPress={onPreview} style={{ width: '100%', height: 400 }}>
+                                <SmartImage
+                                    localUri={document.localUri}
+                                    remotePath={document.remotePath}
+                                    style={{ width: '100%', height: '100%', borderRadius: 16, backgroundColor: isDark ? '#323234' : '#F5F5F0' }}
+                                    resizeMode="contain"
+                                    fallbackIconSize={48}
+                                />
+                            </Pressable>
                         </View>
 
                         <View style={{ gap: 20, paddingBottom: 40 }}>
@@ -627,11 +650,12 @@ const WalletScreen = ({ documents, vehicles }: { documents: Document[], vehicles
             <View
                 style={[styles.docIconContainer, isDark && styles.docIconContainerDark]}
             >
-                {item.localUri ? (
-                    <Image source={{ uri: item.localUri }} style={{ width: '100%', height: '100%', borderRadius: 8 }} />
-                ) : (
-                    <FileText size={20} color="#9CA3AF" />
-                )}
+                <SmartImage
+                    localUri={item.localUri}
+                    remotePath={item.remotePath}
+                    style={{ width: '100%', height: '100%', borderRadius: 8 }}
+                    fallbackIconSize={20}
+                />
             </View>
             <View style={{ flex: 1 }}>
                 <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 18, color: isDark ? '#FDFCF8' : '#1C1C1E', marginBottom: 2 }} numberOfLines={1}>{item.reference || t('wallet.document.untitled')}</Text>
@@ -750,9 +774,26 @@ const WalletScreen = ({ documents, vehicles }: { documents: Document[], vehicles
                             setModalVisible(true)
                         }, 100)
                     }}
-                    onPreview={() => {
-                        if (viewingDoc?.localUri) {
-                            setPreviewImage(viewingDoc.localUri)
+                    onPreview={async () => {
+                        if (viewingDoc) {
+                            let uri: string | null | undefined = viewingDoc.localUri
+
+                            // Check if local file exists
+                            if (uri) {
+                                const info = await FileSystem.getInfoAsync(uri)
+                                if (!info.exists) {
+                                    uri = null
+                                }
+                            }
+
+                            // If no local, try remote
+                            if (!uri && viewingDoc.remotePath) {
+                                uri = await StorageService.downloadFile(viewingDoc.remotePath)
+                            }
+
+                            if (uri) {
+                                setPreviewImage(uri)
+                            }
                         }
                     }}
                     document={viewingDoc}

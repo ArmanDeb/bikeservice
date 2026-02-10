@@ -47,10 +47,15 @@ export const MaintenanceService = {
 
         // Try to upload file if exists
         let remotePath: string | null = null
+        let finalLocalUri = documentUri
+
         if (documentUri) {
+            // Cache locally for persistence
+            finalLocalUri = await StorageService.cacheFile(documentUri)
+
             const { data: { user } } = await supabase.auth.getUser()
             if (user) {
-                remotePath = await StorageService.uploadFile(documentUri, user.id)
+                remotePath = await StorageService.uploadFile(finalLocalUri, user.id)
             }
         }
 
@@ -90,7 +95,7 @@ export const MaintenanceService = {
                     // @ts-ignore
                     doc.reference = `Invoice - ${title}`
                     // @ts-ignore
-                    doc.localUri = documentUri
+                    doc.localUri = finalLocalUri
                     // @ts-ignore
                     doc.remotePath = remotePath || undefined
                 })

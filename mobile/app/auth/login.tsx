@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, ActivityIndicator, StyleSheet, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { supabase } from '../../src/services/Supabase';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLanguage } from '../../src/context/LanguageContext';
+import { supabase } from '../../src/services/Supabase';
 import { useTheme } from '../../src/context/ThemeContext';
+import { useLanguage } from '../../src/context/LanguageContext';
 import { useNetwork } from '../../src/context/NetworkContext';
-import { Sun, Moon } from 'lucide-react-native';
 import { ConfirmationModal } from '../../src/components/common/ConfirmationModal';
+import { ModalInput } from '../../src/components/common/ModalInput';
 
 const styles = StyleSheet.create({
     container: {
@@ -36,33 +36,6 @@ const styles = StyleSheet.create({
     },
     subtitleDark: {
         color: '#9CA3AF',
-    },
-    label: {
-        fontSize: 12,
-        fontFamily: 'Outfit_700Bold',
-        color: '#666660',
-        textTransform: 'uppercase',
-        marginBottom: 8,
-        letterSpacing: 1,
-    },
-    labelDark: {
-        color: '#9CA3AF',
-    },
-    input: {
-        backgroundColor: '#F5F5F0',
-        padding: 16,
-        borderRadius: 14,
-        borderWidth: 1,
-        borderColor: '#E6E5E0',
-        fontSize: 16,
-        fontFamily: 'WorkSans_400Regular',
-        color: '#1C1C1E',
-        marginBottom: 24,
-    },
-    inputDark: {
-        backgroundColor: '#2C2C2E',
-        borderColor: '#3A3A3C',
-        color: '#FFFFFF',
     },
     primaryButton: {
         backgroundColor: '#1C1C1E', // Dark Stone
@@ -107,22 +80,8 @@ const styles = StyleSheet.create({
     footerLinkDark: {
         color: '#FDFCF8',
     },
-    themeToggle: {
-        position: 'absolute',
-        top: 10,
-        right: 24,
-        width: 52,
-        height: 52,
-        borderRadius: 26,
-        backgroundColor: '#F5F5F0',
-        justifyContent: 'center',
-        alignItems: 'center',
-        // Removed elevation and shadow to fix "square shadow" issue
-    },
-    themeToggleDark: {
-        backgroundColor: '#2C2C2E',
-        borderWidth: 1,
-        borderColor: '#3A3A3C',
+    footerTextDark: {
+        color: '#9CA3AF',
     }
 });
 
@@ -167,74 +126,66 @@ export default function LoginScreen() {
 
     return (
         <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
-            <View>
-                <Text style={[styles.title, isDark && styles.titleDark]}>{t('auth.welcome')}</Text>
-                <Text style={[styles.subtitle, isDark && styles.subtitleDark]}>{t('auth.register_subtitle')}</Text>
-
-                <View>
-                    <View>
-                        <Text style={[styles.label, isDark && styles.labelDark]}>{t('auth.email')}</Text>
-                        <TextInput
-                            onChangeText={setEmail}
-                            value={email}
-                            autoCapitalize="none"
-                            keyboardType="email-address"
-                            style={[styles.input, isDark && styles.inputDark]}
-                            placeholder="you@example.com"
-                            placeholderTextColor={isDark ? "#64748B" : "#9CA3AF"}
-                        />
-                    </View>
-
-                    <View>
-                        <Text style={[styles.label, isDark && styles.labelDark]}>{t('auth.password')}</Text>
-                        <TextInput
-                            onChangeText={setPassword}
-                            value={password}
-                            secureTextEntry={true}
-                            autoCapitalize="none"
-                            style={[styles.input, isDark && styles.inputDark]}
-                            placeholder="••••••••"
-                            placeholderTextColor={isDark ? "#64748B" : "#9CA3AF"}
-                        />
-                    </View>
-
-                    <Pressable
-                        onPress={signInWithEmail}
-                        disabled={loading}
-                        style={[
-                            styles.primaryButton,
-                            isDark && styles.primaryButtonDark,
-                            loading && styles.primaryButtonDisabled
-                        ]}
-                    >
-                        {loading ? (
-                            <ActivityIndicator color={isDark ? "#1C1C1E" : "#FFFFFF"} />
-                        ) : (
-                            <Text style={[styles.buttonText, isDark && styles.buttonTextDark]}>
-                                {t('auth.sign_in')}
-                            </Text>
-                        )}
-                    </Pressable>
-
-                    <View style={styles.footer}>
-                        <Text style={[styles.footerText, isDark && styles.labelDark]}>{t('auth.no_account')} </Text>
-                        <Pressable onPress={() => router.push('/auth/')}>
-                            <Text style={[styles.footerLink, isDark && styles.footerLinkDark]}>{t('auth.sign_up')}</Text>
-                        </Pressable>
-                    </View>
-                </View>
-            </View>
-
-            <Pressable
-                onPress={toggleTheme}
-                style={[styles.themeToggle, isDark && styles.themeToggleDark]}
+            <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : undefined}
+                style={{ flex: 1 }}
             >
-                {isDark ? (
-                    <Sun color="#FDFCF8" size={24} />
-                ) : (
-                    <Moon color="#1C1C1E" size={24} />
-                )}
-            </Pressable>
+                <ScrollView
+                    contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    <View>
+                        <Text style={[styles.title, isDark && styles.titleDark]}>{t('auth.welcome')}</Text>
+                        <Text style={[styles.subtitle, isDark && styles.subtitleDark]}>{t('auth.register_subtitle')}</Text>
+
+                        <View>
+                            <ModalInput
+                                label={t('auth.email')}
+                                value={email}
+                                onChangeText={setEmail}
+                                placeholder="you@example.com"
+                                keyboardType="email-address"
+                            />
+                        </View>
+
+                        <View>
+                            <ModalInput
+                                label={t('auth.password')}
+                                value={password}
+                                onChangeText={setPassword}
+                                placeholder="••••••••"
+                                secureTextEntry={true}
+                            />
+                        </View>
+
+                        <Pressable
+                            onPress={signInWithEmail}
+                            disabled={loading}
+                            style={[
+                                styles.primaryButton,
+                                isDark && styles.primaryButtonDark,
+                                loading && styles.primaryButtonDisabled
+                            ]}
+                        >
+                            {loading ? (
+                                <ActivityIndicator color={isDark ? "#1C1C1E" : "#FFFFFF"} />
+                            ) : (
+                                <Text style={[styles.buttonText, isDark && styles.buttonTextDark]}>
+                                    {t('auth.sign_in')}
+                                </Text>
+                            )}
+                        </Pressable>
+
+                        <View style={styles.footer}>
+                            <Text style={[styles.footerText, isDark && styles.footerTextDark]}>{t('auth.no_account')} </Text>
+                            <Pressable onPress={() => router.push('/auth/')}>
+                                <Text style={[styles.footerLink, isDark && styles.footerLinkDark]}>{t('auth.sign_up')}</Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
 
             <ConfirmationModal
                 visible={alertVisible}
@@ -244,6 +195,6 @@ export default function LoginScreen() {
                 confirmText={t('common.ok')}
                 variant="default"
             />
-        </SafeAreaView>
+        </SafeAreaView >
     );
 }

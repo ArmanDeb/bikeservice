@@ -11,7 +11,7 @@ import { useVehicle } from '../../src/context/VehicleContext'
 import { useAuth } from '../../src/context/AuthContext'
 import { useTheme } from '../../src/context/ThemeContext'
 import { useLanguage } from '../../src/context/LanguageContext'
-import { FileText, Activity, Wrench, Wallet, Car, AlertTriangle } from 'lucide-react-native'
+import { FileText, Activity, Wrench, Wallet, Car, AlertTriangle, LayoutGrid } from 'lucide-react-native'
 
 import { Q } from '@nozbe/watermelondb'
 import { TableName } from '../../src/database/constants'
@@ -96,8 +96,12 @@ const styles = StyleSheet.create({
     },
     cardLight: {
         backgroundColor: '#FFFFFF',
-        borderColor: '#E6E5E0',
-        shadowColor: 'transparent',
+        borderColor: '#D6D5D0', // Darker border
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 }, // Deeper shadow
+        shadowOpacity: 0.08, // Slightly more visible
+        shadowRadius: 12, // Softer spread
+        elevation: 4,
     },
     cardDark: {
         backgroundColor: '#2C2C2E', // Lighter Gray Layer
@@ -109,8 +113,8 @@ const styles = StyleSheet.create({
     cardHeader: {
         padding: 16,
         borderBottomWidth: 1,
-        borderColor: '#E6E5E0',
-        backgroundColor: '#FBFBF9',
+        borderColor: '#D6D5D0', // Match new border
+        backgroundColor: '#F7F7F5', // Slightly darker header background
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
     },
@@ -266,6 +270,32 @@ const styles = StyleSheet.create({
     tagTextRepairDark: { color: '#FB7185' },
     tagTextMod: { color: '#7E22CE' }, // Muted Purple
     tagTextModDark: { color: '#C084FC' },
+
+    // Toggle Styles
+    toggleContainer: {
+        flexDirection: 'row',
+        padding: 4,
+        borderRadius: 12,
+        borderWidth: 1,
+    },
+    toggleContainerLight: {
+        backgroundColor: '#FFFFFF',
+        borderColor: '#D6D5D0',
+    },
+    toggleContainerDark: {
+        backgroundColor: '#2C2C2E',
+        borderColor: '#3A3A3C',
+    },
+    toggleButton: {
+        padding: 8,
+        borderRadius: 8,
+    },
+    toggleButtonActiveLight: {
+        backgroundColor: '#F5F5F0',
+    },
+    toggleButtonActiveDark: {
+        backgroundColor: '#3A3A3C', // Slightly lighter than container
+    },
 });
 
 const DashboardScreen = ({ vehicles, logs }: { vehicles: Vehicle[], logs: MaintenanceLog[] }) => {
@@ -274,6 +304,9 @@ const DashboardScreen = ({ vehicles, logs }: { vehicles: Vehicle[], logs: Mainte
     const { isDark } = useTheme()
     const { t, language } = useLanguage()
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+
+    // View Mode State
+    const [viewMode, setViewMode] = useState<'single' | 'all'>('single')
 
     // Alert state
     const [alertVisible, setAlertVisible] = useState(false)
@@ -298,12 +331,16 @@ const DashboardScreen = ({ vehicles, logs }: { vehicles: Vehicle[], logs: Mainte
     }
 
     // 1. Identify Active Vehicle
-    const activeVehicle = selectedVehicleId ? vehicles.find(v => v.id === selectedVehicleId) : null
+    // If viewMode is 'all', activeVehicle is null (to show overview)
+    // If viewMode is 'single', try selectedVehicleId, fallback to first vehicle
+    const activeVehicle = viewMode === 'single'
+        ? (selectedVehicleId ? vehicles.find(v => v.id === selectedVehicleId) : (vehicles.length > 0 ? vehicles[0] : null))
+        : null
 
     // 2. Filter Logs (Reactive)
-    const activeLogs = selectedVehicleId
-        ? logs.filter(l => l.vehicleId === selectedVehicleId)
-        : logs
+    const activeLogs = activeVehicle
+        ? logs.filter(l => l.vehicleId === activeVehicle.id)
+        : logs // In 'all' mode or no vehicle selected, show all logs? Or logs for ALL vehicles.
 
     const handleExportPDF = async () => {
         if (!activeVehicle) {
@@ -342,7 +379,7 @@ const DashboardScreen = ({ vehicles, logs }: { vehicles: Vehicle[], logs: Mainte
     const totalGarageCost = activeLogs.reduce((sum, log) => sum + log.cost, 0)
 
     // ... breakdown logic remains same ...
-    const recentLogs = activeLogs
+    const recentLogs = activeLogs.sort((a, b) => b.date.getTime() - a.date.getTime()) // Ensure sorting
     const costBreakdown = activeLogs.reduce((acc, log) => {
         acc[log.type] = (acc[log.type] || 0) + log.cost
         return acc
@@ -356,40 +393,80 @@ const DashboardScreen = ({ vehicles, logs }: { vehicles: Vehicle[], logs: Mainte
                 showsVerticalScrollIndicator={false}
             >
 
-                <View style={styles.headerRow}>
-                    <Text style={[styles.pageTitle, isDark && styles.pageTitleDark]}>{t('dashboard.title')}</Text>
-                </View>
-                {activeVehicle ? (
-                    <View style={{ marginBottom: 24, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <View style={[styles.vehicleIndicator, isDark && { backgroundColor: '#FDFCF8' }, { gap: 8, flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }]}>
-                            <BrandLogo
-                                brand={activeVehicle.brand}
-                                variant="icon"
-                                size={20}
-                                color={isDark ? '#1C1C1E' : '#1C1C1E'}
-                            />
-                            <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontFamily: 'Outfit_700Bold', fontSize: 16, color: isDark ? '#1C1C1E' : '#1C1C1E', flex: 1 }}>
-                                {activeVehicle.brand} {activeVehicle.model}
-                            </Text>
-                        </View>
+                <View style={{ gap: 16, marginBottom: 24 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Text style={[styles.pageTitle, isDark && styles.pageTitleDark]}>{t('dashboard.title')}</Text>
 
-                        <Pressable
-                            onPress={handleExportPDF}
-                            disabled={isGeneratingPDF}
-                            style={[styles.pdfButton, isDark && styles.pdfButtonDark]}
-                        >
-                            {isGeneratingPDF ? (
-                                <ActivityIndicator size="small" color={isDark ? "#1C1C1E" : "#FFFFFF"} />
-                            ) : (
-                                <>
-                                    <FileText size={16} color={isDark ? "#1C1C1E" : "#FFFFFF"} />
-                                    <Text style={[styles.pdfButtonText, isDark && styles.pdfButtonTextDark]}>{t('dashboard.export_pdf')}</Text>
-                                </>
-                            )}
-                        </Pressable>
+                        {/* PDF Export Button - Only show if vehicle selected */}
+                        {activeVehicle && (
+                            <Pressable
+                                onPress={handleExportPDF}
+                                disabled={isGeneratingPDF}
+                                style={[styles.pdfButton, isDark && styles.pdfButtonDark, { paddingHorizontal: 12, paddingVertical: 8 }]}
+                            >
+                                {isGeneratingPDF ? (
+                                    <ActivityIndicator size="small" color={isDark ? "#1C1C1E" : "#FFFFFF"} />
+                                ) : (
+                                    <>
+                                        <FileText size={16} color={isDark ? "#1C1C1E" : "#FFFFFF"} />
+                                        <Text style={[styles.pdfButtonText, isDark && styles.pdfButtonTextDark]}>{t('dashboard.export_pdf')}</Text>
+                                    </>
+                                )}
+                            </Pressable>
+                        )}
                     </View>
-                ) : (
-                    <Text style={[styles.pageSubtitle, isDark && styles.pageSubtitleDark]}>
+
+                    {/* View Mode Toggle - Full Width */}
+                    {vehicles.length > 0 && (
+                        <View style={[styles.toggleContainer, isDark ? styles.toggleContainerDark : styles.toggleContainerLight, { borderRadius: 16, padding: 4, borderWidth: 0, backgroundColor: isDark ? '#2C2C2E' : '#F5F5F0', flexDirection: 'row', width: '100%' }]}>
+                            {/* Single Vehicle Tab */}
+                            <Pressable
+                                onPress={() => setViewMode('single')}
+                                style={[
+                                    styles.toggleButton,
+                                    { flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+                                    viewMode === 'single' && (isDark ? { backgroundColor: '#3A3A3C' } : { backgroundColor: '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: 2 })
+                                ]}
+                            >
+                                <Text
+                                    numberOfLines={1}
+                                    style={[
+                                        { fontFamily: viewMode === 'single' ? 'Outfit_700Bold' : 'WorkSans_400Regular', fontSize: 14 },
+                                        { color: viewMode === 'single' ? (isDark ? '#FDFCF8' : '#1C1C1E') : (isDark ? '#9CA3AF' : '#666660') }
+                                    ]}
+                                >
+                                    {selectedVehicleId
+                                        ? (() => {
+                                            const v = vehicles.find(v => v.id === selectedVehicleId);
+                                            return v ? `${v.brand} ${v.model}` : t('dashboard.vehicle');
+                                        })()
+                                        : (vehicles[0] ? `${vehicles[0].brand} ${vehicles[0].model}` : t('dashboard.vehicle'))
+                                    }
+                                </Text>
+                            </Pressable>
+
+                            {/* All Vehicles Tab */}
+                            <Pressable
+                                onPress={() => setViewMode('all')}
+                                style={[
+                                    styles.toggleButton,
+                                    { width: 80, paddingVertical: 10, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+                                    viewMode === 'all' && (isDark ? { backgroundColor: '#3A3A3C' } : { backgroundColor: '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: 2 })
+                                ]}
+                            >
+                                <Text style={[
+                                    { fontFamily: viewMode === 'all' ? 'Outfit_700Bold' : 'WorkSans_400Regular', fontSize: 14 },
+                                    { color: viewMode === 'all' ? (isDark ? '#FDFCF8' : '#1C1C1E') : (isDark ? '#9CA3AF' : '#666660') }
+                                ]}>
+                                    {t('dashboard.all_vehicles') || "Tous"}
+                                </Text>
+                            </Pressable>
+                        </View>
+                    )}
+                </View>
+
+                {!activeVehicle && (
+                    <Text style={[styles.pageSubtitle, isDark && styles.pageSubtitleDark, { marginBottom: 24 }]}>
                         {t('dashboard.overview_garage')}
                     </Text>
                 )}
@@ -446,7 +523,7 @@ const DashboardScreen = ({ vehicles, logs }: { vehicles: Vehicle[], logs: Mainte
                     {recentLogs.length > 0 ? (
                         recentLogs.slice(0, 5).map((log, index) => {
                             // Find vehicle if we are in global view
-                            const logVehicle = !selectedVehicleId ? vehicles.find(v => v.id === log.vehicleId) : null
+                            const logVehicle = viewMode === 'all' ? vehicles.find(v => v.id === log.vehicleId) : null
 
                             return (
                                 <View key={log.id} style={{ marginBottom: 24, position: 'relative' }}>
@@ -532,7 +609,7 @@ const DashboardScreen = ({ vehicles, logs }: { vehicles: Vehicle[], logs: Mainte
                 </View>
 
                 {/* Quick Stats (Only show Global Vehicle count if NO vehicle is selected) */}
-                {!selectedVehicleId && (
+                {!activeVehicle && (
                     <View style={{ flexDirection: 'row', gap: 16, marginBottom: 24 }}>
                         <View style={[styles.card, isDark ? styles.cardDark : styles.cardLight, { flex: 1, padding: 24, marginBottom: 0 }]}>
                             <Text style={[styles.sectionLabel, isDark && styles.sectionLabelDark]}>{t('dashboard.vehicles_count')}</Text>

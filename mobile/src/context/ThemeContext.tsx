@@ -2,11 +2,13 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useColorScheme as useDeviceColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { vars } from 'nativewind';
+import { View } from 'react-native';
 
-type Theme = 'dark' | 'paper';
+type Theme = 'dark' | 'paper' | 'system';
 
 interface ThemeContextType {
     theme: Theme;
+    resolvedTheme: 'dark' | 'paper';
     toggleTheme: () => void;
     setTheme: (theme: Theme) => void;
     isDark: boolean;
@@ -38,19 +40,24 @@ export const themes = {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const deviceColorScheme = useDeviceColorScheme();
-    const [theme, setThemeState] = useState<Theme>('dark');
+    const [theme, setThemeState] = useState<Theme>('system');
     const [isReady, setIsReady] = useState(false);
 
+    // Resolve 'system' to actual theme
+    const resolvedTheme = theme === 'system'
+        ? (deviceColorScheme === 'dark' ? 'dark' : 'paper')
+        : theme;
+
     useEffect(() => {
-        // Load saved theme or fallback to device preference (defaulting to dark if unsure)
+        // Load saved theme or fallback to system
         const loadTheme = async () => {
             try {
                 const savedTheme = await AsyncStorage.getItem(THEME_STORAGE_KEY);
-                if (savedTheme === 'dark' || savedTheme === 'paper') {
-                    setThemeState(savedTheme);
+                if (savedTheme === 'dark' || savedTheme === 'paper' || savedTheme === 'system') {
+                    setThemeState(savedTheme as Theme);
                 } else {
-                    // Default to dark for now as it's the original design
-                    setThemeState('dark');
+                    // Default to system if nothing saved
+                    setThemeState('system');
                 }
             } catch (e) {
                 console.error('Failed to load theme', e);
@@ -63,9 +70,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         // Apply theme variables globally using NativeWind's vars
-        const currentThemeVars = themes[theme];
+        const currentThemeVars = themes[resolvedTheme];
         vars(currentThemeVars);
-    }, [theme]);
+    }, [resolvedTheme]);
 
     const setTheme = async (newTheme: Theme) => {
         setThemeState(newTheme);
@@ -73,22 +80,28 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     };
 
     const toggleTheme = () => {
-        setTheme(theme === 'dark' ? 'paper' : 'dark');
+        // Simple toggle for header button behavior: if dark -> paper, if paper -> dark
+        // behavior for 'system' depends on what it currently resolves to
+        const next = resolvedTheme === 'dark' ? 'paper' : 'dark';
+        setTheme(next);
     };
 
-    if (!isReady) return null; // Or a splash screen
+    if (!isReady) return null;
 
     return (
-        <ThemeContext.Provider value={{ theme, toggleTheme, setTheme, isDark: theme === 'dark' }}>
-            <View style={vars(themes[theme])} className="flex-1">
+        <ThemeContext.Provider value={{
+            theme,
+            resolvedTheme,
+            toggleTheme,
+            setTheme,
+            isDark: resolvedTheme === 'dark'
+        }}>
+            <View style={vars(themes[resolvedTheme])} className="flex-1">
                 {children}
             </View>
         </ThemeContext.Provider>
     );
 }
-
-// Need to import View to wrap children for variables to cascade
-import { View } from 'react-native';
 
 export const useTheme = () => {
     const context = useContext(ThemeContext);

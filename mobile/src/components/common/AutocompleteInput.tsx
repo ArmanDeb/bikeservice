@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleProp, ViewStyle, TextStyle } from 'react-native';
 
 interface AutocompleteInputProps {
     label: string;
@@ -9,6 +9,10 @@ interface AutocompleteInputProps {
     onSelect: (option: string) => void;
     placeholder: string;
     filterMode?: 'startsWith' | 'includes';
+    containerStyle?: StyleProp<ViewStyle>;
+    inputStyle?: StyleProp<TextStyle>;
+    labelStyle?: StyleProp<TextStyle>;
+    placeholderTextColor?: string;
 }
 
 import { useTheme } from '../../context/ThemeContext';
@@ -20,7 +24,11 @@ export const AutocompleteInput = ({
     options,
     onSelect,
     placeholder,
-    filterMode = 'includes'
+    filterMode = 'includes',
+    containerStyle,
+    inputStyle,
+    labelStyle,
+    placeholderTextColor
 }: AutocompleteInputProps) => {
     const [isFocused, setIsFocused] = useState(false);
     const { isDark } = useTheme();
@@ -36,12 +44,18 @@ export const AutocompleteInput = ({
     const showDropdown = isFocused && value.length > 0 && filteredOptions.length > 0;
 
     return (
-        <View className="mb-3 z-10">
-            <Text className={`text-xs uppercase mb-2 tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{label}</Text>
+        <View className="mb-3 z-10" style={containerStyle}>
+            <Text
+                className={`text-xs uppercase mb-2 tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+                style={labelStyle}
+            >
+                {label}
+            </Text>
             <TextInput
                 placeholder={placeholder}
-                placeholderTextColor={isDark ? "#6B7280" : "#9CA3AF"}
+                placeholderTextColor={placeholderTextColor || (isDark ? "#6B7280" : "#9CA3AF")}
                 className={`p-3 rounded-xl text-lg ${showDropdown ? 'rounded-b-none border-b-0' : ''} border ${isDark ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-gray-100 border-gray-200 text-gray-900'}`}
+                style={inputStyle}
                 value={value}
                 onChangeText={(text) => {
                     onChangeText(text);
@@ -54,14 +68,14 @@ export const AutocompleteInput = ({
             />
             {showDropdown && (
                 <View className={`border border-t-0 rounded-b-xl max-h-64 overflow-hidden ${isDark ? 'bg-neutral-900 border-neutral-700' : 'bg-white border-gray-200'}`}>
-                    <FlatList
-                        data={filteredOptions.slice(0, 20)}
-                        keyExtractor={item => item}
+                    <ScrollView
                         keyboardShouldPersistTaps="handled"
                         nestedScrollEnabled={true}
                         showsVerticalScrollIndicator={true}
-                        renderItem={({ item }) => (
+                    >
+                        {filteredOptions.slice(0, 20).map((item) => (
                             <TouchableOpacity
+                                key={item}
                                 onPress={() => {
                                     onSelect(item);
                                     setIsFocused(false);
@@ -70,8 +84,8 @@ export const AutocompleteInput = ({
                             >
                                 <Text className={`text-base ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>{item}</Text>
                             </TouchableOpacity>
-                        )}
-                    />
+                        ))}
+                    </ScrollView>
                 </View>
             )}
         </View>
