@@ -97,11 +97,17 @@ export const DocumentService = {
         const shouldAttachToVehicle = vehicleId && !isUserLevelType(type)
 
         // Try to upload file if exists
+        // Try to upload file if exists
         let remotePath: string | null = null
+        let finalLocalUri = filePath
+
         if (filePath) {
+            // Cache locally for persistence
+            finalLocalUri = await StorageService.cacheFile(filePath)
+
             const { data: { user } } = await supabase.auth.getUser()
             if (user) {
-                remotePath = await StorageService.uploadFile(filePath, user.id)
+                remotePath = await StorageService.uploadFile(finalLocalUri, user.id)
             }
         }
 
@@ -110,7 +116,7 @@ export const DocumentService = {
                 doc.reference = title
                 doc.type = type
                 doc.expiryDate = expiryDate || undefined
-                doc.localUri = filePath || undefined
+                doc.localUri = finalLocalUri || undefined
                 doc.remotePath = remotePath || undefined
                 if (shouldAttachToVehicle) {
                     doc.vehicle!.id = vehicleId
@@ -143,12 +149,21 @@ export const DocumentService = {
         type?: 'registration' | 'insurance' | 'license' | 'technical_control' | 'coc' | 'invoice' | 'other'
     ) => {
         // Try to upload file if new file path provided
+        // Try to upload file if new file path provided
         let remotePath: string | null = null
+        let finalLocalUri = filePath
+
         if (filePath && filePath !== document.localUri) {
+            // Cache locally for persistence
+            finalLocalUri = await StorageService.cacheFile(filePath)
+
             const { data: { user } } = await supabase.auth.getUser()
             if (user) {
-                remotePath = await StorageService.uploadFile(filePath, user.id)
+                remotePath = await StorageService.uploadFile(finalLocalUri, user.id)
             }
+        } else {
+            // Keep existing if unchanged
+            finalLocalUri = document.localUri || null
         }
 
         await database.write(async () => {
@@ -157,7 +172,7 @@ export const DocumentService = {
                 if (type) doc.type = type
                 doc.expiryDate = expiryDate || undefined
                 if (filePath !== undefined) {
-                    doc.localUri = filePath || undefined
+                    doc.localUri = finalLocalUri || undefined
                     if (remotePath) doc.remotePath = remotePath
                 }
             })

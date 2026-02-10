@@ -18,12 +18,13 @@ import {
 
 export default function SettingsScreen() {
     const { user, signOut, deleteAccount } = useAuth();
-    const { theme, toggleTheme, isDark } = useTheme();
+    const { theme, toggleTheme, isDark, setTheme } = useTheme();
     const { language, setLanguage, t } = useLanguage();
     const router = useRouter();
     const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
     const [languageModalVisible, setLanguageModalVisible] = useState(false);
+    const [themeModalVisible, setThemeModalVisible] = useState(false);
 
     // Alert state
     const [alertVisible, setAlertVisible] = useState(false)
@@ -295,7 +296,7 @@ export default function SettingsScreen() {
                     <Text style={styles.sectionTitle}>{t('settings.appearance')}</Text>
                     <View style={styles.sectionCard}>
                         <Pressable
-                            onPress={toggleTheme}
+                            onPress={() => setThemeModalVisible(true)}
                             style={styles.menuItem}
                         >
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -311,16 +312,14 @@ export default function SettingsScreen() {
                                 <View>
                                     <Text style={styles.menuText}>{t('settings.readingMode')}</Text>
                                     <Text style={styles.menuSubText}>
-                                        {theme === 'paper' ? t('settings.readingMode.on') : (theme === 'dark' ? 'Dark Mode' : 'Light Mode')}
+                                        {theme === 'system'
+                                            ? t('settings.readingMode.system')
+                                            : (theme === 'paper' ? t('settings.readingMode.on') : t('settings.readingMode.off'))
+                                        }
                                     </Text>
                                 </View>
                             </View>
-                            <Switch
-                                value={theme === 'paper'}
-                                onValueChange={toggleTheme}
-                                trackColor={{ false: '#E6E5E0', true: '#1C1C1E' }}
-                                thumbColor={'#FFFFFF'}
-                            />
+                            <ChevronRight size={20} color={chevronColor} style={{ transform: [{ rotate: '90deg' }] }} />
                         </Pressable>
                     </View>
                 </View>
@@ -519,6 +518,56 @@ export default function SettingsScreen() {
                         </Pressable>
                     </View>
                 </View>
+
+                {/* Theme Selection Modal */}
+                <Modal visible={themeModalVisible} transparent animationType="slide">
+                    <Pressable
+                        style={styles.modalOverlay}
+                        onPress={() => setThemeModalVisible(false)}
+                    >
+                        <Pressable onPress={(e) => e.stopPropagation()} style={styles.modalContent}>
+                            <Text style={[styles.title, { fontSize: 24, textAlign: 'center' }]}>{t('settings.appearance')}</Text>
+                            <FlatList
+                                data={[
+                                    { code: 'system', label: t('settings.readingMode.system'), icon: <BookOpen size={24} color={isDark ? "#FDFCF8" : "#1C1C1E"} /> }, // Using BookOpen as generic icon or maybe something else
+                                    { code: 'dark', label: t('settings.readingMode.off'), icon: <Moon size={24} color={isDark ? "#FDFCF8" : "#1C1C1E"} /> },
+                                    { code: 'paper', label: t('settings.readingMode.on'), icon: <Sun size={24} color={isDark ? "#FDFCF8" : "#1C1C1E"} /> }
+                                ]}
+                                keyExtractor={item => item.code}
+                                renderItem={({ item }) => (
+                                    <Pressable
+                                        onPress={() => {
+                                            setTheme(item.code as any);
+                                            setThemeModalVisible(false);
+                                        }}
+                                        style={[
+                                            styles.languageItem,
+                                            theme === item.code && (isDark ? styles.languageItemActive : styles.languageItemActive)
+                                        ]}
+                                    >
+                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                            <View style={{ width: 40, alignItems: 'center' }}>
+                                                {item.icon}
+                                            </View>
+                                            <Text style={[styles.menuText, theme !== item.code && { fontFamily: 'WorkSans_400Regular' }]}>
+                                                {item.label}
+                                            </Text>
+                                        </View>
+                                        {theme === item.code && (
+                                            <Check size={24} color={isDark ? "#FDFCF8" : "#1C1C1E"} />
+                                        )}
+                                    </Pressable>
+                                )}
+                            />
+                            <Pressable
+                                onPress={() => setThemeModalVisible(false)}
+                                style={styles.cancelButton}
+                            >
+                                <Text style={styles.menuSubText}>{t('common.cancel')}</Text>
+                            </Pressable>
+                        </Pressable>
+                    </Pressable>
+                </Modal>
 
                 {/* Language Selection Modal */}
                 <Modal visible={languageModalVisible} transparent animationType="slide">

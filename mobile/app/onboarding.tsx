@@ -6,6 +6,7 @@ import { useLanguage } from '../src/context/LanguageContext';
 import { useTheme } from '../src/context/ThemeContext';
 import { MOTORCYCLE_DATA, BRANDS } from '../src/data/motorcycleData';
 import { AutocompleteInput } from '../src/components/common/AutocompleteInput';
+import { ModalInput } from '../src/components/common/ModalInput';
 import { VehicleService } from '../src/services/VehicleService';
 import { ConfirmationModal } from '../src/components/common/ConfirmationModal';
 
@@ -87,9 +88,11 @@ const styles = StyleSheet.create({
     },
     iconCircle: {
         backgroundColor: '#F5F5F0',
-        padding: 32,
-        borderRadius: 9999,
+        width: 120,
+        height: 120,
+        borderRadius: 30,
         marginBottom: 32,
+        overflow: 'hidden',
     },
     iconCircleDark: {
         backgroundColor: '#2C2C2E',
@@ -242,7 +245,15 @@ const OnboardingScreen = () => {
         }
     };
 
-    const availableModels = brand ? (MOTORCYCLE_DATA[brand] || []) : [];
+    const getModelsForBrand = () => {
+        // First try exact match
+        if (MOTORCYCLE_DATA[brand]) return MOTORCYCLE_DATA[brand]
+        // Then try to find a brand that matches the input
+        const matchingBrand = BRANDS.find(b => b.toLowerCase() === brand.toLowerCase())
+        if (matchingBrand && MOTORCYCLE_DATA[matchingBrand]) return MOTORCYCLE_DATA[matchingBrand]
+        return []
+    }
+    const availableModels = getModelsForBrand()
 
     const renderContent = () => {
         switch (step) {
@@ -252,8 +263,8 @@ const OnboardingScreen = () => {
                         <View style={[styles.iconCircle, isDark && styles.iconCircleDark]}>
                             <Image
                                 source={require('../assets/logo.png')}
-                                style={{ width: 100, height: 100 }}
-                                resizeMode="contain"
+                                style={{ width: '100%', height: '100%' }}
+                                resizeMode="cover"
                             />
                         </View>
                         <Text style={[styles.title, isDark && styles.titleDark]}>
@@ -302,15 +313,12 @@ const OnboardingScreen = () => {
                         </View>
 
                         <View style={{ width: '100%' }}>
-                            <Text style={[styles.inputLabel, isDark && styles.inputLabelDark]}>{t('onboarding.step1.year')}</Text>
-                            <TextInput
-                                placeholder="2023"
-                                placeholderTextColor={isDark ? "#64748B" : "#9CA3AF"}
-                                keyboardType="numeric"
-                                style={[styles.input, isDark && styles.inputDark]}
+                            <ModalInput
+                                label={t('onboarding.step1.year')}
                                 value={year}
                                 onChangeText={(text) => setYear(text.replace(/[^0-9]/g, ''))}
-                                maxLength={4}
+                                placeholder="2023"
+                                keyboardType="numeric"
                             />
                         </View>
 
@@ -336,19 +344,20 @@ const OnboardingScreen = () => {
                         <Text style={[styles.subtitle, isDark && styles.subtitleDark]}>{t('onboarding.step2.subtitle')}</Text>
 
                         <View style={{ width: '100%' }}>
-                            <Text style={[styles.inputLabel, isDark && styles.inputLabelDark]}>{t('garage.modal.mileage')}</Text>
-                            <TextInput
-                                placeholder="12500"
-                                placeholderTextColor={isDark ? "#64748B" : "#9CA3AF"}
-                                keyboardType="numeric"
-                                style={[styles.input, styles.mileageInput, isDark && styles.inputDark]}
+                            <ModalInput
+                                label={t('garage.modal.mileage')}
                                 value={mileage}
                                 onChangeText={(text) => {
                                     const numeric = text.replace(/[^0-9]/g, '');
                                     const formatted = numeric.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
                                     setMileage(formatted);
                                 }}
-                                autoFocus
+                                formatValue={(text) => {
+                                    const numeric = text.replace(/[^0-9]/g, '');
+                                    return numeric.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                                }}
+                                placeholder="12.500"
+                                keyboardType="numeric"
                             />
                         </View>
 
@@ -394,6 +403,7 @@ const OnboardingScreen = () => {
                 <ScrollView
                     contentContainerStyle={{ flexGrow: 1 }}
                     showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
                 >
                     <View style={styles.contentContainer}>
                         {/* Progress Bar */}

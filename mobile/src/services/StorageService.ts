@@ -75,5 +75,27 @@ export const StorageService = {
             console.error('Delete File Error:', error)
             return false
         }
+    },
+
+    cacheFile: async (sourceUri: string): Promise<string> => {
+        try {
+            const filename = sourceUri.split('/').pop() || `doc_${Date.now()}.jpg`
+            // Ensure filename is safe
+            const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+            const destination = `${FileSystem.documentDirectory}documents/${Date.now()}_${safeFilename}`
+
+            // Ensure dir exists
+            const dir = `${FileSystem.documentDirectory}documents/`
+            const dirInfo = await FileSystem.getInfoAsync(dir)
+            if (!dirInfo.exists) {
+                await FileSystem.makeDirectoryAsync(dir, { intermediates: true })
+            }
+
+            await FileSystem.copyAsync({ from: sourceUri, to: destination })
+            return destination
+        } catch (error) {
+            console.error('Cache File Error:', error)
+            return sourceUri // Fallback to original if copy fails
+        }
     }
 }

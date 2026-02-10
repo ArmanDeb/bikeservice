@@ -86,6 +86,13 @@ const buildHtml = (
         justificatif: language === 'fr' ? 'Justificatif' : 'Supporting Doc'
     };
 
+    const typeLabels: Record<string, string> = {
+        periodic: language === 'fr' ? 'Entretien Périodique' : 'Periodic Maintenance',
+        repair: language === 'fr' ? 'Réparation' : 'Repair',
+        modification: language === 'fr' ? 'Modification' : 'Modification',
+        other: language === 'fr' ? 'Autre' : 'Other'
+    };
+
     return `
         <!DOCTYPE html>
         <html>
@@ -177,7 +184,7 @@ const buildHtml = (
                             <td>${log.date.toLocaleDateString(dateLocale)}</td>
                             <td><strong>${log.title}</strong></td>
                             <td>${log.mileageAtLog.toLocaleString()}</td>
-                            <td><span class="type-badge">${log.type}</span></td>
+                            <td><span class="type-badge">${typeLabels[log.type] || log.type}</span></td>
                             <td style="font-weight: bold;">${log.cost} €</td>
                         </tr>
                         `).join('')}

@@ -69,9 +69,11 @@ const styles = StyleSheet.create({
     },
     logoCircle: {
         backgroundColor: '#F5F5F0',
-        padding: 24,
-        borderRadius: 9999,
+        width: 120,
+        height: 120,
+        borderRadius: 30,
         marginBottom: 24,
+        overflow: 'hidden',
     },
     logoCircleDark: {
         backgroundColor: '#2C2C2E',
@@ -193,7 +195,7 @@ export default function IntroScreen() {
     };
 
     return (
-        <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
+        <SafeAreaView style={[styles.container, isDark && styles.containerDark]} edges={['top', 'left', 'right', 'bottom']}>
             <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
             {/* Scrollable Content */}
@@ -202,13 +204,13 @@ export default function IntroScreen() {
                 contentContainerStyle={{ paddingBottom: 40 }}
                 showsVerticalScrollIndicator={false}
             >
-                <View style={styles.header}>
+                <View style={[styles.header, { paddingTop: 20 }]}>
                     <View style={styles.logoContainer}>
                         <View style={[styles.logoCircle, isDark && styles.logoCircleDark]}>
                             <Image
                                 source={require('../assets/logo.png')}
-                                style={{ width: 80, height: 80 }}
-                                resizeMode="contain"
+                                style={{ width: '100%', height: '100%' }}
+                                resizeMode="cover"
                             />
                         </View>
                         <Text style={[styles.appName, isDark && styles.appNameDark]}>
