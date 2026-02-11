@@ -11,7 +11,7 @@ import * as FileSystem from 'expo-file-system/legacy'
 import Document from '../../src/database/models/Document'
 import { VehicleService } from '../../src/services/VehicleService'
 import Vehicle from '../../src/database/models/Vehicle'
-import { Camera, FileText, ChevronRight, ChevronLeft, Bike, FolderOpen, X, Plus, Pencil } from 'lucide-react-native'
+import { Camera, FileText, ChevronRight, ChevronLeft, Bike, FolderOpen, X, Plus, Pencil, ChevronDown, ChevronUp } from 'lucide-react-native'
 import { useVehicle } from '../../src/context/VehicleContext'
 import { useTheme } from '../../src/context/ThemeContext'
 import { useLanguage } from '../../src/context/LanguageContext'
@@ -323,6 +323,7 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
     const [expiryDate, setExpiryDate] = useState('')
     const [localUri, setLocalUri] = useState<string | null>(null)
     const [vehicleId, setVehicleId] = useState('')
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
     // Alert state
     const [alertVisible, setAlertVisible] = useState(false)
@@ -476,30 +477,62 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
                         </View>
 
                         <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>{t('wallet.modal.type')}</Text>
-                        <View style={{ marginBottom: 24 }}>
-                            <ScrollView
-                                horizontal
-                                showsHorizontalScrollIndicator={false}
-                                contentContainerStyle={{ paddingRight: 24 }}
+                        <View style={{ marginBottom: 24, zIndex: 10 }}>
+                            <Pressable
+                                onPress={() => setIsDropdownOpen(!isDropdownOpen)}
+                                style={[
+                                    styles.input,
+                                    isDark && styles.inputDark,
+                                    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: isDropdownOpen ? 8 : 16 }
+                                ]}
                             >
-                                {availableDocTypes.map((dt) => (
-                                    <Pressable
-                                        key={dt.id}
-                                        onPress={() => setType(dt.id as any)}
-                                        style={[
-                                            styles.typeButton,
-                                            isDark && styles.typeButtonDark,
-                                            type === dt.id && (isDark ? styles.typeButtonSelectedDark : styles.typeButtonSelected)
-                                        ]}
-                                    >
-                                        <Text style={[
-                                            styles.typeText,
-                                            isDark && styles.typeTextDark,
-                                            type === dt.id && (isDark ? styles.typeTextSelectedDark : styles.typeTextSelected)
-                                        ]}>{dt.label}</Text>
-                                    </Pressable>
-                                ))}
-                            </ScrollView>
+                                <Text style={{ fontFamily: 'WorkSans_400Regular', fontSize: 16, color: isDark ? '#FDFCF8' : '#1C1C1E' }}>
+                                    {docTypes.find(dt => dt.id === type)?.label || t('wallet.type.other')}
+                                </Text>
+                                {isDropdownOpen ? (
+                                    <ChevronUp size={20} color={isDark ? '#FDFCF8' : '#1C1C1E'} />
+                                ) : (
+                                    <ChevronDown size={20} color={isDark ? '#FDFCF8' : '#1C1C1E'} />
+                                )}
+                            </Pressable>
+
+                            {isDropdownOpen && (
+                                <View style={{
+                                    backgroundColor: isDark ? '#2C2C2E' : '#FFFFFF',
+                                    borderRadius: 14,
+                                    borderWidth: 1,
+                                    borderColor: isDark ? '#3A3A3C' : '#D6D5D0',
+                                    overflow: 'hidden',
+                                    marginTop: -8,
+                                    marginBottom: 16
+                                }}>
+                                    {availableDocTypes.map((dt, index) => (
+                                        <Pressable
+                                            key={dt.id}
+                                            onPress={() => {
+                                                setType(dt.id as any)
+                                                setIsDropdownOpen(false)
+                                            }}
+                                            style={({ pressed }) => ({
+                                                padding: 16,
+                                                backgroundColor: pressed
+                                                    ? (isDark ? '#3A3A3C' : '#F5F5F0')
+                                                    : (type === dt.id ? (isDark ? '#3A3A3C' : '#F0F0F0') : 'transparent'),
+                                                borderBottomWidth: index === availableDocTypes.length - 1 ? 0 : 1,
+                                                borderBottomColor: isDark ? '#3A3A3C' : '#F0F0F0'
+                                            })}
+                                        >
+                                            <Text style={{
+                                                fontFamily: type === dt.id ? 'WorkSans_600SemiBold' : 'WorkSans_400Regular',
+                                                fontSize: 16,
+                                                color: isDark ? '#FDFCF8' : '#1C1C1E'
+                                            }}>
+                                                {dt.label}
+                                            </Text>
+                                        </Pressable>
+                                    ))}
+                                </View>
+                            )}
                         </View>
 
                         <ModalInput
