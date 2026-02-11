@@ -5,6 +5,7 @@ import { migrations } from './migrations'
 import Vehicle from './models/Vehicle'
 import MaintenanceLog from './models/MaintenanceLog'
 import Document from './models/Document'
+import DocumentPage from './models/DocumentPage'
 
 const adapter = new SQLiteAdapter({
     schema,
@@ -21,5 +22,6 @@ export const database = new Database({
         Vehicle,
         MaintenanceLog,
         Document,
+        DocumentPage,
     ],
 })

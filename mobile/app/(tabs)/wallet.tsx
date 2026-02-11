@@ -185,17 +185,22 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     // Screen Styles
-    addButton: {
-        backgroundColor: '#1C1C1E',
-        padding: 8,
-        borderRadius: 12,
+    iconButton: {
+        padding: 0,
+        borderRadius: 14,
         width: 44,
         height: 44,
         alignItems: 'center',
         justifyContent: 'center',
+        borderWidth: 1,
     },
-    addButtonDark: {
-        backgroundColor: '#FDFCF8',
+    iconButtonSurfaceLight: {
+        backgroundColor: '#FFFFFF',
+        borderColor: '#E6E5E0',
+    },
+    iconButtonSurfaceDark: {
+        backgroundColor: '#2C2C2E',
+        borderColor: '#3A3A3C',
     },
 
     docItem: {
@@ -319,9 +324,9 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
     const { t, language } = useLanguage()
     const { isDark } = useTheme()
     const [title, setTitle] = useState('')
-    const [type, setType] = useState<'registration' | 'insurance' | 'license' | 'technical_control' | 'coc' | 'invoice' | 'other' | null>(null)
+    const [type, setType] = useState<'registration' | 'insurance' | 'license' | 'technical_control' | 'coc' | 'invoice' | 'other' | 'maintenance_invoice' | null>(null)
     const [expiryDate, setExpiryDate] = useState('')
-    const [localUri, setLocalUri] = useState<string | null>(null)
+    const [pages, setPages] = useState<{ localUri: string, remotePath?: string | null }[]>([])
     const [vehicleId, setVehicleId] = useState('')
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
@@ -356,13 +361,19 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
                 setTitle(document.reference || '')
                 setType(document.type)
                 setExpiryDate(document.expiryDate ? document.expiryDate.toISOString().split('T')[0] : '')
-                setLocalUri(document.localUri || null)
                 setVehicleId(document.vehicleId || '')
+
+                // Fetch pages
+                document.pages.fetch().then(fetchedPages => {
+                    // Sort by index
+                    const sorted = fetchedPages.sort((a, b) => a.pageIndex - b.pageIndex)
+                    setPages(sorted.map(p => ({ localUri: p.localUri, remotePath: p.remotePath })))
+                })
             } else {
                 setTitle('')
                 setType(null)
                 setExpiryDate('')
-                setLocalUri(null)
+                setPages([])
                 setVehicleId(selectedVehicleId || (vehicles.length > 0 ? vehicles[0].id : ''))
             }
         }
@@ -370,14 +381,18 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
 
     const pickImage = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            mediaTypes: ['images'],
             allowsEditing: true,
             quality: 0.5,
         })
 
         if (!result.canceled && result.assets[0].uri) {
-            setLocalUri(result.assets[0].uri)
+            setPages(prev => [...prev, { localUri: result.assets[0].uri, remotePath: null }])
         }
+    }
+
+    const removeImage = (index: number) => {
+        setPages(prev => prev.filter((_, i) => i !== index))
     }
 
     const handleSubmit = async () => {
@@ -387,11 +402,12 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
         }
 
         const expiry = expiryDate ? new Date(expiryDate) : null
+        const localUris = pages.map(p => p.localUri)
 
         if (document) {
-            await DocumentService.updateDocument(document, title, expiry, localUri, type)
+            await DocumentService.updateDocument(document, title, expiry, localUris, type)
         } else {
-            await DocumentService.createDocument(title, type, expiry, localUri, vehicleId)
+            await DocumentService.createDocument(title, type, expiry, localUris, vehicleId)
         }
         onClose()
     }
@@ -407,12 +423,9 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
     ] as const
 
     // Filter available document types
-    const uniqueTypes = ['registration', 'coc', 'license', 'technical_control', 'insurance'] // Added insurance/technical_control if we want them unique per year? No, maybe just registration/coc/license for now? 
-    // Wait, license is per person usually, but here attached to a bike? Or generic? 
-    // Let's stick to the plan: registration, coc, license.
-    // Actually, insurance changes every year, technical control every 2 years. 
     // Registration and COC are lifetime (usually). License is user-bound but let's assume one main license doc.
-    const ONE_TIME_DOCS = ['registration', 'coc', 'license']
+    // Technical control and Insurance are also unique per vehicle (at any given time).
+    const ONE_TIME_DOCS = ['registration', 'coc', 'license', 'technical_control', 'insurance']
 
     const availableDocTypes = React.useMemo(() => {
         if (!vehicleId) return docTypes
@@ -424,7 +437,7 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
             .filter(d => d.vehicleId === vehicleId)
             .map(d => d.type)
 
-        // Check if ANY license exists, regardless of vehicleId
+        // Check if ANY license exists, regardless of vehicleId (User level document)
         const hasLicense = documents.some(d => d.type === 'license')
 
         return docTypes.filter(dt => {
@@ -436,8 +449,8 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
                 return false
             }
 
-            // If it's a one-time doc (registration, coc, insurance) and already exists for THIS vehicle, hide it
-            if (['registration', 'coc', 'insurance'].includes(dt.id) && existingTypesForVehicle.includes(dt.id)) {
+            // If it's a one-time doc and already exists for THIS vehicle, hide it
+            if (ONE_TIME_DOCS.includes(dt.id) && existingTypesForVehicle.includes(dt.id)) {
                 return false
             }
             return true
@@ -518,6 +531,14 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
                                         <Pressable
                                             key={dt.id}
                                             onPress={() => {
+                                                const newLabel = dt.label
+                                                // Auto-fill title if empty or if it matches another standard label
+                                                const isStandardLabel = !title || docTypes.some(d => d.label === title)
+
+                                                if (isStandardLabel) {
+                                                    setTitle(newLabel)
+                                                }
+
                                                 setType(dt.id as any)
                                                 setIsDropdownOpen(false)
                                             }}
@@ -558,37 +579,74 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
                             placeholder="YYYY-MM-DD"
                         />
 
-                        {/* Disable file modification in edit mode */}
-                        {document && localUri ? (
-                            <Pressable
-                                onPress={() => onPreview(localUri)}
-                                style={[styles.cameraButton, isDark && styles.cameraButtonDark, { opacity: 1, padding: 0, overflow: 'hidden' }]}
-                            >
-                                <SmartImage
-                                    localUri={localUri}
-                                    remotePath={document.remotePath}
-                                    style={{ width: '100%', height: 250, borderRadius: 12 }}
-                                    resizeMode="contain"
-                                />
-                            </Pressable>
-                        ) : !document && localUri ? (
-                            <Pressable
-                                onPress={() => onPreview(localUri)}
-                                style={[styles.cameraButton, isDark && styles.cameraButtonDark, { opacity: 1, padding: 0, overflow: 'hidden' }]}
-                            >
-                                <Image source={{ uri: localUri }} style={{ width: '100%', height: 250, borderRadius: 12 }} resizeMode="contain" />
-                            </Pressable>
-                        ) : null}
+                        <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark, { marginTop: 8 }]}>{t('wallet.field.documents')}</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 24 }}>
+                            {pages.map((page, index) => (
+                                <View key={index} style={{ marginRight: 12, position: 'relative' }}>
+                                    <View style={{ width: 120, height: 160, borderRadius: 12, overflow: 'hidden', backgroundColor: isDark ? '#323234' : '#F5F5F0', borderWidth: 1, borderColor: isDark ? '#3A3A3C' : '#D6D5D0' }}>
+                                        {/* Always use SmartImage to handle remote/local fallback */}
+                                        <SmartImage
+                                            localUri={page.localUri}
+                                            remotePath={page.remotePath || undefined}
+                                            style={{ width: '100%', height: '100%' }}
+                                            resizeMode="cover"
+                                        />
+                                    </View>
+                                    <Pressable
+                                        onPress={() => removeImage(index)}
+                                        style={{
+                                            position: 'absolute',
+                                            top: -8,
+                                            right: -8,
+                                            backgroundColor: '#BA4444',
+                                            borderRadius: 12,
+                                            width: 24,
+                                            height: 24,
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            borderWidth: 2,
+                                            borderColor: isDark ? '#2C2C2E' : '#FFFFFF',
+                                            zIndex: 10,
+                                        }}
+                                    >
+                                        <X size={14} color="#FFFFFF" />
+                                    </Pressable>
+                                    <Pressable
+                                        onPress={() => onPreview(page.localUri)}
+                                        style={{
+                                            position: 'absolute',
+                                            bottom: 8,
+                                            right: 8,
+                                            backgroundColor: 'rgba(0,0,0,0.6)',
+                                            borderRadius: 8,
+                                            padding: 4
+                                        }}
+                                    >
+                                        <FolderOpen size={14} color="#FFFFFF" />
+                                    </Pressable>
+                                </View>
+                            ))}
 
-                        {!document && !localUri && (
                             <Pressable
                                 onPress={pickImage}
-                                style={[styles.cameraButton, isDark && styles.cameraButtonDark]}
+                                style={{
+                                    width: 120,
+                                    height: 160,
+                                    borderRadius: 12,
+                                    backgroundColor: isDark ? '#323234' : '#F5F5F0',
+                                    borderWidth: 1,
+                                    borderColor: isDark ? '#3A3A3C' : '#D6D5D0',
+                                    borderStyle: 'dashed',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                }}
                             >
-                                <Camera size={32} color="#9CA3AF" />
-                                <Text style={{ fontFamily: 'WorkSans_400Regular', color: '#666660', marginTop: 8 }}>{t('wallet.field.attach_photo')}</Text>
+                                <Plus size={32} color={isDark ? '#666660' : '#9CA3AF'} />
+                                <Text style={{ fontFamily: 'WorkSans_500Medium', color: isDark ? '#666660' : '#9CA3AF', marginTop: 8, fontSize: 12 }}>
+                                    {t('wallet.field.add_page')}
+                                </Text>
                             </Pressable>
-                        )}
+                        </ScrollView>
 
                         <Pressable onPress={handleSubmit} style={[styles.submitButton, isDark && styles.submitButtonDark]}>
                             <Text style={[styles.submitButtonText, isDark && styles.submitButtonTextDark]}>
@@ -643,39 +701,63 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
     )
 }
 
-const DocumentViewModal = ({ visible, onClose, onEdit, onPreview, document }: { visible: boolean, onClose: () => void, onEdit: () => void, onPreview: () => void, document: Document | null }) => {
+const DocumentViewModal = ({ visible, onClose, onEdit, onPreview, document }: { visible: boolean, onClose: () => void, onEdit: () => void, onPreview: (localUri: string, remotePath?: string | null) => void, document: Document | null }) => {
     const { t, language } = useLanguage()
     const { isDark } = useTheme()
+    const [pages, setPages] = useState<{ localUri: string, remotePath?: string }[]>([])
+
+    React.useEffect(() => {
+        if (visible && document) {
+            // Initial load from document cover
+            setPages([{ localUri: document.localUri || '', remotePath: document.remotePath }])
+
+            // Fetch all pages
+            document.pages.fetch().then(fetchedPages => {
+                if (fetchedPages.length > 0) {
+                    const sorted = fetchedPages.sort((a, b) => a.pageIndex - b.pageIndex)
+                    setPages(sorted.map(p => ({ localUri: p.localUri, remotePath: p.remotePath })))
+                }
+            })
+        }
+    }, [visible, document])
 
     if (!document) return null
 
     return (
         <Modal visible={visible} animationType="fade" transparent>
             <Pressable style={styles.modalOverlay} onPress={onClose}>
-                <Pressable onPress={(e) => e.stopPropagation()} style={[styles.modalContent, isDark && styles.modalContentDark, { height: '80%' }]}>
+                <Pressable onPress={(e) => e.stopPropagation()} style={[styles.modalContent, isDark && styles.modalContentDark, { height: '85%' }]}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                         <Text style={[styles.title, isDark && styles.titleDark, { fontSize: 24, flex: 1, marginRight: 16 }]} numberOfLines={1}>
                             {document.reference || t('wallet.document.untitled')}
                         </Text>
                         <Pressable
                             onPress={onEdit}
-                            style={[styles.addButton, isDark && styles.addButtonDark, { width: 44, height: 44, borderRadius: 12 }]}
+                            style={[
+                                styles.iconButton,
+                                isDark ? styles.iconButtonSurfaceDark : styles.iconButtonSurfaceLight,
+                                { width: 44, height: 44, borderRadius: 12 }
+                            ]}
                         >
-                            <Pencil size={20} color={isDark ? "#1C1C1E" : "#FFFFFF"} />
+                            <Pencil size={20} color={isDark ? "#E5E5E0" : "#4A4A45"} />
                         </Pressable>
                     </View>
 
                     <ScrollView showsVerticalScrollIndicator={false}>
-                        <View style={{ alignItems: 'center', marginBottom: 24 }}>
-                            <Pressable onPress={onPreview} style={{ width: '100%', height: 400 }}>
-                                <SmartImage
-                                    localUri={document.localUri}
-                                    remotePath={document.remotePath}
-                                    style={{ width: '100%', height: '100%', borderRadius: 16, backgroundColor: isDark ? '#323234' : '#F5F5F0' }}
-                                    resizeMode="contain"
-                                    fallbackIconSize={48}
-                                />
-                            </Pressable>
+                        <View style={{ gap: 16 }}>
+                            {pages.map((page, index) => (
+                                <View key={index} style={{ width: '100%', height: 500, alignItems: 'center', justifyContent: 'center' }}>
+                                    <Pressable onPress={() => onPreview(page.localUri, page.remotePath)} style={{ width: '100%', height: '100%' }}>
+                                        <SmartImage
+                                            localUri={page.localUri}
+                                            remotePath={page.remotePath}
+                                            style={{ width: '100%', height: '100%', borderRadius: 16, backgroundColor: isDark ? '#323234' : '#F5F5F0' }}
+                                            resizeMode="contain"
+                                            fallbackIconSize={48}
+                                        />
+                                    </Pressable>
+                                </View>
+                            ))}
                         </View>
 
                         <View style={{ gap: 20, paddingBottom: 40 }}>
@@ -771,9 +853,12 @@ const WalletScreen = ({ documents, vehicles }: { documents: Document[], vehicles
                     {selectedVehicleId && (
                         <Pressable
                             onPress={() => setModalVisible(true)}
-                            style={[styles.addButton, isDark && styles.addButtonDark]}
+                            style={[
+                                styles.iconButton,
+                                isDark ? styles.iconButtonSurfaceDark : styles.iconButtonSurfaceLight
+                            ]}
                         >
-                            <Plus size={24} color={isDark ? "#1C1C1E" : "#FFFFFF"} />
+                            <Plus size={24} color="#F97316" />
                         </Pressable>
                     )}
                 </View>
@@ -863,26 +948,24 @@ const WalletScreen = ({ documents, vehicles }: { documents: Document[], vehicles
                             setModalVisible(true)
                         }, 100)
                     }}
-                    onPreview={async () => {
-                        if (viewingDoc) {
-                            let uri: string | null | undefined = viewingDoc.localUri
+                    onPreview={async (localUri, remotePath) => {
+                        let uri: string | null | undefined = localUri
 
-                            // Check if local file exists
-                            if (uri) {
-                                const info = await FileSystem.getInfoAsync(uri)
-                                if (!info.exists) {
-                                    uri = null
-                                }
+                        // Check if local file exists
+                        if (uri) {
+                            const info = await FileSystem.getInfoAsync(uri)
+                            if (!info.exists) {
+                                uri = null
                             }
+                        }
 
-                            // If no local, try remote
-                            if (!uri && viewingDoc.remotePath) {
-                                uri = await StorageService.downloadFile(viewingDoc.remotePath)
-                            }
+                        // If no local, try remote
+                        if (!uri && remotePath) {
+                            uri = await StorageService.downloadFile(remotePath)
+                        }
 
-                            if (uri) {
-                                setPreviewImage(uri)
-                            }
+                        if (uri) {
+                            setPreviewImage(uri)
                         }
                     }}
                     document={viewingDoc}
