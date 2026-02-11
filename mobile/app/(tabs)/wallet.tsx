@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
         justifyContent: 'flex-end',
-        backgroundColor: 'rgba(28, 28, 30, 0.4)', // Warm overlay
+        backgroundColor: 'rgba(28, 28, 30, 0.8)', // Darker overlay
     },
     modalContent: {
         borderTopWidth: 1,
@@ -49,7 +49,8 @@ const styles = StyleSheet.create({
         padding: 24,
         borderTopLeftRadius: 32,
         borderTopRightRadius: 32,
-        maxHeight: '90%',
+        // maxHeight constraint removed
+        // maxHeight: '90%',
         backgroundColor: '#FFFFFF',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: -6 }, // Deeper shadow
@@ -88,6 +89,11 @@ const styles = StyleSheet.create({
         borderColor: '#D6D5D0',
         fontFamily: 'WorkSans_400Regular',
         color: '#1C1C1E',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
     },
     inputDark: {
         backgroundColor: '#323234',
@@ -403,14 +409,14 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles }: { vi
     const inputStyle = isDark ? styles.inputDark : styles.input
 
     return (
-        <Modal visible={visible} animationType="slide" transparent>
+        <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
             <Pressable style={styles.modalOverlay} onPress={onClose}>
                 <KeyboardAwareScrollView
                     style={{ flex: 1 }}
-                    contentContainerStyle={{ flexGrow: 1, justifyContent: 'flex-end' }}
+                    contentContainerStyle={{ flexGrow: 1, justifyContent: 'flex-end', paddingTop: '15%' }}
                     enableOnAndroid={true}
                     enableAutomaticScroll={true}
-                    extraScrollHeight={20}
+                    extraScrollHeight={120}
                     keyboardShouldPersistTaps="handled"
                 >
                     <Pressable onPress={(e) => e.stopPropagation()} style={[styles.modalContent, isDark && styles.modalContentDark]}>
