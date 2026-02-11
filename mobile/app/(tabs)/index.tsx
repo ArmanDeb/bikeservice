@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { View, Text, Pressable, StatusBar, Modal, Alert, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native'
+import { View, Text, Pressable, StatusBar, Modal, Alert, StyleSheet, Platform, ScrollView } from 'react-native'
+import KeyboardAwareScrollView from 'react-native-keyboard-aware-scroll-view/lib/KeyboardAwareScrollView'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import DraggableFlatList, { ScaleDecorator, RenderItemParams } from 'react-native-draggable-flatlist'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
@@ -205,11 +206,16 @@ const VehicleModal = ({ visible, onClose, vehicle }: { visible: boolean, onClose
     return (
         <Modal visible={visible} animationType="slide" transparent>
             <Pressable style={styles.modalOverlay} onPress={onClose}>
-                <KeyboardAvoidingView
-                    behavior={Platform.OS === "ios" ? "padding" : undefined}
-                    style={{ flex: 1, justifyContent: 'flex-end' }}
+                <KeyboardAwareScrollView
+                    style={{ flex: 1 }}
+                    contentContainerStyle={{ flexGrow: 1, justifyContent: 'flex-end' }}
+                    enableOnAndroid={true}
+                    enableAutomaticScroll={true}
+                    extraScrollHeight={20}
+                    keyboardShouldPersistTaps="handled"
                 >
                     <Pressable onPress={(e) => e.stopPropagation()} style={[styles.modalContent, isDark ? styles.modalContentDark : styles.modalContentLight]}>
+
                         <View style={styles.modalHeader}>
                             <Text style={[styles.modalTitle, isDark ? styles.modalTitleDark : styles.modalTitleLight]}>
                                 {vehicle ? t('garage.modal.edit_title') : t('garage.modal.add_title')}
@@ -295,8 +301,9 @@ const VehicleModal = ({ visible, onClose, vehicle }: { visible: boolean, onClose
                                 <Text style={styles.deleteButtonText}>{t('garage.modal.delete')}</Text>
                             </Pressable>
                         )}
+
                     </Pressable>
-                </KeyboardAvoidingView>
+                </KeyboardAwareScrollView>
             </Pressable>
 
 
