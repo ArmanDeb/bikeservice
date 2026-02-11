@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { View, Text, TouchableOpacity, Modal, Image, Alert, ScrollView, StatusBar, StyleSheet, Pressable, KeyboardAvoidingView, Platform } from 'react-native'
+import { View, Text, TouchableOpacity, Modal, Image, Alert, ScrollView, StatusBar, StyleSheet, Pressable, Platform } from 'react-native'
+import KeyboardAwareScrollView from 'react-native-keyboard-aware-scroll-view/lib/KeyboardAwareScrollView'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { withObservables } from '@nozbe/watermelondb/react'
 import * as ImagePicker from 'expo-image-picker'
@@ -404,141 +405,145 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles }: { vi
     return (
         <Modal visible={visible} animationType="slide" transparent>
             <Pressable style={styles.modalOverlay} onPress={onClose}>
-                <KeyboardAvoidingView
-                    behavior={Platform.OS === "ios" ? "padding" : undefined}
-                    style={{ flex: 1, justifyContent: 'flex-end' }}
+                <KeyboardAwareScrollView
+                    style={{ flex: 1 }}
+                    contentContainerStyle={{ flexGrow: 1, justifyContent: 'flex-end' }}
+                    enableOnAndroid={true}
+                    enableAutomaticScroll={true}
+                    extraScrollHeight={20}
+                    keyboardShouldPersistTaps="handled"
                 >
                     <Pressable onPress={(e) => e.stopPropagation()} style={[styles.modalContent, isDark && styles.modalContentDark]}>
                         <Text style={[styles.title, isDark && styles.titleDark, { fontSize: 24, marginBottom: 24 }]}>
                             {document ? t('wallet.modal.edit_title') : t('wallet.modal.add_title')}
                         </Text>
 
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            <View style={{ marginBottom: 16 }}>
-                                <View style={[styles.vehicleSelector, vehicleSelectorStyle]}>
-                                    {vehicleId ? (
-                                        <BrandLogo
-                                            brand={vehicles.find(v => v.id === vehicleId)?.brand || ''}
-                                            variant="icon"
-                                            size={24}
-                                            color={isDark ? "#E5E5E0" : "#1C1C1E"}
-                                        />
-                                    ) : (
-                                        <Bike size={24} color={isDark ? "#E5E5E0" : "#1C1C1E"} />
-                                    )}
-                                    <Text style={{ fontFamily: 'WorkSans_500Medium', fontSize: 16, marginLeft: 12, color: isDark ? '#FDFCF8' : '#1C1C1E' }}>
-                                        {vehicleId
-                                            ? `${vehicles.find(v => v.id === vehicleId)?.brand} ${vehicles.find(v => v.id === vehicleId)?.model}`
-                                            : (language === 'fr' ? 'Sélectionner un véhicule' : 'Select a vehicle')}
-                                    </Text>
-                                </View>
-                            </View>
 
-                            <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>{t('wallet.modal.type')}</Text>
-                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 24 }}>
-                                {docTypes.map((dt) => (
-                                    <Pressable
-                                        key={dt.id}
-                                        onPress={() => setType(dt.id as any)}
-                                        style={[
-                                            styles.typeButton,
-                                            isDark && styles.typeButtonDark,
-                                            type === dt.id && (isDark ? styles.typeButtonSelectedDark : styles.typeButtonSelected)
-                                        ]}
-                                    >
-                                        <Text style={[
-                                            styles.typeText,
-                                            isDark && styles.typeTextDark,
-                                            type === dt.id && (isDark ? styles.typeTextSelectedDark : styles.typeTextSelected)
-                                        ]}>{dt.label}</Text>
-                                    </Pressable>
-                                ))}
-                            </View>
-
-                            <ModalInput
-                                label={t('wallet.field.title')}
-                                value={title}
-                                onChangeText={setTitle}
-                                placeholder={t('wallet.field.title')}
-                            />
-
-                            <ModalInput
-                                label={t('wallet.field.expiry')}
-                                value={expiryDate}
-                                onChangeText={setExpiryDate}
-                                placeholder="YYYY-MM-DD"
-                            />
-
-                            {/* Disable file modification in edit mode */}
-                            {document && localUri ? (
-                                <Pressable
-                                    onPress={() => onPreview(localUri)}
-                                    style={[styles.cameraButton, isDark && styles.cameraButtonDark, { opacity: 1, padding: 0, overflow: 'hidden' }]}
-                                >
-                                    <SmartImage
-                                        localUri={localUri}
-                                        remotePath={document.remotePath}
-                                        style={{ width: '100%', height: 250, borderRadius: 12 }}
-                                        resizeMode="contain"
+                        <View style={{ marginBottom: 16 }}>
+                            <View style={[styles.vehicleSelector, vehicleSelectorStyle]}>
+                                {vehicleId ? (
+                                    <BrandLogo
+                                        brand={vehicles.find(v => v.id === vehicleId)?.brand || ''}
+                                        variant="icon"
+                                        size={24}
+                                        color={isDark ? "#E5E5E0" : "#1C1C1E"}
                                     />
-                                </Pressable>
-                            ) : !document && localUri ? (
-                                <Pressable
-                                    onPress={() => onPreview(localUri)}
-                                    style={[styles.cameraButton, isDark && styles.cameraButtonDark, { opacity: 1, padding: 0, overflow: 'hidden' }]}
-                                >
-                                    <Image source={{ uri: localUri }} style={{ width: '100%', height: 250, borderRadius: 12 }} resizeMode="contain" />
-                                </Pressable>
-                            ) : null}
-
-                            {!document && !localUri && (
-                                <Pressable
-                                    onPress={pickImage}
-                                    style={[styles.cameraButton, isDark && styles.cameraButtonDark]}
-                                >
-                                    <Camera size={32} color="#9CA3AF" />
-                                    <Text style={{ fontFamily: 'WorkSans_400Regular', color: '#666660', marginTop: 8 }}>{t('wallet.field.attach_photo')}</Text>
-                                </Pressable>
-                            )}
-
-                            <Pressable onPress={handleSubmit} style={[styles.submitButton, isDark && styles.submitButtonDark]}>
-                                <Text style={[styles.submitButtonText, isDark && styles.submitButtonTextDark]}>
-                                    {document ? t('common.save') : t('wallet.modal.add_title')}
+                                ) : (
+                                    <Bike size={24} color={isDark ? "#E5E5E0" : "#1C1C1E"} />
+                                )}
+                                <Text style={{ fontFamily: 'WorkSans_500Medium', fontSize: 16, marginLeft: 12, color: isDark ? '#FDFCF8' : '#1C1C1E' }}>
+                                    {vehicleId
+                                        ? `${vehicles.find(v => v.id === vehicleId)?.brand} ${vehicles.find(v => v.id === vehicleId)?.model}`
+                                        : (language === 'fr' ? 'Sélectionner un véhicule' : 'Select a vehicle')}
                                 </Text>
-                            </Pressable>
+                            </View>
+                        </View>
 
-                            {document && (
+                        <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>{t('wallet.modal.type')}</Text>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 24 }}>
+                            {docTypes.map((dt) => (
                                 <Pressable
-                                    onPress={() => {
-                                        const isMaintenanceDoc = !!document.logId
-                                        showAlert(
-                                            t('wallet.modal.delete_confirm_title'),
-                                            isMaintenanceDoc
-                                                ? t('wallet.modal.delete_confirm_desc_maintenance')
-                                                : t('wallet.modal.delete_confirm_desc'),
-                                            {
-                                                confirmText: t('common.delete'),
-                                                variant: 'danger',
-                                                onConfirm: async () => {
-                                                    await DocumentService.deleteDocument(document)
-                                                    setAlertVisible(false)
-                                                    onClose()
-                                                }
-                                            }
-                                        )
-                                    }}
-                                    style={styles.deleteButton}
+                                    key={dt.id}
+                                    onPress={() => setType(dt.id as any)}
+                                    style={[
+                                        styles.typeButton,
+                                        isDark && styles.typeButtonDark,
+                                        type === dt.id && (isDark ? styles.typeButtonSelectedDark : styles.typeButtonSelected)
+                                    ]}
                                 >
-                                    <Text style={{ fontFamily: 'Outfit_700Bold', color: '#BA4444', fontSize: 16 }}>{t('wallet.modal.delete')}</Text>
+                                    <Text style={[
+                                        styles.typeText,
+                                        isDark && styles.typeTextDark,
+                                        type === dt.id && (isDark ? styles.typeTextSelectedDark : styles.typeTextSelected)
+                                    ]}>{dt.label}</Text>
                                 </Pressable>
-                            )}
+                            ))}
+                        </View>
 
-                            <Pressable onPress={onClose} style={styles.cancelButton}>
-                                <Text style={{ fontFamily: 'WorkSans_500Medium', color: '#666660' }}>{t('common.cancel')}</Text>
+                        <ModalInput
+                            label={t('wallet.field.title')}
+                            value={title}
+                            onChangeText={setTitle}
+                            placeholder={t('wallet.field.title')}
+                        />
+
+                        <ModalInput
+                            label={t('wallet.field.expiry')}
+                            value={expiryDate}
+                            onChangeText={setExpiryDate}
+                            placeholder="YYYY-MM-DD"
+                        />
+
+                        {/* Disable file modification in edit mode */}
+                        {document && localUri ? (
+                            <Pressable
+                                onPress={() => onPreview(localUri)}
+                                style={[styles.cameraButton, isDark && styles.cameraButtonDark, { opacity: 1, padding: 0, overflow: 'hidden' }]}
+                            >
+                                <SmartImage
+                                    localUri={localUri}
+                                    remotePath={document.remotePath}
+                                    style={{ width: '100%', height: 250, borderRadius: 12 }}
+                                    resizeMode="contain"
+                                />
                             </Pressable>
-                        </ScrollView>
+                        ) : !document && localUri ? (
+                            <Pressable
+                                onPress={() => onPreview(localUri)}
+                                style={[styles.cameraButton, isDark && styles.cameraButtonDark, { opacity: 1, padding: 0, overflow: 'hidden' }]}
+                            >
+                                <Image source={{ uri: localUri }} style={{ width: '100%', height: 250, borderRadius: 12 }} resizeMode="contain" />
+                            </Pressable>
+                        ) : null}
+
+                        {!document && !localUri && (
+                            <Pressable
+                                onPress={pickImage}
+                                style={[styles.cameraButton, isDark && styles.cameraButtonDark]}
+                            >
+                                <Camera size={32} color="#9CA3AF" />
+                                <Text style={{ fontFamily: 'WorkSans_400Regular', color: '#666660', marginTop: 8 }}>{t('wallet.field.attach_photo')}</Text>
+                            </Pressable>
+                        )}
+
+                        <Pressable onPress={handleSubmit} style={[styles.submitButton, isDark && styles.submitButtonDark]}>
+                            <Text style={[styles.submitButtonText, isDark && styles.submitButtonTextDark]}>
+                                {document ? t('common.save') : t('wallet.modal.add_title')}
+                            </Text>
+                        </Pressable>
+
+                        {document && (
+                            <Pressable
+                                onPress={() => {
+                                    const isMaintenanceDoc = !!document.logId
+                                    showAlert(
+                                        t('wallet.modal.delete_confirm_title'),
+                                        isMaintenanceDoc
+                                            ? t('wallet.modal.delete_confirm_desc_maintenance')
+                                            : t('wallet.modal.delete_confirm_desc'),
+                                        {
+                                            confirmText: t('common.delete'),
+                                            variant: 'danger',
+                                            onConfirm: async () => {
+                                                await DocumentService.deleteDocument(document)
+                                                setAlertVisible(false)
+                                                onClose()
+                                            }
+                                        }
+                                    )
+                                }}
+                                style={styles.deleteButton}
+                            >
+                                <Text style={{ fontFamily: 'Outfit_700Bold', color: '#BA4444', fontSize: 16 }}>{t('wallet.modal.delete')}</Text>
+                            </Pressable>
+                        )}
+
+                        <Pressable onPress={onClose} style={styles.cancelButton}>
+                            <Text style={{ fontFamily: 'WorkSans_500Medium', color: '#666660' }}>{t('common.cancel')}</Text>
+                        </Pressable>
+
                     </Pressable>
-                </KeyboardAvoidingView>
+                </KeyboardAwareScrollView>
             </Pressable>
 
             <ConfirmationModal

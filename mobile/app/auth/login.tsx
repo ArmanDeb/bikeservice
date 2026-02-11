@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Platform, Alert } from 'react-native';
+import KeyboardAwareScrollView from 'react-native-keyboard-aware-scroll-view/lib/KeyboardAwareScrollView';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../src/services/Supabase';
@@ -126,66 +127,65 @@ export default function LoginScreen() {
 
     return (
         <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
-            <KeyboardAvoidingView
-                behavior={Platform.OS === "ios" ? "padding" : undefined}
+            <KeyboardAwareScrollView
                 style={{ flex: 1 }}
+                contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingBottom: 40 }}
+                showsVerticalScrollIndicator={false}
+                enableOnAndroid={true}
+                enableAutomaticScroll={true}
+                extraScrollHeight={20}
+                keyboardShouldPersistTaps="handled"
             >
-                <ScrollView
-                    contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
-                >
+                <View>
+                    <Text style={[styles.title, isDark && styles.titleDark]}>{t('auth.welcome')}</Text>
+                    <Text style={[styles.subtitle, isDark && styles.subtitleDark]}>{t('auth.register_subtitle')}</Text>
+
                     <View>
-                        <Text style={[styles.title, isDark && styles.titleDark]}>{t('auth.welcome')}</Text>
-                        <Text style={[styles.subtitle, isDark && styles.subtitleDark]}>{t('auth.register_subtitle')}</Text>
-
-                        <View>
-                            <ModalInput
-                                label={t('auth.email')}
-                                value={email}
-                                onChangeText={setEmail}
-                                placeholder="you@example.com"
-                                keyboardType="email-address"
-                            />
-                        </View>
-
-                        <View>
-                            <ModalInput
-                                label={t('auth.password')}
-                                value={password}
-                                onChangeText={setPassword}
-                                placeholder="••••••••"
-                                secureTextEntry={true}
-                            />
-                        </View>
-
-                        <Pressable
-                            onPress={signInWithEmail}
-                            disabled={loading}
-                            style={[
-                                styles.primaryButton,
-                                isDark && styles.primaryButtonDark,
-                                loading && styles.primaryButtonDisabled
-                            ]}
-                        >
-                            {loading ? (
-                                <ActivityIndicator color={isDark ? "#1C1C1E" : "#FFFFFF"} />
-                            ) : (
-                                <Text style={[styles.buttonText, isDark && styles.buttonTextDark]}>
-                                    {t('auth.sign_in')}
-                                </Text>
-                            )}
-                        </Pressable>
-
-                        <View style={styles.footer}>
-                            <Text style={[styles.footerText, isDark && styles.footerTextDark]}>{t('auth.no_account')} </Text>
-                            <Pressable onPress={() => router.push('/auth/')}>
-                                <Text style={[styles.footerLink, isDark && styles.footerLinkDark]}>{t('auth.sign_up')}</Text>
-                            </Pressable>
-                        </View>
+                        <ModalInput
+                            label={t('auth.email')}
+                            value={email}
+                            onChangeText={setEmail}
+                            placeholder="you@example.com"
+                            keyboardType="email-address"
+                        />
                     </View>
-                </ScrollView>
-            </KeyboardAvoidingView>
+
+                    <View>
+                        <ModalInput
+                            label={t('auth.password')}
+                            value={password}
+                            onChangeText={setPassword}
+                            placeholder="••••••••"
+                            secureTextEntry={true}
+                        />
+                    </View>
+
+                    <Pressable
+                        onPress={signInWithEmail}
+                        disabled={loading}
+                        style={[
+                            styles.primaryButton,
+                            isDark && styles.primaryButtonDark,
+                            loading && styles.primaryButtonDisabled
+                        ]}
+                    >
+                        {loading ? (
+                            <ActivityIndicator color={isDark ? "#1C1C1E" : "#FFFFFF"} />
+                        ) : (
+                            <Text style={[styles.buttonText, isDark && styles.buttonTextDark]}>
+                                {t('auth.sign_in')}
+                            </Text>
+                        )}
+                    </Pressable>
+
+                    <View style={styles.footer}>
+                        <Text style={[styles.footerText, isDark && styles.footerTextDark]}>{t('auth.no_account')} </Text>
+                        <Pressable onPress={() => router.push('/auth/')}>
+                            <Text style={[styles.footerLink, isDark && styles.footerLinkDark]}>{t('auth.sign_up')}</Text>
+                        </Pressable>
+                    </View>
+                </View>
+            </KeyboardAwareScrollView>
 
             <ConfirmationModal
                 visible={alertVisible}
