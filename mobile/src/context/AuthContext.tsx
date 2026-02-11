@@ -132,6 +132,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.log(`Found ${vehicleIds.length} vehicles to clean up.`);
 
             if (vehicleIds.length > 0) {
+                // 1.5 Manually Delete Files from Storage for documents linked to these vehicles
+                // We do this because the DB trigger might fail if it tries to delete files that we don't have permission to delete via SQL,
+                // or if the trigger is broken. We attempt to clean up storage validly first.
+                // However, fetching all docs to get paths might be heavy, but necessary if we want to be clean.
+                // Let's try to fetch documents first.
+                const { data: docsToDelete } = await supabase
+                    .from('documents')
+                    .select('remote_path')
+                    .in('vehicle_id', vehicleIds);
+
+                if (docsToDelete && docsToDelete.length > 0) {
+                    const paths = docsToDelete.map(d => d.remote_path).filter(p => p !== null) as string[];
+                    if (paths.length > 0) {
+                        console.log(`Deleting ${paths.length} files from storage...`);
+                        // We assume a 'documents' bucket, but need to check Service.
+                        // DocumentService uses StorageService which uses 'documents' bucket usually.
+                        // Let's use the StorageAdapter or direct supabase storage call if we know the bucket.
+                        // Looking at DocumentService.ts: StorageService.uploadFile uses 'documents'.
+                        const { error: storageError } = await supabase.storage
+                            .from('documents')
+                            .remove(paths);
+
+                        if (storageError) console.error('Failed to delete files from storage:', storageError);
+                        else console.log('✅ Files deleted from storage');
+                    }
+                }
+
                 // 2. Delete Documents linked to these vehicles
                 const { error: dError } = await supabase
                     .from('documents')
