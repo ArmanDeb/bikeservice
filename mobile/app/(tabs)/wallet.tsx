@@ -514,8 +514,6 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
                                                 setIsDropdownOpen(false)
                                             }}
                                             style={({ pressed }) => ({
-                                                paddingVertical: 16,
-                                                paddingHorizontal: 20, // Increased padding as requested
                                                 backgroundColor: pressed
                                                     ? (isDark ? '#3A3A3C' : '#F5F5F0')
                                                     : (type === dt.id ? (isDark ? '#3A3A3C' : '#F0F0F0') : 'transparent'),
@@ -523,13 +521,15 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
                                                 borderBottomColor: isDark ? '#3A3A3C' : '#F0F0F0'
                                             })}
                                         >
-                                            <Text style={{
-                                                fontFamily: type === dt.id ? 'WorkSans_600SemiBold' : 'WorkSans_400Regular',
-                                                fontSize: 16,
-                                                color: isDark ? '#FDFCF8' : '#1C1C1E'
-                                            }}>
-                                                {dt.label}
-                                            </Text>
+                                            <View style={{ paddingVertical: 16, paddingHorizontal: 24 }}>
+                                                <Text style={{
+                                                    fontFamily: type === dt.id ? 'WorkSans_600SemiBold' : 'WorkSans_400Regular',
+                                                    fontSize: 16,
+                                                    color: isDark ? '#FDFCF8' : '#1C1C1E'
+                                                }}>
+                                                    {dt.label}
+                                                </Text>
+                                            </View>
                                         </Pressable>
                                     ))}
                                 </View>
