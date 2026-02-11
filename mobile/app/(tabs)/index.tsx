@@ -204,14 +204,14 @@ const VehicleModal = ({ visible, onClose, vehicle }: { visible: boolean, onClose
     }
 
     return (
-        <Modal visible={visible} animationType="slide" transparent>
+        <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
             <Pressable style={styles.modalOverlay} onPress={onClose}>
                 <KeyboardAwareScrollView
                     style={{ flex: 1 }}
-                    contentContainerStyle={{ flexGrow: 1, justifyContent: 'flex-end' }}
+                    contentContainerStyle={{ flexGrow: 1, justifyContent: 'flex-end', paddingTop: '15%' }}
                     enableOnAndroid={true}
                     enableAutomaticScroll={true}
-                    extraScrollHeight={20}
+                    extraScrollHeight={120}
                     keyboardShouldPersistTaps="handled"
                 >
                     <Pressable onPress={(e) => e.stopPropagation()} style={[styles.modalContent, isDark ? styles.modalContentDark : styles.modalContentLight]}>
@@ -649,7 +649,7 @@ const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
         justifyContent: 'flex-end',
-        backgroundColor: 'rgba(28, 28, 30, 0.4)', // Warm overlay
+        backgroundColor: 'rgba(28, 28, 30, 0.8)', // Darker overlay for better focus
     },
     modalContent: {
         padding: 32,
@@ -661,7 +661,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 12,
         elevation: 10,
-        maxHeight: '90%',
+        // maxHeight: '90%', // Removed to prevent clipping
     },
     modalContentLight: {
         backgroundColor: '#FFFFFF',
