@@ -72,7 +72,7 @@ export const translations: Translations = {
     'garage.modal.delete': { fr: 'Supprimer le véhicule', en: 'Delete Vehicle' },
     'garage.modal.delete_confirm_title': { fr: 'Supprimer la moto', en: 'Delete Vehicle' },
     'garage.modal.delete_confirm_desc': { fr: 'Attention, ceci est irréversible. Toutes les données associées seront perdues.', en: 'Warning: this is irreversible. All associated data will be lost.' },
-    'garage.modal.vin_placeholder': { fr: 'Numéro de Châssis (Optionnel)', en: 'VIN (Optional)' },
+    'garage.modal.vin_placeholder': { fr: 'Numéro de Châssis', en: 'VIN' },
 
     // Maintenance Screen
     'maintenance.title': { fr: 'Entretien', en: 'Maintenance' },

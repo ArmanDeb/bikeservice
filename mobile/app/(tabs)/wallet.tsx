@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
 });
 
 // Document Modal Component
-const DocumentModal = ({ visible, onClose, onPreview, document, vehicles }: { visible: boolean, onClose: () => void, onPreview: (uri: string) => void, document?: Document | null, vehicles: Vehicle[] }) => {
+const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, documents }: { visible: boolean, onClose: () => void, onPreview: (uri: string) => void, document?: Document | null, vehicles: Vehicle[], documents: Document[] }) => {
     const { selectedVehicleId } = useVehicle()
     const { t, language } = useLanguage()
     const { isDark } = useTheme()
@@ -405,6 +405,36 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles }: { vi
         { id: 'other', label: t('wallet.type.other') },
     ] as const
 
+    // Filter available document types
+    const uniqueTypes = ['registration', 'coc', 'license', 'technical_control', 'insurance'] // Added insurance/technical_control if we want them unique per year? No, maybe just registration/coc/license for now? 
+    // Wait, license is per person usually, but here attached to a bike? Or generic? 
+    // Let's stick to the plan: registration, coc, license.
+    // Actually, insurance changes every year, technical control every 2 years. 
+    // Registration and COC are lifetime (usually). License is user-bound but let's assume one main license doc.
+    const ONE_TIME_DOCS = ['registration', 'coc', 'license']
+
+    const availableDocTypes = React.useMemo(() => {
+        if (!vehicleId) return docTypes
+
+        // If we are editing, we should definitely show the current document's type even if it's unique
+        const currentType = document?.type
+
+        const existingTypesForVehicle = documents
+            .filter(d => d.vehicleId === vehicleId)
+            .map(d => d.type)
+
+        return docTypes.filter(dt => {
+            // Always show the type of the document being edited
+            if (currentType === dt.id) return true
+
+            // If it's a one-time doc and already exists, hide it
+            if (ONE_TIME_DOCS.includes(dt.id) && existingTypesForVehicle.includes(dt.id)) {
+                return false
+            }
+            return true
+        })
+    }, [vehicleId, documents, document])
+
     const vehicleSelectorStyle = isDark ? styles.vehicleSelectorDark : styles.vehicleSelector
     const inputStyle = isDark ? styles.inputDark : styles.input
 
@@ -446,24 +476,30 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles }: { vi
                         </View>
 
                         <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>{t('wallet.modal.type')}</Text>
-                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 24 }}>
-                            {docTypes.map((dt) => (
-                                <Pressable
-                                    key={dt.id}
-                                    onPress={() => setType(dt.id as any)}
-                                    style={[
-                                        styles.typeButton,
-                                        isDark && styles.typeButtonDark,
-                                        type === dt.id && (isDark ? styles.typeButtonSelectedDark : styles.typeButtonSelected)
-                                    ]}
-                                >
-                                    <Text style={[
-                                        styles.typeText,
-                                        isDark && styles.typeTextDark,
-                                        type === dt.id && (isDark ? styles.typeTextSelectedDark : styles.typeTextSelected)
-                                    ]}>{dt.label}</Text>
-                                </Pressable>
-                            ))}
+                        <View style={{ marginBottom: 24 }}>
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={{ paddingRight: 24 }}
+                            >
+                                {availableDocTypes.map((dt) => (
+                                    <Pressable
+                                        key={dt.id}
+                                        onPress={() => setType(dt.id as any)}
+                                        style={[
+                                            styles.typeButton,
+                                            isDark && styles.typeButtonDark,
+                                            type === dt.id && (isDark ? styles.typeButtonSelectedDark : styles.typeButtonSelected)
+                                        ]}
+                                    >
+                                        <Text style={[
+                                            styles.typeText,
+                                            isDark && styles.typeTextDark,
+                                            type === dt.id && (isDark ? styles.typeTextSelectedDark : styles.typeTextSelected)
+                                        ]}>{dt.label}</Text>
+                                    </Pressable>
+                                ))}
+                            </ScrollView>
                         </View>
 
                         <ModalInput
@@ -819,6 +855,7 @@ const WalletScreen = ({ documents, vehicles }: { documents: Document[], vehicles
                     onPreview={(uri) => setPreviewImage(uri)}
                     document={editingDoc}
                     vehicles={vehicles}
+                    documents={documents}
                 />
 
                 {/* Full Screen Image Preview Modal */}
