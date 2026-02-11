@@ -424,12 +424,20 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
             .filter(d => d.vehicleId === vehicleId)
             .map(d => d.type)
 
+        // Check if ANY license exists, regardless of vehicleId
+        const hasLicense = documents.some(d => d.type === 'license')
+
         return docTypes.filter(dt => {
             // Always show the type of the document being edited
             if (currentType === dt.id) return true
 
-            // If it's a one-time doc and already exists, hide it
-            if (ONE_TIME_DOCS.includes(dt.id) && existingTypesForVehicle.includes(dt.id)) {
+            // Special case for license: if ANY license exists, hide it (assuming 1 license per user)
+            if (dt.id === 'license' && hasLicense) {
+                return false
+            }
+
+            // If it's a one-time doc (registration, coc) and already exists for THIS vehicle, hide it
+            if (['registration', 'coc'].includes(dt.id) && existingTypesForVehicle.includes(dt.id)) {
                 return false
             }
             return true
