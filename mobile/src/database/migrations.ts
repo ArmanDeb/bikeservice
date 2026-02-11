@@ -1,4 +1,5 @@
 import { schemaMigrations } from '@nozbe/watermelondb/Schema/migrations'
+import { tableSchema } from '@nozbe/watermelondb/Schema'
 
 export const migrations = schemaMigrations({
     migrations: [
@@ -50,6 +51,53 @@ export const migrations = schemaMigrations({
                     columns: [
                         { name: 'display_order', type: 'number' }
                     ]
+                }
+            ]
+        },
+        {
+            toVersion: 5,
+            steps: [
+                {
+                    type: 'create_table',
+                    schema: tableSchema({
+                        name: 'document_pages',
+                        columns: [
+                            { name: 'document_id', type: 'string', isIndexed: true },
+                            { name: 'local_uri', type: 'string' },
+                            { name: 'remote_path', type: 'string', isOptional: true },
+                            { name: 'page_index', type: 'number' },
+                            { name: 'width', type: 'number', isOptional: true },
+                            { name: 'height', type: 'number', isOptional: true },
+                            { name: 'created_at', type: 'number' },
+                            { name: 'updated_at', type: 'number' },
+                        ]
+                    })
+                }
+            ]
+        },
+        {
+            toVersion: 6,
+            steps: [
+                // Re-create document_pages to ensure it has all columns (fix for v5 issues)
+                {
+                    type: 'sql',
+                    sql: 'DROP TABLE IF EXISTS document_pages;'
+                },
+                {
+                    type: 'create_table',
+                    schema: tableSchema({
+                        name: 'document_pages',
+                        columns: [
+                            { name: 'document_id', type: 'string', isIndexed: true },
+                            { name: 'local_uri', type: 'string' },
+                            { name: 'remote_path', type: 'string', isOptional: true },
+                            { name: 'page_index', type: 'number' },
+                            { name: 'width', type: 'number', isOptional: true },
+                            { name: 'height', type: 'number', isOptional: true },
+                            { name: 'created_at', type: 'number' },
+                            { name: 'updated_at', type: 'number' },
+                        ]
+                    })
                 }
             ]
         }

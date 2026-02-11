@@ -23,6 +23,8 @@ import { BrandLogo } from '../../src/components/common/BrandLogo'
 import { ModalInput } from '../../src/components/common/ModalInput'
 import { ConfirmationModal } from '../../src/components/common/ConfirmationModal'
 import { LoadingModal } from '../../src/components/common/LoadingModal'
+import MaintenanceLogItem from '../../src/components/maintenance/MaintenanceLogItem'
+import MaintenanceDetailModal from '../../src/components/maintenance/MaintenanceDetailModal'
 
 // Styles definition
 const styles = StyleSheet.create({
@@ -119,15 +121,22 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     // Screen Styles
-    addButton: {
-        backgroundColor: '#1C1C1E',
-        borderRadius: 9999,
+    iconButton: {
+        padding: 0,
+        borderRadius: 14,
         width: 44,
         height: 44,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: '#1C1C1E',
+    },
+    iconButtonSurfaceLight: {
+        backgroundColor: '#FFFFFF',
+        borderColor: '#E6E5E0',
+    },
+    iconButtonSurfaceDark: {
+        backgroundColor: '#2C2C2E',
+        borderColor: '#3A3A3C',
     },
     backButton: {
         backgroundColor: '#FFFFFF',
@@ -142,25 +151,9 @@ const styles = StyleSheet.create({
         borderColor: '#3A3A3C',
     },
     logItem: {
-        backgroundColor: '#FFFFFF',
-        padding: 20,
-        borderRadius: 16,
         marginBottom: 16,
-        borderWidth: 1,
-        borderColor: '#D6D5D0',
-        flexDirection: 'row',
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        elevation: 2,
     },
-    logItemDark: {
-        backgroundColor: '#2C2C2E',
-        borderColor: '#3A3A3C',
-        shadowOpacity: 0.2,
-    },
+    // Removed duplicate logItem styles as they are now in the component
     vehicleCard: {
         backgroundColor: '#FFFFFF',
         padding: 24,
@@ -305,27 +298,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginRight: 16,
     },
-    logTagContainer: {
-        backgroundColor: '#F5F5F0',
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 4,
-        borderWidth: 1,
-        borderColor: '#E6E5E0',
-    },
-    logTagContainerDark: {
-        backgroundColor: '#3A3A3C',
-        borderColor: '#4B5563',
-    },
-    logTagText: {
-        fontSize: 10,
-        fontFamily: 'Outfit_700Bold',
-        color: '#666660',
-        textTransform: 'uppercase',
-    },
-    logTagTextDark: {
-        color: '#9CA3AF',
-    },
+    // Removed duplicate logTag styles as they are now in the component
     emptyContainer: {
         alignItems: 'center',
         justifyContent: 'center',
@@ -1019,6 +992,9 @@ const MaintenanceScreen = ({ logs, vehicles }: { logs: MaintenanceLog[], vehicle
     const { t, language } = useLanguage()
     const [modalVisible, setModalVisible] = useState(false)
     const [editingLog, setEditingLog] = useState<MaintenanceLog | null>(null)
+    const [viewingLog, setViewingLog] = useState<MaintenanceLog | null>(null)
+    const [detailModalVisible, setDetailModalVisible] = useState(false)
+    const [loading, setLoading] = useState(false)
     const [sortBy, setSortBy] = useState<'date_added' | 'mileage' | 'service_date'>('date_added')
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
     const [showSortDropdown, setShowSortDropdown] = useState(false)
@@ -1050,6 +1026,31 @@ const MaintenanceScreen = ({ logs, vehicles }: { logs: MaintenanceLog[], vehicle
         return sortOrder === 'asc' ? diff : -diff
     })
 
+    const handleLogPress = (log: MaintenanceLog) => {
+        setViewingLog(log)
+        setDetailModalVisible(true)
+    }
+
+    const handleDeleteLogConfirm = async () => {
+        if (!viewingLog) return
+
+        try {
+            await MaintenanceService.deleteLog(viewingLog)
+            setDetailModalVisible(false)
+            setViewingLog(null)
+        } catch (error) {
+            console.error('Error deleting log:', error)
+            Alert.alert(t('alert.error'), 'Failed to delete maintenance log')
+        }
+    }
+
+    const renderItem = ({ item }: { item: MaintenanceLog }) => (
+        <MaintenanceLogItem
+            log={item}
+            onPress={() => handleLogPress(item)}
+        />
+    )
+
     return (
         <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
             <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
@@ -1077,9 +1078,12 @@ const MaintenanceScreen = ({ logs, vehicles }: { logs: MaintenanceLog[], vehicle
                             }
                             setModalVisible(true)
                         }}
-                        style={styles.addButton}
+                        style={[
+                            styles.iconButton,
+                            isDark ? styles.iconButtonSurfaceDark : styles.iconButtonSurfaceLight
+                        ]}
                     >
-                        <Plus size={24} color="white" />
+                        <Plus size={24} color="#F97316" />
                     </Pressable>
                 </View>
 
@@ -1171,40 +1175,7 @@ const MaintenanceScreen = ({ logs, vehicles }: { logs: MaintenanceLog[], vehicle
                                     data={sortedLogs}
                                     keyExtractor={item => item.id}
                                     showsVerticalScrollIndicator={false}
-                                    renderItem={({ item }) => (
-                                        <Pressable
-                                            onPress={() => {
-                                                setEditingLog(item)
-                                                setModalVisible(true)
-                                            }}
-                                            style={[styles.logItem, isDark && styles.logItemDark]}
-                                        >
-                                            <View style={[styles.logIconContainer, {
-                                                backgroundColor: isDark
-                                                    ? (item.type === 'periodic' ? 'rgba(156, 163, 175, 0.2)' : item.type === 'repair' ? 'rgba(186, 68, 68, 0.2)' : 'rgba(156, 163, 175, 0.2)')
-                                                    : (item.type === 'periodic' ? 'rgba(74, 74, 69, 0.1)' : item.type === 'repair' ? 'rgba(186, 68, 68, 0.1)' : 'rgba(133, 127, 114, 0.1)')
-                                            }]}>
-                                                {item.type === 'periodic' && <Calendar size={24} color={isDark ? '#9CA3AF' : '#4A4A45'} />}
-                                                {item.type === 'repair' && <Wrench size={24} color={isDark ? '#EF6B6B' : '#BA4444'} />}
-                                                {item.type === 'modification' && <FlaskConical size={24} color={isDark ? '#9CA3AF' : '#857F72'} />}
-                                            </View>
-                                            <View style={{ flex: 1 }}>
-                                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                                                    <Text style={{ color: isDark ? '#FDFCF8' : '#1C1C1E', fontFamily: 'Outfit_700Bold', fontSize: 18, flex: 1, marginRight: 8 }}>{item.title}</Text>
-                                                    <Text style={{ color: isDark ? '#E5E5E0' : '#4A4A45', fontFamily: 'Outfit_700Bold', fontSize: 18 }}>{item.cost} €</Text>
-                                                </View>
-                                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <View>
-                                                        <Text style={{ color: isDark ? '#9CA3AF' : '#666660', fontFamily: 'WorkSans_400Regular', fontSize: 14 }}>{item.date.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US')}</Text>
-                                                        <Text style={{ color: isDark ? '#9CA3AF' : '#666660', fontFamily: 'WorkSans_500Medium', fontSize: 14 }}>{item.mileageAtLog.toLocaleString()} km</Text>
-                                                    </View>
-                                                    <View style={[styles.logTagContainer, isDark && styles.logTagContainerDark]}>
-                                                        <Text style={[styles.logTagText, isDark && styles.logTagTextDark]}>{t('maintenance.type.' + item.type)}</Text>
-                                                    </View>
-                                                </View>
-                                            </View>
-                                        </Pressable>
-                                    )}
+                                    renderItem={renderItem}
                                     ListEmptyComponent={
                                         <View style={styles.emptyContainer}>
                                             <View style={[styles.emptyIconContainer, isDark && styles.emptyIconContainerDark]}>
@@ -1246,6 +1217,33 @@ const MaintenanceScreen = ({ logs, vehicles }: { logs: MaintenanceLog[], vehicle
                     </ScrollView>
                 )}
 
+                {/* Maintenance Detail Modal */}
+                <MaintenanceDetailModal
+                    visible={detailModalVisible}
+                    onClose={() => setDetailModalVisible(false)}
+                    log={viewingLog}
+                    onEdit={() => {
+                        setDetailModalVisible(false)
+                        setEditingLog(viewingLog)
+                        setModalVisible(true)
+                    }}
+                    onDelete={() => {
+                        Alert.alert(
+                            t('alert.confirm'),
+                            t('maintenance.alert.delete_confirm'),
+                            [
+                                { text: t('common.cancel'), style: 'cancel' },
+                                {
+                                    text: t('common.delete'),
+                                    style: 'destructive',
+                                    onPress: handleDeleteLogConfirm
+                                }
+                            ]
+                        )
+                    }}
+                />
+
+                {/* Maintenance Add/Edit Modal */}
                 <MaintenanceModal
                     visible={modalVisible}
                     onClose={() => {

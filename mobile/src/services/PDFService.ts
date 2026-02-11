@@ -212,10 +212,12 @@ const buildHtml = (
     `;
 }
 
+const ANDROID_DOWNLOADS_URI = 'content://com.android.externalstorage.documents/tree/primary%3ADownload';
+
 /**
  * Try to save to previously selected directory, or ask user to choose one
  */
-async function saveToDirectory(pdfUri: string, fileName: string): Promise<boolean> {
+async function saveToDirectory(pdfUri: string, fileName: string): Promise<string | null> {
     // Try to get previously saved directory
     const savedDirectory = await AsyncStorage.getItem(SAVED_DIRECTORY_KEY);
 
@@ -238,7 +240,7 @@ async function saveToDirectory(pdfUri: string, fileName: string): Promise<boolea
             });
 
             console.log('[PDFService] PDF saved to saved directory!');
-            return true;
+            return savedDirectory;
         } catch (e: any) {
             console.log('[PDFService] Saved directory failed, asking user again:', e.message);
             // Permission expired or directory deleted, ask user again
@@ -248,7 +250,9 @@ async function saveToDirectory(pdfUri: string, fileName: string): Promise<boolea
 
     // Ask user to choose directory
     console.log('[PDFService] Asking user to choose download folder...');
-    const permissions = await StorageAccessFramework.requestDirectoryPermissionsAsync();
+
+    // We try to suggest the Downloads folder initially
+    const permissions = await StorageAccessFramework.requestDirectoryPermissionsAsync(ANDROID_DOWNLOADS_URI);
 
     if (permissions.granted) {
         // Save the directory for future use
@@ -270,10 +274,10 @@ async function saveToDirectory(pdfUri: string, fileName: string): Promise<boolea
         });
 
         console.log('[PDFService] PDF saved successfully!');
-        return true;
+        return permissions.directoryUri;
     }
 
-    return false;
+    return null;
 }
 
 export const PDFService = {
@@ -351,15 +355,21 @@ export const PDFService = {
                 console.log('[PDFService] Android detected, trying to save to Downloads...');
 
                 try {
-                    const saved = await saveToDirectory(uri, fileName);
+                    const savedPath = await saveToDirectory(uri, fileName);
 
-                    if (saved) {
+                    if (savedPath) {
+                        // Extract a clean, user-friendly folder name from the content URI
+                        // e.g. "content://...primary%3ADownload%2FBikeservice" -> "Download/Bikeservice"
+                        const decoded = decodeURIComponent(savedPath);
+                        const pathSegment = decoded.split(':').pop() || '';
+                        const folderName = pathSegment.replace(/\//g, ' / ');
+
                         return {
                             success: true,
                             title: language === 'fr' ? "Rapport Enregistré ✅" : "Report Saved ✅",
                             message: language === 'fr'
-                                ? `"${fileName}" a été enregistré dans vos Téléchargements.`
-                                : `"${fileName}" has been saved to your Downloads.`,
+                                ? `Rapport enregistré dans\n📁 ${folderName}`
+                                : `Report saved in\n📁 ${folderName}`,
                             buttonText: language === 'fr' ? "Super !" : "Great !"
                         };
                     } else {

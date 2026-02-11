@@ -42,6 +42,7 @@ export default function TabsLayout() {
     return (
         <Tabs
             screenOptions={{
+                lazy: false,
                 headerShown: false,
                 tabBarStyle: {
                     backgroundColor: isDark ? '#1C1C1E' : '#FDFCF8',

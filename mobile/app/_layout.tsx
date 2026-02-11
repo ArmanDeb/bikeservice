@@ -1,6 +1,7 @@
 import 'react-native-gesture-handler';
 import { useEffect, useState } from 'react'
 import { Stack, useRouter, useSegments } from 'expo-router'
+import { ThemeProvider as NavThemeProvider, DarkTheme, DefaultTheme } from '@react-navigation/native';
 import { useFonts, Outfit_300Light, Outfit_400Regular, Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold } from '@expo-google-fonts/outfit';
 import { WorkSans_300Light, WorkSans_400Regular, WorkSans_500Medium, WorkSans_600SemiBold, WorkSans_700Bold } from '@expo-google-fonts/work-sans';
 import * as SplashScreen from 'expo-splash-screen';
@@ -18,7 +19,7 @@ import { database } from '../src/database'
 
 function RootLayoutNav() {
     const { user, isLoading } = useAuth()
-    const { isDark } = useTheme()
+    const { isDark, resolvedTheme } = useTheme()
     const segments = useSegments()
     const router = useRouter()
     const { isConnected } = useNetwork()
@@ -88,14 +89,30 @@ function RootLayoutNav() {
         )
     }
 
+    const navigationTheme = resolvedTheme === 'dark' ? {
+        ...DarkTheme,
+        colors: {
+            ...DarkTheme.colors,
+            background: '#000000', // Match --color-background for dark
+        },
+    } : {
+        ...DefaultTheme,
+        colors: {
+            ...DefaultTheme.colors,
+            background: '#F8F5F2', // Match --color-background for paper
+        },
+    };
+
     return (
-        <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="auth" options={{ headerShown: false }} />
-            <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-            <Stack.Screen name="intro" options={{ headerShown: false }} />
-            <Stack.Screen name="legal" options={{ headerShown: false }} />
-        </Stack>
+        <NavThemeProvider value={navigationTheme}>
+            <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="auth" options={{ headerShown: false }} />
+                <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+                <Stack.Screen name="intro" options={{ headerShown: false }} />
+                <Stack.Screen name="legal" options={{ headerShown: false }} />
+            </Stack>
+        </NavThemeProvider>
     )
 }
 

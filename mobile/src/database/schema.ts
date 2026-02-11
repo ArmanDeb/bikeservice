@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb'
 
 export const schema = appSchema({
-    version: 4,
+    version: 6,
     tables: [
         tableSchema({
             name: 'vehicles',
@@ -43,6 +43,19 @@ export const schema = appSchema({
                 { name: 'vehicle_id', type: 'string', isOptional: true, isIndexed: true },
                 { name: 'log_id', type: 'string', isOptional: true, isIndexed: true },
                 { name: 'user_id', type: 'string', isOptional: true, isIndexed: true },
+                { name: 'created_at', type: 'number' },
+                { name: 'updated_at', type: 'number' },
+            ],
+        }),
+        tableSchema({
+            name: 'document_pages',
+            columns: [
+                { name: 'document_id', type: 'string', isIndexed: true },
+                { name: 'local_uri', type: 'string' },
+                { name: 'remote_path', type: 'string', isOptional: true },
+                { name: 'page_index', type: 'number' },
+                { name: 'width', type: 'number', isOptional: true },
+                { name: 'height', type: 'number', isOptional: true },
                 { name: 'created_at', type: 'number' },
                 { name: 'updated_at', type: 'number' },
             ],

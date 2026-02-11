@@ -7,6 +7,7 @@ import { sync } from './SyncService'
 import Document from '../database/models/Document'
 import { StorageService } from './StorageService'
 import { supabase } from './Supabase'
+import DocumentPage from '../database/models/DocumentPage'
 
 export const MaintenanceService = {
     // Observe logs for a specific vehicle, sorted by date desc
@@ -39,25 +40,13 @@ export const MaintenanceService = {
         mileageAtLog: number,
         date: Date,
         notes?: string,
-        documentUri?: string // New Argument
+        documentUris?: string[] // New Argument (Array)
     ) => {
         // 1. Validation Logic
         // We REMOVED the strict check to allow backfilling old logs (Historical Data).
         // if (mileageAtLog < vehicle.currentMileage) ... 
 
-        // Try to upload file if exists
-        let remotePath: string | null = null
-        let finalLocalUri = documentUri
 
-        if (documentUri) {
-            // Cache locally for persistence
-            finalLocalUri = await StorageService.cacheFile(documentUri)
-
-            const { data: { user } } = await supabase.auth.getUser()
-            if (user) {
-                remotePath = await StorageService.uploadFile(finalLocalUri, user.id)
-            }
-        }
 
         // 2. Atomic Transaction (Create Log + Update Vehicle + Create Document)
         await database.write(async () => {
@@ -82,23 +71,55 @@ export const MaintenanceService = {
                 })
             }
 
-            // 3. Create Document if URI provided (Auto-save to Wallet)
-            if (documentUri) {
-                const docCollection = database.collections.get(TableName.DOCUMENTS)
-                await docCollection.create(doc => {
+            // 3. Create Document if URIs provided (Auto-save to Wallet)
+            if (documentUris && documentUris.length > 0) {
+                // Process files first (Cache & Upload)
+                // Note: We do this inside the transaction which is not ideal for async storage ops, 
+                // but we need the result for the DB write. 
+                // Ideally we should process outside, but for now we follow the pattern.
+                // Actually, `StorageService` calls are async, so they pause the transaction. 
+                // WatermelonDB supports async in write() block.
+
+                const processedPages: { localUri: string, remotePath: string | null }[] = []
+                for (const uri of documentUris) {
+                    const finalLocalUri = await StorageService.cacheFile(uri)
+                    let remotePath: string | null = null
+                    const { data: { user } } = await supabase.auth.getUser()
+                    if (user) {
+                        remotePath = await StorageService.uploadFile(finalLocalUri, user.id)
+                    }
+                    processedPages.push({ localUri: finalLocalUri, remotePath })
+                }
+
+                const docCollection = database.collections.get<Document>(TableName.DOCUMENTS)
+                const newDoc = await docCollection.create(doc => {
                     // @ts-ignore
                     doc.vehicle.set(freshVehicle)
                     // @ts-ignore
-                    doc._raw.log_id = newLog.id
+                    doc.logId = newLog.id
                     // @ts-ignore
-                    doc.type = 'invoice'
+                    doc.type = 'maintenance_invoice'
                     // @ts-ignore
                     doc.reference = `Invoice - ${title}`
                     // @ts-ignore
-                    doc.localUri = finalLocalUri
+                    doc.localUri = processedPages[0].localUri
                     // @ts-ignore
-                    doc.remotePath = remotePath || undefined
+                    doc.remotePath = processedPages[0].remotePath || undefined
                 })
+
+                // Create pages
+                const batch = processedPages.map((page, index) =>
+                    database.collections.get<DocumentPage>('document_pages').prepareCreate(p => {
+                        p.document.set(newDoc)
+                        p.localUri = page.localUri
+                        p.remotePath = page.remotePath || undefined
+                        p.pageIndex = index
+                    })
+                )
+
+                if (batch.length > 0) {
+                    await database.batch(...batch)
+                }
             }
         })
         sync()

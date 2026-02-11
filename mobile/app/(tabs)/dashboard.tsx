@@ -354,7 +354,9 @@ const DashboardScreen = ({ vehicles, logs }: { vehicles: Vehicle[], logs: Mainte
 
         try {
             // 1. Fetch related documents (invoices)
-            const documents = await DocumentService.getDocumentsForVehicle(activeVehicle.id)
+            // User requested to ONLY export documents related to a maintenance
+            const allDocuments = await DocumentService.getDocumentsForVehicle(activeVehicle.id)
+            const documents = allDocuments.filter(doc => doc.logId != null)
 
             // 2. Generate and Share PDF
             console.log('[Dashboard] 2. Building PDF Report...')
