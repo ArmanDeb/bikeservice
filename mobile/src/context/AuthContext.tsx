@@ -112,45 +112,80 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!user) return;
 
         try {
-            // 1. Delete Documents first (references both Vehicles and Logs)
-            // We use neq '0' to match all rows visible to this user via RLS
-            const { error: dError } = await supabase
-                .from('documents')
-                .delete()
-                .neq('id', '00000000-0000-0000-0000-000000000000');
+            console.log('🗑️ Starting account deletion process...');
 
-            if (dError) console.error('Error deleting documents:', dError);
-
-            // 2. Delete Maintenance Logs (references Vehicles)
-            const { error: lError } = await supabase
-                .from('maintenance_logs')
-                .delete()
-                .neq('id', '00000000-0000-0000-0000-000000000000');
-
-            if (lError) console.error('Error deleting logs:', lError);
-
-            // 3. Delete Vehicles (Root)
-            const { error: vError } = await supabase
+            // 1. Fetch user's vehicles to target documents and logs specifically
+            // We need to know which vehicles belong to the user to clean up their dependencies
+            const { data: userVehicles, error: fetchError } = await supabase
                 .from('vehicles')
-                .delete()
-                .neq('id', '00000000-0000-0000-0000-000000000000');
+                .select('id')
+                .eq('user_id', user.id);
 
-            if (vError) {
-                console.error('Error deleting vehicles:', vError);
-                throw new Error(vError.message);
+            if (fetchError) {
+                console.error('Error fetching vehicles for deletion:', fetchError);
+                // Fallback: If we can't fetch by user_id, we might rely on RLS, but explicit is better.
+                // If this fails, we probably can't proceed safely.
+                throw new Error('Failed to prepare account deletion: ' + fetchError.message);
             }
 
-            // 4. Delete Auth Account (via RPC)
+            const vehicleIds = userVehicles?.map(v => v.id) || [];
+            console.log(`Found ${vehicleIds.length} vehicles to clean up.`);
+
+            if (vehicleIds.length > 0) {
+                // 2. Delete Documents linked to these vehicles
+                const { error: dError } = await supabase
+                    .from('documents')
+                    .delete()
+                    .in('vehicle_id', vehicleIds);
+
+                if (dError) {
+                    console.error('Error deleting documents:', dError);
+                    throw new Error('Failed to delete documents: ' + dError.message);
+                }
+                console.log('✅ Documents deleted');
+
+                // 3. Delete Maintenance Logs linked to these vehicles
+                const { error: lError } = await supabase
+                    .from('maintenance_logs')
+                    .delete()
+                    .in('vehicle_id', vehicleIds);
+
+                if (lError) {
+                    console.error('Error deleting logs:', lError);
+                    throw new Error('Failed to delete maintenance logs: ' + lError.message);
+                }
+                console.log('✅ Logs deleted');
+
+                // 4. Delete Vehicles
+                const { error: vError } = await supabase
+                    .from('vehicles')
+                    .delete()
+                    .in('id', vehicleIds);
+
+                if (vError) {
+                    console.error('Error deleting vehicles:', vError);
+                    throw new Error('Failed to delete vehicles: ' + vError.message);
+                }
+                console.log('✅ Vehicles deleted');
+            } else {
+                console.log('No vehicles found to delete, or RLS hid them.');
+
+                // Even if we didn't find vehicles, we should try to cleanup any orphaned items if RLS allows, 
+                // but checking vehicleIds is safer to avoid deleting shared data if that were possible.
+            }
+
+            // 5. Delete Auth Account (via RPC)
             const { error: uError } = await supabase.rpc('delete_user');
             if (uError) {
                 console.error('Error deleting auth user:', uError);
                 throw new Error('Failed to delete user account: ' + uError.message);
             }
+            console.log('✅ User account deleted');
 
-            // 5. Sign Out (triggers local wipe)
+            // 6. Sign Out (triggers local wipe)
             await signOut();
 
-        } catch (e) {
+        } catch (e: any) {
             console.error('Delete account failed', e);
             throw e;
         }
