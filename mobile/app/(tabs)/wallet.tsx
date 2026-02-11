@@ -436,8 +436,8 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
                 return false
             }
 
-            // If it's a one-time doc (registration, coc) and already exists for THIS vehicle, hide it
-            if (['registration', 'coc'].includes(dt.id) && existingTypesForVehicle.includes(dt.id)) {
+            // If it's a one-time doc (registration, coc, insurance) and already exists for THIS vehicle, hide it
+            if (['registration', 'coc', 'insurance'].includes(dt.id) && existingTypesForVehicle.includes(dt.id)) {
                 return false
             }
             return true
