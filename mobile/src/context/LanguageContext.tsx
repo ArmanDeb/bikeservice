@@ -132,6 +132,7 @@ export const translations: Translations = {
     'wallet.type.coc': { fr: 'Certificat de Conformité', en: 'Certificate of Conformity' },
     'wallet.type.invoice': { fr: 'Facture', en: 'Invoice' },
     'wallet.type.other': { fr: 'Autre', en: 'Other' },
+    'wallet.type.placeholder': { fr: 'Choisir le type de document', en: 'Select document type' },
     'wallet.field.title': { fr: 'Titre (ex: Assurance)', en: 'Title (e.g. Insurance)' },
     'wallet.field.expiry': { fr: 'Expiration (AAAA-MM-JJ) - Optionnel', en: 'Expiry (YYYY-MM-DD) - Optional' },
     'wallet.field.attach_photo': { fr: 'Joindre une photo', en: 'Attach Photo' },

@@ -319,7 +319,7 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
     const { t, language } = useLanguage()
     const { isDark } = useTheme()
     const [title, setTitle] = useState('')
-    const [type, setType] = useState<'registration' | 'insurance' | 'license' | 'technical_control' | 'coc' | 'invoice' | 'other'>('invoice')
+    const [type, setType] = useState<'registration' | 'insurance' | 'license' | 'technical_control' | 'coc' | 'invoice' | 'other' | null>(null)
     const [expiryDate, setExpiryDate] = useState('')
     const [localUri, setLocalUri] = useState<string | null>(null)
     const [vehicleId, setVehicleId] = useState('')
@@ -360,7 +360,7 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
                 setVehicleId(document.vehicleId || '')
             } else {
                 setTitle('')
-                setType('invoice')
+                setType(null)
                 setExpiryDate('')
                 setLocalUri(null)
                 setVehicleId(selectedVehicleId || (vehicles.length > 0 ? vehicles[0].id : ''))
@@ -381,8 +381,8 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
     }
 
     const handleSubmit = async () => {
-        if (!title || !vehicleId) {
-            showAlert(t('alert.error'), 'Title and Vehicle are required')
+        if (!title || !vehicleId || !type) {
+            showAlert(t('alert.error'), 'Title, Type and Vehicle are required')
             return
         }
 
@@ -486,8 +486,8 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
                                     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: isDropdownOpen ? 8 : 16 }
                                 ]}
                             >
-                                <Text style={{ fontFamily: 'WorkSans_400Regular', fontSize: 16, color: isDark ? '#FDFCF8' : '#1C1C1E' }}>
-                                    {docTypes.find(dt => dt.id === type)?.label || t('wallet.type.other')}
+                                <Text style={{ fontFamily: 'WorkSans_400Regular', fontSize: 16, color: type ? (isDark ? '#FDFCF8' : '#1C1C1E') : '#9CA3AF' }}>
+                                    {type ? (docTypes.find(dt => dt.id === type)?.label || t('wallet.type.other')) : t('wallet.type.placeholder')}
                                 </Text>
                                 {isDropdownOpen ? (
                                     <ChevronUp size={20} color={isDark ? '#FDFCF8' : '#1C1C1E'} />
@@ -514,7 +514,8 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
                                                 setIsDropdownOpen(false)
                                             }}
                                             style={({ pressed }) => ({
-                                                padding: 16,
+                                                paddingVertical: 16,
+                                                paddingHorizontal: 20, // Increased padding as requested
                                                 backgroundColor: pressed
                                                     ? (isDark ? '#3A3A3C' : '#F5F5F0')
                                                     : (type === dt.id ? (isDark ? '#3A3A3C' : '#F0F0F0') : 'transparent'),
