@@ -2,8 +2,10 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import {
     readAsStringAsync,
+    downloadAsync,
     EncodingType,
     getInfoAsync,
+    documentDirectory,
     StorageAccessFramework
 } from 'expo-file-system/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -12,6 +14,7 @@ import MaintenanceLog from '../database/models/MaintenanceLog';
 import Document from '../database/models/Document';
 import { Alert, Platform } from 'react-native';
 import { BRAND_LOGOS } from '../data/brandLogos';
+import { StorageService } from './StorageService';
 
 const SAVED_DIRECTORY_KEY = '@BikeService:savedPdfDirectory';
 
@@ -316,7 +319,33 @@ export const PDFService = {
                     const justificatifLabel = language === 'fr' ? 'Justificatif' : 'Supporting Doc';
 
                     if (!fileInfo.exists) {
-                        console.warn('[PDFService] File does not exist:', uri);
+                        console.warn('[PDFService] Local file missing, trying remote fallback:', uri);
+
+                        // Try downloading from Supabase Storage
+                        if (doc.remotePath) {
+                            try {
+                                const signedUrl = await StorageService.downloadFile(doc.remotePath);
+                                if (signedUrl) {
+                                    // Download to a temp local path
+                                    const tempPath = `${documentDirectory}temp_pdf_${Date.now()}.jpg`;
+                                    const downloaded = await downloadAsync(signedUrl, tempPath);
+
+                                    const remoteBase64 = await readAsStringAsync(downloaded.uri, {
+                                        encoding: EncodingType.Base64,
+                                    });
+                                    console.log('[PDFService] Remote fallback succeeded for:', doc.reference);
+                                    invoiceDocs.push({
+                                        type: doc.type || justificatifLabel,
+                                        reference: doc.reference,
+                                        base64: remoteBase64
+                                    });
+                                    continue;
+                                }
+                            } catch (remoteErr: any) {
+                                console.warn('[PDFService] Remote fallback failed:', remoteErr.message);
+                            }
+                        }
+
                         invoiceDocs.push({ type: doc.type || justificatifLabel, reference: doc.reference });
                         continue;
                     }

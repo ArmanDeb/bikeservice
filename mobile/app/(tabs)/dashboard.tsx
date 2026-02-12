@@ -166,6 +166,8 @@ const styles = StyleSheet.create({
     tableRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: 12,
         paddingVertical: 16,
         borderBottomWidth: 1,
         borderColor: '#E6E5E0',
@@ -177,6 +179,7 @@ const styles = StyleSheet.create({
         fontFamily: 'WorkSans_400Regular',
         fontSize: 16,
         color: '#666660',
+        flexShrink: 1,
     },
     tableLabelDark: {
         color: '#9CA3AF',
@@ -489,7 +492,7 @@ const DashboardScreen = ({ vehicles, logs }: { vehicles: Vehicle[], logs: Mainte
                         <Text style={[styles.sectionLabel, isDark && styles.sectionLabelDark]}>
                             {activeVehicle ? t('dashboard.total_cost_vehicle') : t('dashboard.total_cost_garage')}
                         </Text>
-                        <Text style={[styles.costText, isDark && styles.costTextDark]}>
+                        <Text style={[styles.costText, isDark && styles.costTextDark]} adjustsFontSizeToFit numberOfLines={1}>
                             {totalGarageCost.toLocaleString()} <Text style={[styles.currencyText, isDark && styles.currencyTextDark]}>€</Text>
                         </Text>
                     </View>

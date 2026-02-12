@@ -103,6 +103,7 @@ const styles = StyleSheet.create({
         fontFamily: 'Outfit_700Bold',
         color: '#1C1C1E',
         textAlign: 'center',
+        textDecorationLine: 'none',
         marginBottom: 16,
     },
     titleDark: {
