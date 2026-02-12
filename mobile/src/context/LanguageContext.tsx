@@ -65,7 +65,7 @@ export const translations: Translations = {
     'garage.modal.model_placeholder': { fr: 'MT-07, R1, GS...', en: 'MT-07, R1, GS...' },
     'garage.modal.model_placeholder_no_brand': { fr: 'Sélectionnez une marque', en: 'Select brand first' },
     'garage.modal.year': { fr: 'Année', en: 'Year' },
-    'garage.modal.mileage': { fr: 'Kilométrage (km)', en: 'Mileage (km)' },
+    'garage.modal.mileage': { fr: 'Kilométrage', en: 'Mileage' },
     'garage.modal.vin': { fr: 'Numéro de Châssis (Optionnel)', en: 'VIN (Optional)' },
     'garage.modal.submit_add': { fr: 'Ajouter au Garage', en: 'Add to Garage' },
     'garage.modal.submit_edit': { fr: 'Enregistrer', en: 'Save Changes' },
