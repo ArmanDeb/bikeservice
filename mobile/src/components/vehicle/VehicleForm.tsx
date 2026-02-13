@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native'
 import { useLanguage } from '../../context/LanguageContext'
 import { useTheme } from '../../context/ThemeContext'
-import { AutocompleteInput } from '../common/AutocompleteInput'
+import { SearchableSelector } from '../common/SearchableSelector'
 import { ModalInput } from '../common/ModalInput'
 import { MOTORCYCLE_DATA, BRANDS } from '../../data/motorcycleData'
 import { Trash2 } from 'lucide-react-native'
@@ -86,27 +86,26 @@ export const VehicleForm = ({ initialValues, onSubmit, onDelete, onCancel, submi
                 </View>
             )}
 
-            <AutocompleteInput
+            <SearchableSelector
                 label={t('garage.modal.brand')}
                 value={brand}
-                onChangeText={setBrand}
-                options={BRANDS.filter(b => b !== 'Other')}
                 onSelect={handleBrandSelect}
+                options={BRANDS.filter(b => b !== 'Other')}
                 placeholder={t('garage.modal.brand_placeholder')}
-                filterMode="startsWith"
+                searchPlaceholder={t('common.search')}
                 containerStyle={{ marginBottom: 16 }}
                 inputStyle={[styles.input, isDark ? styles.inputDark : styles.inputLight]}
                 labelStyle={[styles.inputLabel, isDark ? styles.inputLabelDark : styles.inputLabelLight]}
                 placeholderTextColor="#9CA3AF"
             />
 
-            <AutocompleteInput
+            <SearchableSelector
                 label={t('garage.modal.model')}
                 value={model}
-                onChangeText={setModel}
-                options={availableModels}
                 onSelect={setModel}
+                options={availableModels}
                 placeholder={brand ? t('garage.modal.model_placeholder') : t('garage.modal.model_placeholder_no_brand')}
+                searchPlaceholder={t('common.search')}
                 containerStyle={{ marginBottom: 16 }}
                 inputStyle={[styles.input, isDark ? styles.inputDark : styles.inputLight]}
                 labelStyle={[styles.inputLabel, isDark ? styles.inputLabelDark : styles.inputLabelLight]}

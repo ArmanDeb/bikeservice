@@ -26,6 +26,7 @@ import {
     STAGGER_DELAY,
     ENTRANCE_TRANSLATE_Y,
 } from '../../src/utils/animations';
+import { getAuthErrorMessage } from '../../src/utils/authErrorMapper';
 
 const styles = StyleSheet.create({
     container: {
@@ -182,7 +183,7 @@ export default function LoginScreen() {
 
         if (error) {
             setAlertTitle(t('alert.error'));
-            setAlertMessage(error.message);
+            setAlertMessage(t(getAuthErrorMessage(error)));
             setAlertVisible(true);
             setLoading(false);
         } else {
@@ -249,6 +250,18 @@ export default function LoginScreen() {
                             placeholder="••••••••"
                             secureTextEntry={true}
                         />
+                        <Pressable
+                            onPress={() => router.push('/auth/forgot-password')}
+                            style={{ alignSelf: 'flex-end', marginTop: 8 }}
+                        >
+                            <Text style={{
+                                fontFamily: 'WorkSans_600SemiBold',
+                                color: isDark ? '#9CA3AF' : '#666660',
+                                fontSize: 14
+                            }}>
+                                {t('auth.forgot_password') || 'Forgot Password?'}
+                            </Text>
+                        </Pressable>
                     </Animated.View>
 
                     <Animated.View style={buttonStyle}>

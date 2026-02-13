@@ -3,6 +3,7 @@ import { Session, User } from '@supabase/supabase-js';
 import { SecureStorageAdapter } from '../services/SecureStorage';
 import { supabase } from '../services/Supabase';
 import { database } from '../database';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type AuthContextType = {
     user: User | null;
@@ -65,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // 2. Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log(`Auth Event: ${event}`);
+            console.log(`Auth Event: ${event}`, session?.user?.id ? `User: ${session.user.id.substring(0, 8)}...` : 'No User');
 
             if (event === 'SIGNED_OUT') {
                 try {
@@ -74,6 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         await database.unsafeResetDatabase();
                     });
                     await SecureStorageAdapter.removeItem('last_user_id');
+                    await AsyncStorage.removeItem('@BikeService:lastSyncTimestamp');
                     console.log('✨ Database wiped successfully.');
                 } catch (e) {
                     // Ignore concurrent sync errors during logout
@@ -87,7 +89,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         await database.write(async () => {
                             await database.unsafeResetDatabase();
                         });
-                        console.log('✨ Database wiped successfully.');
+                        await SecureStorageAdapter.removeItem('last_user_id'); // Clear old user ID
+                        // IMPORT LAST_SYNC_KEY from sync service first if possible, or just string literal for now to avoid circular dep if needed
+                        // But wait, SyncService imports database, AuthContext imports database... circular dependency risk?
+                        // Let's use string literal '@BikeService:lastSyncTimestamp' to be safe or move constant to constants file.
+                        // For now, hardcode string to match SyncService.ts
+                        await AsyncStorage.setItem('@BikeService:lastSyncTimestamp', '0');
+                        console.log('✨ Database wiped & Sync reset successfully.');
                     } catch (e) {
                         console.error('❌ Failed to wipe database on switch:', e);
                     }

@@ -27,6 +27,7 @@ import {
     ENTRANCE_TRANSLATE_Y,
     triggerShake,
 } from '../../src/utils/animations';
+import { getAuthErrorMessage } from '../../src/utils/authErrorMapper';
 
 const styles = StyleSheet.create({
     container: {
@@ -204,7 +205,7 @@ export default function AuthScreen() {
 
         if (error) {
             setAlertTitle(t('alert.error'));
-            setAlertMessage(error.message);
+            setAlertMessage(t(getAuthErrorMessage(error)));
             setAlertVisible(true);
             setLoading(false);
             return;

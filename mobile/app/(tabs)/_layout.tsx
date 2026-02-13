@@ -10,6 +10,8 @@ import { BrandLogo } from '../../src/components/common/BrandLogo'
 
 import { Bike, BarChart2, Wrench, Folder, Settings, Wallet } from 'lucide-react-native'
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 // Enhanced icon component for the Garage tab
 const GarageIconBase = ({ vehicles, color }: { vehicles: Vehicle[], color: string }) => {
     const { selectedVehicleId } = useVehicle();
@@ -38,6 +40,7 @@ const GarageTabIcon = withObservables([], () => ({
 export default function TabsLayout() {
     const { isDark } = useTheme();
     const { t } = useLanguage();
+    const insets = useSafeAreaInsets();
 
     return (
         <Tabs
@@ -51,8 +54,8 @@ export default function TabsLayout() {
                     elevation: 0,
                     shadowOpacity: 0,
                     paddingTop: 8,
-                    height: 60 + (Platform.OS === 'ios' ? 15 : 0), // Add extra height for iOS home indicator area if needed, but safe area should handle it. Better to just use a generous height.
-                    paddingBottom: Platform.OS === 'ios' ? 25 : 8,
+                    height: 60 + insets.bottom,
+                    paddingBottom: insets.bottom + 8,
                 },
                 tabBarActiveTintColor: isDark ? '#E5E5E0' : '#1C1C1E',
                 tabBarInactiveTintColor: isDark ? '#666660' : '#9CA3AF',

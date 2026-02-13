@@ -12,7 +12,7 @@ import { ThemeProvider, useTheme } from '../src/context/ThemeContext'
 import { LanguageProvider } from '../src/context/LanguageContext'
 import { NetworkProvider, useNetwork } from '../src/context/NetworkContext'
 import { sync } from '../src/services/SyncService'
-import { View, ActivityIndicator, Text } from 'react-native'
+import { View, ActivityIndicator, Text, Image, Dimensions } from 'react-native'
 import '../global.css'
 import { database } from '../src/database'
 
@@ -35,20 +35,17 @@ function RootLayoutNav() {
 
         const handleNavigation = async () => {
             if (!user && !inAuthGroup) {
-                // Check if intro has been seen
-                const hasSeenIntro = await AsyncStorage.getItem('has_seen_intro');
-
-                if (!hasSeenIntro && segments[0] !== 'intro') {
+                // Always show intro as the landing page if not logged in
+                if (segments[0] !== 'intro') {
                     router.replace('/intro');
-                } else if (hasSeenIntro && segments[0] !== 'intro') {
-                    // Only redirect to auth if not already there and not in intro
-                    router.replace('/auth');
                 }
             } else if (user) {
                 // If user is logged in, properly route them.
                 const inLegalGroup = segments[0] === 'legal'
                 const inOnboardingGroup = segments[0] === 'onboarding'
-                const needsRouting = inAuthGroup || segments[0] === 'intro' || (!inLegalGroup && !inOnboardingGroup && segments[0] !== '(tabs)')
+                // Safe check for segments[1] to avoid Tuple type error
+                const isResetFlow = segments[0] === 'auth' && segments.length > 1 && (segments[1] === 'reset-password' || segments[1] === 'forgot-password');
+                const needsRouting = !isResetFlow && (inAuthGroup || segments[0] === 'intro' || (!inLegalGroup && !inOnboardingGroup && segments[0] !== '(tabs)'))
 
                 if (needsRouting) {
                     setIsNavigating(true)
@@ -62,6 +59,7 @@ function RootLayoutNav() {
                         }
                     } catch (e) {
                         console.error('❌ Initial sync failed:', e)
+                        // Ideally show a toast or non-blocking alert here if it fails
                     }
 
                     // Strict check after sync
@@ -84,10 +82,40 @@ function RootLayoutNav() {
 
 
     if (isLoading || isNavigating) {
+        const { width } = Dimensions.get('window');
         return (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: isDark ? '#000' : '#F8F5F2' }}>
-                <ActivityIndicator size="large" color={isDark ? "#ffffff" : "#000000"} />
-                {isNavigating && <Text style={{ color: isDark ? '#fff' : '#000', marginTop: 20 }}>Syncing your garage...</Text>}
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: isDark ? '#1C1C1E' : '#FDFCF8' }}>
+                <View style={{
+                    width: width * 0.4,
+                    height: width * 0.4,
+                    backgroundColor: '#1C1C1E', // Always dark background for BS logo box
+                    borderRadius: 32,
+                    overflow: 'hidden',
+                    marginBottom: 30,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 8,
+                    elevation: 5
+                }}>
+                    <Image
+                        source={require('../assets/logo.png')}
+                        style={{ width: '100%', height: '100%', resizeMode: 'cover' }}
+                    />
+                </View>
+                <ActivityIndicator size="large" color="#FAC902" />
+                {isNavigating && (
+                    <Text style={{
+                        color: isDark ? '#E5E5E0' : '#1C1C1E',
+                        marginTop: 20,
+                        fontFamily: 'WorkSans_500Medium',
+                        fontSize: 16
+                    }}>
+                        Syncing your garage...
+                    </Text>
+                )}
             </View>
         )
     }
@@ -119,6 +147,8 @@ function RootLayoutNav() {
     )
 }
 
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
 export default function RootLayout() {
     const [fontsLoaded] = useFonts({
         Outfit_300Light,
@@ -144,16 +174,18 @@ export default function RootLayout() {
     }
 
     return (
-        <AuthProvider>
-            <NetworkProvider>
-                <LanguageProvider>
-                    <ThemeProvider>
-                        <VehicleProvider>
-                            <RootLayoutNav />
-                        </VehicleProvider>
-                    </ThemeProvider>
-                </LanguageProvider>
-            </NetworkProvider>
-        </AuthProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <AuthProvider>
+                <NetworkProvider>
+                    <LanguageProvider>
+                        <ThemeProvider>
+                            <VehicleProvider>
+                                <RootLayoutNav />
+                            </VehicleProvider>
+                        </ThemeProvider>
+                    </LanguageProvider>
+                </NetworkProvider>
+            </AuthProvider>
+        </GestureHandlerRootView>
     )
 }

@@ -227,3 +227,14 @@ Cette section retrace l'évolution du projet au jour le jour, mes hésitations e
 ---
 
 *(Note : Ce document est mis à jour à chaque étape clé du développement.)*
+
+### 13 Février 2026 : Récupération de mot de passe & Fiabilisation Synchro
+*   **Récupération de mot de passe (OTP) :**
+    *   **Choix Technique :** Abandon des "Magic Links" (souvent bloqués ou ouverts dans le mauvais navigateur) au profit d'un système **OTP (One-Time Password)** à 6 chiffres.
+    *   **Flux :** L'utilisateur reçoit un code par email -> Saisie dans l'app -> Authentification temporaire -> Changement de mot de passe.
+    *   **Sécurité (Force Logout) :** Après la modification du mot de passe, j'ai imposé une **déconnexion forcée** suivie d'une redirection vers l'écran de Login. Cela garantit que la session est proprement renouvelée et que le mécanisme de synchronisation (qui dépend de l'`user_id`) repart sur des bases saines.
+*   **Fiabilisation de la Synchronisation (Data Loss Fix) :**
+    *   **Problème Critique :** Des utilisateurs rapportaient perdre leurs données (garage vide) après une déconnexion/reconnexion.
+    *   **Diagnostic :** Le `SyncService` gardait en mémoire le timestamp de la dernière synchro (`LAST_SYNC_KEY`) même après un changement d'utilisateur. Le serveur ne renvoyait donc que les "nouveautés" (delta), ignorant les données de base nécessaires au nouvel utilisateur.
+    *   **Solution :** Modification du `AuthContext` pour **effacer systématiquement** la clé de synchronisation (`AsyncStorage.removeItem`) lors de la déconnexion ou du changement de compte. Chaque nouvelle session déclenche ainsi une "Full Sync" garantie.
+

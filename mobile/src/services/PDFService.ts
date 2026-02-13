@@ -90,7 +90,7 @@ const buildHtml = (
     };
 
     const typeLabels: Record<string, string> = {
-        periodic: language === 'fr' ? 'Entretien Périodique' : 'Periodic Maintenance',
+        periodic: language === 'fr' ? 'Entretien' : 'Periodic Maintenance',
         repair: language === 'fr' ? 'Réparation' : 'Repair',
         modification: language === 'fr' ? 'Modification' : 'Modification',
         other: language === 'fr' ? 'Autre' : 'Other'
@@ -171,28 +171,64 @@ const buildHtml = (
 
             <div class="section">
                 <div class="section-title">${labels.history}</div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>${labels.tableDate}</th>
-                            <th>${labels.tableDesc}</th>
-                            <th>${labels.tableKM}</th>
-                            <th>${labels.tableCat}</th>
-                            <th>${labels.tableCost}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${logs.map(log => `
-                        <tr>
-                            <td>${log.date.toLocaleDateString(dateLocale)}</td>
-                            <td><strong>${log.title}</strong></td>
-                            <td>${log.mileageAtLog.toLocaleString()}</td>
-                            <td><span class="type-badge">${typeLabels[log.type] || log.type}</span></td>
-                            <td style="font-weight: bold;">${log.cost} €</td>
-                        </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
+                
+                ${(() => {
+            // Group logs by type
+            const groupedLogs: Record<string, MaintenanceLog[]> = {
+                periodic: [],
+                repair: [],
+                modification: [],
+                other: []
+            };
+
+            logs.forEach(log => {
+                const type = log.type || 'other';
+                if (groupedLogs[type]) {
+                    groupedLogs[type].push(log);
+                } else {
+                    if (!groupedLogs['other']) groupedLogs['other'] = [];
+                    groupedLogs['other'].push(log);
+                }
+            });
+
+            // Define order
+            const order = ['periodic', 'repair', 'modification', 'other'];
+
+            return order.map(type => {
+                const logsInGroup = groupedLogs[type];
+                if (!logsInGroup || logsInGroup.length === 0) return '';
+
+                const groupTitle = typeLabels[type] || type;
+
+                return `
+                        <div style="margin-top: 15px; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 13px; text-transform: uppercase;">
+                            ${groupTitle}
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>${labels.tableDate}</th>
+                                    <th>${labels.tableDesc}</th>
+                                    <th>${labels.tableKM}</th>
+                                    <th>${labels.tableCost}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${logsInGroup.map(log => `
+                                <tr>
+                                    <td>${log.date.toLocaleDateString(dateLocale)}</td>
+                                    <td><strong>${log.title}</strong></td>
+                                    <td>${log.mileageAtLog.toLocaleString()}</td>
+                                    <td style="font-weight: bold;">${log.cost} €</td>
+                                </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        `;
+            }).join('');
+        })()}
+
+                ${logs.length === 0 ? `<p style="text-align: center; color: #888; font-style: italic; margin-top: 20px;">Aucun historique disponible</p>` : ''}
             </div>
 
             <div class="footer">

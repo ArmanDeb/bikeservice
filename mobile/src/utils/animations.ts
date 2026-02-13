@@ -14,8 +14,8 @@ export const SPRING_ENTRANCE: WithSpringConfig = {
     stiffness: 120,
     mass: 1,
     overshootClamping: false,
-    restDisplacementThreshold: 0.01,
-    restSpeedThreshold: 2,
+    // restDisplacementThreshold: 0.01,
+    // restSpeedThreshold: 2,
 };
 
 // Spring config for subtle micro-interactions (button presses, dot transitions)
