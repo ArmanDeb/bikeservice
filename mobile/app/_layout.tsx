@@ -17,6 +17,8 @@ import '../global.css'
 import { database } from '../src/database'
 
 
+
+
 function RootLayoutNav() {
     const { user, isLoading } = useAuth()
     const { isDark, resolvedTheme } = useTheme()
@@ -29,7 +31,7 @@ function RootLayoutNav() {
         if (isLoading || isNavigating) return
 
         const inAuthGroup = segments[0] === 'auth'
-        const isOnboarding = segments[0] === 'onboarding'
+        // const isOnboarding = segments[0] === 'onboarding' // Removed
 
         const handleNavigation = async () => {
             if (!user && !inAuthGroup) {
@@ -43,10 +45,10 @@ function RootLayoutNav() {
                     router.replace('/auth');
                 }
             } else if (user) {
-                // If user is logged in, and we are either in auth, or at root, or not in tabs/onboarding/intro
-                // properly route them.
+                // If user is logged in, properly route them.
                 const inLegalGroup = segments[0] === 'legal'
-                const needsRouting = inAuthGroup || segments[0] === 'intro' || (!isOnboarding && !inLegalGroup && segments[0] !== '(tabs)')
+                const inOnboardingGroup = segments[0] === 'onboarding'
+                const needsRouting = inAuthGroup || segments[0] === 'intro' || (!inLegalGroup && !inOnboardingGroup && segments[0] !== '(tabs)')
 
                 if (needsRouting) {
                     setIsNavigating(true)
@@ -67,10 +69,11 @@ function RootLayoutNav() {
                     console.log(`Found ${count} vehicles. Routing accordingly...`)
 
                     if (count === 0) {
-                        router.replace('/onboarding')
+                        router.replace('/onboarding/add-vehicle')
                     } else {
                         router.replace('/(tabs)')
                     }
+
                     setIsNavigating(false)
                 }
             }
@@ -108,7 +111,7 @@ function RootLayoutNav() {
             <Stack>
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen name="auth" options={{ headerShown: false }} />
-                <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+                <Stack.Screen name="onboarding/add-vehicle" options={{ headerShown: false }} />
                 <Stack.Screen name="intro" options={{ headerShown: false }} />
                 <Stack.Screen name="legal" options={{ headerShown: false }} />
             </Stack>

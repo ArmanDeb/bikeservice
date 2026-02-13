@@ -329,6 +329,7 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
     const [pages, setPages] = useState<{ localUri: string, remotePath?: string | null }[]>([])
     const [vehicleId, setVehicleId] = useState('')
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+    const [isSubmitting, setIsSubmitting] = useState(false)
 
     // Alert state
     const [alertVisible, setAlertVisible] = useState(false)
@@ -355,13 +356,17 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
         setAlertVisible(true)
     }
 
+    // License is user-level (not tied to a vehicle)
+    const isLicenseType = type === 'license'
+
     React.useEffect(() => {
         if (visible) {
+            setIsDropdownOpen(false)
             if (document) {
                 setTitle(document.reference || '')
                 setType(document.type)
-                setExpiryDate(document.expiryDate ? document.expiryDate.toISOString().split('T')[0] : '')
-                setVehicleId(document.vehicleId || '')
+                setExpiryDate(document.expiryDate ? `${String(document.expiryDate.getDate()).padStart(2, '0')}-${String(document.expiryDate.getMonth() + 1).padStart(2, '0')}-${document.expiryDate.getFullYear()}` : '')
+                setVehicleId(document.vehicleId || selectedVehicleId || (vehicles.length > 0 ? vehicles[0].id : ''))
 
                 // Fetch pages
                 document.pages.fetch().then(fetchedPages => {
@@ -396,20 +401,37 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
     }
 
     const handleSubmit = async () => {
-        if (!title || !vehicleId || !type) {
+        if (isSubmitting) return
+
+        // License is user-level, so vehicleId is not required
+        if (!title || !type || (!isLicenseType && !vehicleId)) {
             showAlert(t('alert.error'), 'Title, Type and Vehicle are required')
             return
         }
 
-        const expiry = expiryDate ? new Date(expiryDate) : null
-        const localUris = pages.map(p => p.localUri)
+        setIsSubmitting(true)
+        try {
+            let expiry: Date | null = null
+            if (expiryDate) {
+                const parts = expiryDate.split('-')
+                if (parts.length === 3) {
+                    const day = parseInt(parts[0], 10)
+                    const month = parseInt(parts[1], 10) - 1
+                    const year = parseInt(parts[2], 10)
+                    expiry = new Date(year, month, day)
+                }
+            }
+            const localUris = pages.map(p => p.localUri)
 
-        if (document) {
-            await DocumentService.updateDocument(document, title, expiry, localUris, type)
-        } else {
-            await DocumentService.createDocument(title, type, expiry, localUris, vehicleId)
+            if (document) {
+                await DocumentService.updateDocument(document, title, expiry, localUris, type)
+            } else {
+                await DocumentService.createDocument(title, type, expiry, localUris, vehicleId)
+            }
+            onClose()
+        } finally {
+            setIsSubmitting(false)
         }
-        onClose()
     }
 
     const docTypes = [
@@ -470,6 +492,7 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
                     enableAutomaticScroll={true}
                     extraScrollHeight={120}
                     keyboardShouldPersistTaps="handled"
+                    disableScrollViewPanResponder={true}
                 >
                     <Pressable onPress={(e) => e.stopPropagation()} style={[styles.modalContent, isDark && styles.modalContentDark]}>
                         <Text style={[styles.title, isDark && styles.titleDark, { fontSize: 24, marginBottom: 24 }]}>
@@ -477,25 +500,27 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
                         </Text>
 
 
-                        <View style={{ marginBottom: 16 }}>
-                            <View style={[styles.vehicleSelector, vehicleSelectorStyle]}>
-                                {vehicleId ? (
-                                    <BrandLogo
-                                        brand={vehicles.find(v => v.id === vehicleId)?.brand || ''}
-                                        variant="icon"
-                                        size={24}
-                                        color={isDark ? "#E5E5E0" : "#1C1C1E"}
-                                    />
-                                ) : (
-                                    <Bike size={24} color={isDark ? "#E5E5E0" : "#1C1C1E"} />
-                                )}
-                                <Text style={{ fontFamily: 'WorkSans_500Medium', fontSize: 16, marginLeft: 12, color: isDark ? '#FDFCF8' : '#1C1C1E' }}>
-                                    {vehicleId
-                                        ? `${vehicles.find(v => v.id === vehicleId)?.brand} ${vehicles.find(v => v.id === vehicleId)?.model}`
-                                        : (language === 'fr' ? 'Sélectionner un véhicule' : 'Select a vehicle')}
-                                </Text>
+                        {!isLicenseType && (
+                            <View style={{ marginBottom: 16 }}>
+                                <View style={[styles.vehicleSelector, vehicleSelectorStyle]}>
+                                    {vehicleId ? (
+                                        <BrandLogo
+                                            brand={vehicles.find(v => v.id === vehicleId)?.brand || ''}
+                                            variant="icon"
+                                            size={24}
+                                            color={isDark ? "#E5E5E0" : "#1C1C1E"}
+                                        />
+                                    ) : (
+                                        <Bike size={24} color={isDark ? "#E5E5E0" : "#1C1C1E"} />
+                                    )}
+                                    <Text style={{ fontFamily: 'WorkSans_500Medium', fontSize: 16, marginLeft: 12, color: isDark ? '#FDFCF8' : '#1C1C1E' }}>
+                                        {vehicleId
+                                            ? `${vehicles.find(v => v.id === vehicleId)?.brand} ${vehicles.find(v => v.id === vehicleId)?.model}`
+                                            : (language === 'fr' ? 'Sélectionner un véhicule' : 'Select a vehicle')}
+                                    </Text>
+                                </View>
                             </View>
-                        </View>
+                        )}
 
                         <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>{t('wallet.modal.type')}</Text>
                         <View style={{ marginBottom: 24, zIndex: 10 }}>
@@ -576,15 +601,23 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
                             label={t('wallet.field.expiry')}
                             value={expiryDate}
                             onChangeText={setExpiryDate}
-                            placeholder="YYYY-MM-DD"
+                            placeholder="JJ-MM-AAAA"
+                            keyboardType="numeric"
+                            formatValue={(text: string) => {
+                                // Remove all non-digit characters
+                                const digits = text.replace(/[^0-9]/g, '').slice(0, 8)
+                                // Auto-insert dashes: DD-MM-YYYY
+                                if (digits.length <= 2) return digits
+                                if (digits.length <= 4) return `${digits.slice(0, 2)}-${digits.slice(2)}`
+                                return `${digits.slice(0, 2)}-${digits.slice(2, 4)}-${digits.slice(4)}`
+                            }}
                         />
 
                         <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark, { marginTop: 8 }]}>{t('wallet.field.documents')}</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 24 }}>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} nestedScrollEnabled={true} style={{ marginBottom: 24 }}>
                             {pages.map((page, index) => (
                                 <View key={index} style={{ marginRight: 12, position: 'relative' }}>
                                     <View style={{ width: 120, height: 160, borderRadius: 12, overflow: 'hidden', backgroundColor: isDark ? '#323234' : '#F5F5F0', borderWidth: 1, borderColor: isDark ? '#3A3A3C' : '#D6D5D0' }}>
-                                        {/* Always use SmartImage to handle remote/local fallback */}
                                         <SmartImage
                                             localUri={page.localUri}
                                             remotePath={page.remotePath || undefined}
@@ -648,9 +681,9 @@ const DocumentModal = ({ visible, onClose, onPreview, document, vehicles, docume
                             </Pressable>
                         </ScrollView>
 
-                        <Pressable onPress={handleSubmit} style={[styles.submitButton, isDark && styles.submitButtonDark]}>
+                        <Pressable onPress={handleSubmit} disabled={isSubmitting} style={[styles.submitButton, isDark && styles.submitButtonDark, isSubmitting && { opacity: 0.5 }]}>
                             <Text style={[styles.submitButtonText, isDark && styles.submitButtonTextDark]}>
-                                {document ? t('common.save') : t('wallet.modal.add_title')}
+                                {isSubmitting ? '...' : (document ? t('common.save') : t('wallet.modal.add_title'))}
                             </Text>
                         </Pressable>
 

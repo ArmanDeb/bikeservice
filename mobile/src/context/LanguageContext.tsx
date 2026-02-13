@@ -20,6 +20,7 @@ export const translations: Translations = {
 
     // Auth
     'auth.welcome': { fr: 'Bienvenue', en: 'Welcome Back' },
+    'auth.join_the_club': { fr: 'Rejoindre le Club', en: 'Join the Club' },
     'auth.register_title': { fr: 'Créer un compte', en: 'Create Account' },
     'auth.email': { fr: 'Email', en: 'Email' },
     'auth.password': { fr: 'Mot de passe', en: 'Password' },
@@ -38,6 +39,7 @@ export const translations: Translations = {
 
     // Common
     'alert.cancel': { fr: 'Annuler', en: 'Cancel' },
+    'common.back': { fr: 'Retour', en: 'Back' },
     'alert.confirm': { fr: 'Confirmer', en: 'Confirm' },
     'alert.success': { fr: 'Succès', en: 'Success' },
     'alert.error': { fr: 'Erreur', en: 'Error' },
@@ -141,7 +143,7 @@ export const translations: Translations = {
     'wallet.field.documents': { fr: 'Documents', en: 'Documents' },
     'wallet.field.add_page': { fr: 'Ajouter page', en: 'Add Page' },
     'wallet.field.title': { fr: 'Titre (ex: Assurance)', en: 'Title (e.g. Insurance)' },
-    'wallet.field.expiry': { fr: 'Expiration (AAAA-MM-JJ) - Optionnel', en: 'Expiry (YYYY-MM-DD) - Optional' },
+    'wallet.field.expiry': { fr: 'Expiration (JJ-MM-AAAA) - Optionnel', en: 'Expiry (DD-MM-YYYY) - Optional' },
     'wallet.field.attach_photo': { fr: 'Joindre une photo', en: 'Attach Photo' },
     'wallet.field.change_photo': { fr: 'Changer l\'image', en: 'Change Image' },
     'wallet.modal.delete': { fr: 'Supprimer', en: 'Delete' },
@@ -214,6 +216,8 @@ export const translations: Translations = {
     'intro.subtitle': { fr: 'Suivi d\'entretien, documents, coûts et rappels. Tout au même endroit.', en: 'Maintenance tracking, documents, costs and reminders. All in one place.' },
     'intro.feature1.title': { fr: 'Suivi d\'entretien', en: 'Maintenance Tracking' },
     'intro.feature1.desc': { fr: 'Gardez une trace de chaque modification et réparation.', en: 'Keep track of every mod and repair.' },
+    'intro.feature_garage.title': { fr: 'Mon Garage', en: 'My Garage' },
+    'intro.feature_garage.desc': { fr: 'Centralisez tous vos véhicules au même endroit.', en: 'Centralize all your vehicles in one place.' },
     'intro.feature2.title': { fr: 'Assistant IA', en: 'AI Assistant' },
     'intro.feature2.desc': { fr: 'Scannez vos factures et documents en un clin d\'œil.', en: 'Scan invoices and documents in a snap.' },
     'intro.feature3.title': { fr: 'Digital Wallet', en: 'Digital Wallet' },
@@ -222,12 +226,20 @@ export const translations: Translations = {
 
     // Onboarding
     'onboarding.welcome.title': { fr: 'Bienvenue sur Bike Service', en: 'Welcome to Bike Service' },
-    'onboarding.welcome.subtitle': { fr: 'L\'assistant intelligent pour l\'entretien de votre moto.', en: 'The smart assistant for your motorcycle maintenance.' },
-    'onboarding.step1.title': { fr: 'Commençons par votre moto', en: 'Let\'s start with your bike' },
+    'onboarding.welcome.subtitle': { fr: "L'assistant intelligent pour l'entretien de votre moto.", en: 'The smart assistant for your motorcycle maintenance.' },
+    'onboarding.add_vehicle_title': { fr: 'Ajouter une moto', en: 'Add a Motorcycle' },
+    'onboarding.add_vehicle_subtitle': { fr: 'Ajoutez votre première moto pour commencer le suivi.', en: 'Add your first motorcycle to start tracking.' },
+    'onboarding.step1.title': { fr: 'Commençons par votre moto', en: "Let's start with your bike" },
     'onboarding.step1.subtitle': { fr: 'Quelle machine allons-nous suivre ensemble ?', en: 'Which machine are we tracking together?' },
+    'onboarding.step1.subtitle_model_brand': { fr: 'Quel modèle de {brand} avez-vous ?', en: 'Which {brand} model do you have?' },
+    'onboarding.step1.subtitle_model_default': { fr: 'Sélectionnez un modèle', en: 'Select a model' },
     'onboarding.step1.year': { fr: 'Année', en: 'Year' },
+    'onboarding.step1.subtitle_year': { fr: 'Quelle est l\'année de fabrication de votre {brand} {model} ?', en: 'What year was your {brand} {model} manufactured?' },
     'onboarding.step2.title': { fr: 'Dernière étape', en: 'Last step' },
     'onboarding.step2.subtitle': { fr: 'Quel est son kilométrage actuel ?', en: 'What is its current mileage?' },
+    'onboarding.step2.subtitle_mileage': { fr: 'Quel est le kilométrage actuel de votre moto ?', en: 'What is the current mileage of your bike?' },
+    'onboarding.summary.title': { fr: 'Confirmer les détails', en: 'Confirm Details' },
+    'onboarding.summary.subtitle': { fr: 'Veuillez vérifier les informations ci-dessous.', en: 'Please review the information below.' },
     'onboarding.buttons.start': { fr: 'C\'est parti !', en: 'Let\'s Go!' },
     'onboarding.buttons.next': { fr: 'Suivant', en: 'Next' },
     'onboarding.buttons.back': { fr: 'Retour', en: 'Back' },

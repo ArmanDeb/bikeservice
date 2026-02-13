@@ -536,7 +536,7 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
             } else {
                 // createLog: (vehicle, title, type, cost, mileageAtLog, date, notes?, documentUri?)
                 // Pass the scanned document URI so it gets linked to this maintenance log
-                await MaintenanceService.createLog(selectedVehicle, title, type, parseFloat(cost), parseInt(mileageAtLog.replace(/\./g, '')), date, notes || undefined, scannedDocumentUri || undefined)
+                await MaintenanceService.createLog(selectedVehicle, title, type, parseFloat(cost), parseInt(mileageAtLog.replace(/\./g, '')), date, notes || undefined, scannedDocumentUri ? [scannedDocumentUri] : undefined)
             }
             onClose()
         } catch (error: any) {
@@ -837,7 +837,7 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
 
                         <View style={{ flexDirection: 'row', gap: 16 }}>
                             <ModalInput
-                                label={t('maintenance.field.cost') + ' (€)'}
+                                label={t('maintenance.field.cost')}
                                 value={cost}
                                 onChangeText={setCost}
                                 placeholder="0"

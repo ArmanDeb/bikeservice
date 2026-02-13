@@ -18,7 +18,10 @@ interface ModalInputProps {
     secureTextEntry?: boolean;
     multiline?: boolean;
     containerStyle?: any;
+    labelStyle?: any;
+    inputStyle?: any;
     formatValue?: (text: string) => string;
+    maxLength?: number;
 }
 
 export const ModalInput: React.FC<ModalInputProps> = ({
@@ -30,7 +33,10 @@ export const ModalInput: React.FC<ModalInputProps> = ({
     secureTextEntry = false,
     multiline = false,
     containerStyle,
+    labelStyle,
+    inputStyle,
     formatValue,
+    maxLength,
 }) => {
     const { isDark } = useTheme();
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -41,11 +47,11 @@ export const ModalInput: React.FC<ModalInputProps> = ({
 
     return (
         <View style={[styles.container, containerStyle]}>
-            <Text style={[styles.label, isDark && styles.labelDark]}>
+            <Text style={[styles.label, isDark && styles.labelDark, labelStyle]}>
                 {label}
             </Text>
 
-            <View style={[styles.inputWrapper, isDark && styles.inputWrapperDark]}>
+            <View style={[styles.inputWrapper, isDark && styles.inputWrapperDark, inputStyle]}>
                 <TextInput
                     style={[
                         styles.input,
@@ -55,11 +61,12 @@ export const ModalInput: React.FC<ModalInputProps> = ({
                     value={value}
                     onChangeText={handleChangeText}
                     placeholder={placeholder}
-                    placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
+                    placeholderTextColor="#9CA3AF"
                     keyboardType={keyboardType}
                     secureTextEntry={secureTextEntry && !isPasswordVisible}
                     multiline={multiline}
                     textAlignVertical={multiline ? 'top' : 'center'}
+                    maxLength={maxLength}
                 />
 
                 {secureTextEntry && (
@@ -108,7 +115,7 @@ const styles = StyleSheet.create({
     },
     input: {
         flex: 1,
-        fontSize: 18,
+        fontSize: 16,
         fontFamily: 'WorkSans_400Regular',
         color: '#111827',
         paddingVertical: 14,
