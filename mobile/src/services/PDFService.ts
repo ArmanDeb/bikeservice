@@ -82,8 +82,8 @@ const buildHtml = (
         tableCat: language === 'fr' ? 'Catégorie' : 'Category',
         tableCost: language === 'fr' ? 'Coût' : 'Cost',
         footer: language === 'fr'
-            ? 'Ce document constitue un historique officiel de maintenance pour le véhicule.'
-            : 'This document constitutes an official maintenance history for the vehicle.',
+            ? 'Ce document est généré par l\'utilisateur et ne constitue pas un document officiel de la marque.'
+            : 'This document is user-generated and does not constitute an official document from the brand.',
         annex: language === 'fr' ? 'Annexe' : 'Annex',
         noImage: language === 'fr' ? 'Image non disponible' : 'Image not available',
         justificatif: language === 'fr' ? 'Justificatif' : 'Supporting Doc'
