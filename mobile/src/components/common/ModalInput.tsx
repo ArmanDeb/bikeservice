@@ -14,7 +14,8 @@ interface ModalInputProps {
     value: string;
     onChangeText: (text: string) => void;
     placeholder?: string;
-    keyboardType?: 'default' | 'numeric' | 'email-address' | 'phone-pad';
+    autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+    keyboardType?: 'default' | 'numeric' | 'email-address' | 'phone-pad' | 'number-pad';
     secureTextEntry?: boolean;
     multiline?: boolean;
     containerStyle?: any;
@@ -22,6 +23,7 @@ interface ModalInputProps {
     inputStyle?: any;
     formatValue?: (text: string) => string;
     maxLength?: number;
+    error?: boolean;
 }
 
 export const ModalInput: React.FC<ModalInputProps> = ({
@@ -30,6 +32,7 @@ export const ModalInput: React.FC<ModalInputProps> = ({
     onChangeText,
     placeholder,
     keyboardType = 'default',
+    autoCapitalize = 'sentences',
     secureTextEntry = false,
     multiline = false,
     containerStyle,
@@ -37,6 +40,7 @@ export const ModalInput: React.FC<ModalInputProps> = ({
     inputStyle,
     formatValue,
     maxLength,
+    error = false,
 }) => {
     const { isDark } = useTheme();
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -47,11 +51,22 @@ export const ModalInput: React.FC<ModalInputProps> = ({
 
     return (
         <View style={[styles.container, containerStyle]}>
-            <Text style={[styles.label, isDark && styles.labelDark, labelStyle]}>
+            <Text style={[
+                styles.label,
+                isDark && styles.labelDark,
+                labelStyle,
+                error && { color: '#EF4444' }
+            ]}>
                 {label}
             </Text>
 
-            <View style={[styles.inputWrapper, isDark && styles.inputWrapperDark, inputStyle]}>
+            <View style={[
+                styles.inputWrapper,
+                isDark && styles.inputWrapperDark,
+                inputStyle,
+                error && { borderColor: '#EF4444', borderWidth: 1 }
+            ]}>
+
                 <TextInput
                     style={[
                         styles.input,
@@ -63,6 +78,7 @@ export const ModalInput: React.FC<ModalInputProps> = ({
                     placeholder={placeholder}
                     placeholderTextColor="#9CA3AF"
                     keyboardType={keyboardType}
+                    autoCapitalize={autoCapitalize}
                     secureTextEntry={secureTextEntry && !isPasswordVisible}
                     multiline={multiline}
                     textAlignVertical={multiline ? 'top' : 'center'}

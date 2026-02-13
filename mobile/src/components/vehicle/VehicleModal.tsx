@@ -39,7 +39,8 @@ export const VehicleModal = ({ visible, onClose, vehicle }: VehicleModalProps) =
 
     return (
         <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-            <Pressable style={styles.modalOverlay} onPress={onClose}>
+            <View style={styles.modalOverlay}>
+                <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
                 <KeyboardAwareScrollView
                     style={{ flex: 1 }}
                     contentContainerStyle={{ flexGrow: 1, justifyContent: 'flex-end', paddingTop: '15%' }}
@@ -47,9 +48,9 @@ export const VehicleModal = ({ visible, onClose, vehicle }: VehicleModalProps) =
                     enableAutomaticScroll={true}
                     extraScrollHeight={120}
                     keyboardShouldPersistTaps="handled"
+                    nestedScrollEnabled={true}
                 >
-                    <Pressable onPress={(e) => e.stopPropagation()} style={[styles.modalContent, isDark ? styles.modalContentDark : styles.modalContentLight]}>
-
+                    <View style={[styles.modalContent, isDark ? styles.modalContentDark : styles.modalContentLight]}>
                         <View style={styles.modalHeader}>
                             <Text style={[styles.modalTitle, isDark ? styles.modalTitleDark : styles.modalTitleLight]}>
                                 {vehicle ? t('garage.modal.edit_title') : t('garage.modal.add_title')}
@@ -65,10 +66,9 @@ export const VehicleModal = ({ visible, onClose, vehicle }: VehicleModalProps) =
                             onDelete={vehicle ? () => setDeleteConfirmVisible(true) : undefined}
                             submitLabel={vehicle ? t('garage.modal.submit_edit') : t('garage.modal.submit_add')}
                         />
-
-                    </Pressable>
+                    </View>
                 </KeyboardAwareScrollView>
-            </Pressable>
+            </View>
 
             <ConfirmationModal
                 visible={deleteConfirmVisible}

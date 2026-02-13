@@ -394,6 +394,7 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
     const [showDatePicker, setShowDatePicker] = useState(false)
     const [scannedDocumentUri, setScannedDocumentUri] = useState<string | null>(null)
     const [submitting, setSubmitting] = useState(false)
+    const [errors, setErrors] = useState<{ [key: string]: boolean }>({})
 
     // Alert state
     const [alertVisible, setAlertVisible] = useState(false)
@@ -426,7 +427,11 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                 setNotes('')
                 setType('periodic')
                 setDate(new Date())
+                setNotes('')
+                setType('periodic')
+                setDate(new Date())
                 setScannedDocumentUri(null)
+                setErrors({})
             }
         }
     }, [visible, log, selectedVehicleId, vehicles])
@@ -516,8 +521,14 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
     const handleSubmit = async () => {
         if (submitting) return
 
-        if (!title || !cost || !mileageAtLog || !vehicleId) {
-            showAlert(t('alert.error'), 'Please fill in all required fields')
+        const newErrors: { [key: string]: boolean } = {}
+        if (!title) newErrors.title = true
+        if (!cost) newErrors.cost = true
+        if (!mileageAtLog) newErrors.mileageAtLog = true
+        if (!vehicleId) newErrors.vehicleId = true // Only check vehicle check if likely to be empty, though it usually defaults
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors)
             return
         }
 
@@ -588,7 +599,12 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                         {/* Selected Vehicle Display (ReadOnly) */}
                         {!log && (
                             <View style={{ marginBottom: 16 }}>
-                                <View style={[styles.vehicleSelect, isDark && styles.vehicleSelectDark, { opacity: 0.8 }]}>
+                                <View style={[
+                                    styles.vehicleSelect,
+                                    isDark && styles.vehicleSelectDark,
+                                    { opacity: 0.8 },
+                                    errors.vehicleId && { borderColor: '#EF4444', borderWidth: 1 }
+                                ]}>
                                     {vehicleId ? (
                                         <BrandLogo
                                             brand={vehicles.find(v => v.id === vehicleId)?.brand || ''}
@@ -828,21 +844,30 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                             </Modal>
                         </View>
 
+
                         <ModalInput
                             label={t('maintenance.field.title')}
                             value={title}
-                            onChangeText={setTitle}
+                            onChangeText={(text) => {
+                                setTitle(text)
+                                if (errors.title) setErrors({ ...errors, title: false })
+                            }}
                             placeholder={t('maintenance.field.title')}
+                            error={errors.title}
                         />
 
                         <View style={{ flexDirection: 'row', gap: 16 }}>
                             <ModalInput
                                 label={t('maintenance.field.cost')}
                                 value={cost}
-                                onChangeText={setCost}
+                                onChangeText={(text) => {
+                                    setCost(text)
+                                    if (errors.cost) setErrors({ ...errors, cost: false })
+                                }}
                                 placeholder="0"
                                 keyboardType="numeric"
                                 containerStyle={{ flex: 1 }}
+                                error={errors.cost}
                             />
 
                             <ModalInput
@@ -854,6 +879,7 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                                     // Format with dots
                                     const formatted = numeric.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
                                     setMileageAtLog(formatted);
+                                    if (errors.mileageAtLog) setErrors({ ...errors, mileageAtLog: false })
                                 }}
                                 formatValue={(text) => {
                                     const numeric = text.replace(/[^0-9]/g, '');
@@ -862,6 +888,7 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                                 placeholder="0"
                                 keyboardType="numeric"
                                 containerStyle={{ flex: 1 }}
+                                error={errors.mileageAtLog}
                             />
                         </View>
 

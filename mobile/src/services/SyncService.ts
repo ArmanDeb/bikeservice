@@ -12,37 +12,53 @@ export async function sync() {
         pullChanges: async ({ lastPulledAt, schemaVersion, migration }) => {
             // 1. Calculate timestamp for "changes since"
             const lastPulled = lastPulledAt || 0
+            // Reverted: Postgres bigint column expects a number, not an ISO string
+            // const lastPulledISO = new Date(lastPulled).toISOString()
 
-            // 2. Fetch changes from Supabase for each table using parallel requests
-            // RLS Policies on server ensure we only get OUR data
+            console.log(`🔄 Sync: Pulling changes since ${lastPulled} (${new Date(lastPulled).toISOString()})`)
 
+            // 2. Fetch changes from Supabase
             const { data: vehicles, error: vehiclesError } = await supabase
                 .from(TableName.VEHICLES)
                 .select('*')
-                .gt('updated_at', lastPulled)
+                .gt('updated_at', lastPulled) // Compare bigint with number
 
-            if (vehiclesError) throw new Error(vehiclesError.message)
+            if (vehiclesError) throw new Error('Vehicles Fetch Error: ' + vehiclesError.message)
+            console.log(`📥 Sync: Fetched ${vehicles?.length || 0} vehicles`)
 
             const { data: logs, error: logsError } = await supabase
                 .from(TableName.MAINTENANCE_LOGS)
                 .select('*')
                 .gt('updated_at', lastPulled)
 
-            if (logsError) throw new Error(logsError.message)
+            if (logsError) throw new Error('Logs Fetch Error: ' + logsError.message)
+            console.log(`📥 Sync: Fetched ${logs?.length || 0} logs`)
 
             const { data: docs, error: docsError } = await supabase
                 .from(TableName.DOCUMENTS)
                 .select('*')
                 .gt('updated_at', lastPulled)
 
-            if (docsError) throw new Error(docsError.message)
+            if (docsError) throw new Error('Docs Fetch Error: ' + docsError.message)
+            console.log(`📥 Sync: Fetched ${docs?.length || 0} docs`)
 
             // 3. Format for WatermelonDB
+            const safeTimestamp = (ts: any) => {
+                if (typeof ts === 'number') return ts
+                return new Date(ts).getTime()
+            }
+
             const processChanges = (rows: any[]) => {
+                const standardizedRows = rows.map(r => ({
+                    ...r,
+                    created_at: safeTimestamp(r.created_at),
+                    updated_at: safeTimestamp(r.updated_at),
+                }))
+
                 return {
-                    created: rows.filter(r => !r.deleted_at && r.created_at > lastPulled),
-                    updated: rows.filter(r => !r.deleted_at && r.created_at <= lastPulled),
-                    deleted: rows.filter(r => !!r.deleted_at).map(r => r.id)
+                    created: standardizedRows.filter(r => !r.deleted_at && r.created_at > lastPulled),
+                    updated: standardizedRows.filter(r => !r.deleted_at && r.created_at <= lastPulled),
+                    deleted: standardizedRows.filter(r => !!r.deleted_at).map(r => r.id)
                 }
             }
 

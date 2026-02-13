@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Text, StyleSheet, ScrollView } from 'react-native'
+import { View, Text, StyleSheet, Alert, Pressable } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { useLanguage } from '../../src/context/LanguageContext'
@@ -20,35 +20,42 @@ export default function AddFirstVehicleScreen() {
             router.replace('/(tabs)')
         } catch (e) {
             console.error('Failed to create vehicle:', e)
-            // Error handling is inside VehicleForm usually via internal state or we can pass error prop
+            Alert.alert(
+                t('common.error') || 'Error',
+                t('garage.add_error') || 'Failed to add vehicle. Please try again.'
+            )
         }
     }
 
     return (
         <SafeAreaView style={[styles.container, isDark ? styles.containerDark : styles.containerLight]}>
-            <KeyboardAwareScrollView
-                contentContainerStyle={styles.content}
-                enableOnAndroid={true}
-                extraScrollHeight={100}
-                keyboardShouldPersistTaps="handled"
-            >
-                <View style={styles.header}>
-                    <Text style={[styles.title, isDark ? styles.textDark : styles.textLight]}>
-                        {t('onboarding.add_vehicle_title') || "Let's get started!"}
-                    </Text>
-                    <Text style={[styles.subtitle, isDark ? styles.textSubDark : styles.textSubLight]}>
-                        {t('onboarding.add_vehicle_subtitle') || "Add your first motorcycle to begin tracking maintenance and documents."}
-                    </Text>
-                </View>
+            <View style={{ flex: 1 }}>
+                <KeyboardAwareScrollView
+                    style={{ flex: 1 }}
+                    contentContainerStyle={{ flexGrow: 1, justifyContent: 'flex-start', paddingTop: '5%' }}
+                    enableOnAndroid={true}
+                    enableAutomaticScroll={true}
+                    extraScrollHeight={120}
+                    keyboardShouldPersistTaps="handled"
+                    nestedScrollEnabled={true}
+                >
+                    <View style={[styles.formContainer, isDark ? styles.cardDark : styles.cardLight]}>
+                        <View style={styles.header}>
+                            <Text style={[styles.title, isDark ? styles.textDark : styles.textLight]}>
+                                {t('onboarding.add_vehicle_title') || "Let's get started!"}
+                            </Text>
+                            <Text style={[styles.subtitle, isDark ? styles.textSubDark : styles.textSubLight]}>
+                                {t('onboarding.add_vehicle_subtitle') || "Add your first motorcycle to begin tracking maintenance and documents."}
+                            </Text>
+                        </View>
 
-                <View style={[styles.formContainer, isDark ? styles.cardDark : styles.cardLight]}>
-                    <VehicleForm
-                        onSubmit={handleSubmit}
-                        submitLabel={t('garage.modal.submit_add') || "Add Motorcycle"}
-                    />
-                </View>
-
-            </KeyboardAwareScrollView>
+                        <VehicleForm
+                            onSubmit={handleSubmit}
+                            submitLabel={t('garage.modal.submit_add') || "Add Motorcycle"}
+                        />
+                    </View>
+                </KeyboardAwareScrollView>
+            </View>
         </SafeAreaView>
     )
 }
@@ -68,7 +75,6 @@ const styles = StyleSheet.create({
     },
     header: {
         marginBottom: 32,
-        marginTop: 16,
     },
     title: {
         fontSize: 32,
@@ -93,17 +99,22 @@ const styles = StyleSheet.create({
         color: '#A1A1AA',
     },
     formContainer: {
-        padding: 24,
-        borderRadius: 24,
+        padding: 32,
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
+        borderBottomLeftRadius: 32,
+        borderBottomRightRadius: 32,
+        margin: 16,
         borderWidth: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 5,
     },
     cardLight: {
         backgroundColor: '#FFFFFF',
         borderColor: '#E6E5E0',
-        shadowColor: '#171717',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 12,
     },
     cardDark: {
         backgroundColor: '#2C2C2E',
