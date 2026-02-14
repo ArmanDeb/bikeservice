@@ -1,3 +1,12 @@
 {
-  "expo": {}
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "354b9faf-23d5-422d-a568-52c630e431f0"
+      }
+    },
+    "android": {
+      "package": "com.armano.bikeservice"
+    }
+  }
 }
