@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { withObservables } from '@nozbe/watermelondb/react'
 import * as ImagePicker from 'expo-image-picker'
 import { useRouter } from 'expo-router'
-import { Scan, ChevronLeft, Bike, Calendar, Wrench, FlaskConical, FileText, ChevronRight, X, Plus, ChevronDown, ArrowUpDown, Check, Minus, ArrowUp, ArrowDown } from 'lucide-react-native'
+import { Scan, ChevronLeft, Bike, Calendar, Wrench, FlaskConical, FileText, ChevronRight, X, Plus, ChevronDown, ArrowUpDown, Check, Minus, ArrowUp, ArrowDown, Filter, ClipboardList, Zap } from 'lucide-react-native'
 import { database } from '../../src/database'
 import { useTheme } from '../../src/context/ThemeContext'
 import { useLanguage } from '../../src/context/LanguageContext'
@@ -83,10 +83,12 @@ const styles = StyleSheet.create({
     },
     typeButton: {
         flex: 1,
-        padding: 12,
+        paddingVertical: 12,
+        paddingHorizontal: 4,
         borderRadius: 12,
         borderWidth: 1,
         alignItems: 'center',
+        justifyContent: 'center',
         backgroundColor: '#FFFFFF', // White background
         borderColor: '#D6D5D0',
     },
@@ -320,7 +322,7 @@ const styles = StyleSheet.create({
     sortButton: {
         backgroundColor: '#F5F5F0',
         paddingHorizontal: 16,
-        paddingVertical: 12,
+        height: 48,
         borderRadius: 12,
         borderWidth: 1,
         borderColor: '#E6E5E0',
@@ -376,6 +378,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#3A3A3C',
         borderColor: '#4B5563',
     },
+
 });
 
 // Maintenance Modal Component
@@ -636,7 +639,17 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                                         type === tType && styles.typeButtonSelected
                                     ]}
                                 >
-                                    <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 12, textTransform: 'uppercase', color: type === tType ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#666660') }}>
+                                    <Text
+                                        numberOfLines={1}
+                                        adjustsFontSizeToFit
+                                        style={{
+                                            fontFamily: 'Outfit_700Bold',
+                                            fontSize: 12,
+                                            textTransform: 'uppercase',
+                                            textAlign: 'center',
+                                            color: type === tType ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#666660')
+                                        }}
+                                    >
                                         {t('maintenance.type.' + tType)}
                                     </Text>
                                 </Pressable>
@@ -1022,20 +1035,38 @@ const MaintenanceScreen = ({ logs, vehicles }: { logs: MaintenanceLog[], vehicle
     const [viewingLog, setViewingLog] = useState<MaintenanceLog | null>(null)
     const [detailModalVisible, setDetailModalVisible] = useState(false)
     const [loading, setLoading] = useState(false)
-    const [sortBy, setSortBy] = useState<'date_added' | 'mileage' | 'service_date'>('date_added')
+    const [sortBy, setSortBy] = useState<'date_added' | 'mileage' | 'service_date' | 'cost'>('date_added')
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
     const [showSortDropdown, setShowSortDropdown] = useState(false)
+    const [showFilterDropdown, setShowFilterDropdown] = useState(false)
+    const [filterCategory, setFilterCategory] = useState<'all' | 'periodic' | 'repair' | 'modification'>('all')
 
     const sortOptions = [
         { key: 'date_added' as const, labelFr: 'Date d\'ajout', labelEn: 'Date added' },
         { key: 'service_date' as const, labelFr: 'Date d\'intervention', labelEn: 'Service date' },
         { key: 'mileage' as const, labelFr: 'Kilométrage', labelEn: 'Mileage' },
+        { key: 'cost' as const, labelFr: 'Prix', labelEn: 'Price' },
+    ]
+
+    const filterOptions = [
+        { key: 'all', labelFr: 'Tous', labelEn: 'All', color: '#4A4A45', darkColor: '#A1A1AA' },
+        { key: 'periodic', labelFr: 'Entretien', labelEn: 'Maintenance', color: '#15803D', darkColor: '#4ADE80' },
+        { key: 'repair', labelFr: 'Réparation', labelEn: 'Repair', color: '#BA4444', darkColor: '#EF6B6B' },
+        { key: 'modification', labelFr: 'Modification', labelEn: 'Modification', color: '#CA8A04', darkColor: '#FACC15' },
     ]
 
     // Reactive filtering: Show NOTHING if no vehicle is selected (Focus Mode)
-    const filteredLogs = selectedVehicleId
-        ? logs.filter(l => l.vehicleId === selectedVehicleId)
-        : []
+    const filteredLogs = useMemo(() => {
+        if (!selectedVehicleId) return []
+
+        let logsFiltered = logs.filter(l => l.vehicleId === selectedVehicleId)
+
+        if (filterCategory !== 'all') {
+            logsFiltered = logsFiltered.filter(l => l.type === filterCategory)
+        }
+
+        return logsFiltered
+    }, [selectedVehicleId, logs, filterCategory])
 
     const sortedLogs = [...filteredLogs].sort((a, b) => {
         let diff = 0
@@ -1043,6 +1074,8 @@ const MaintenanceScreen = ({ logs, vehicles }: { logs: MaintenanceLog[], vehicle
             diff = a.mileageAtLog - b.mileageAtLog
         } else if (sortBy === 'service_date') {
             diff = a.date.getTime() - b.date.getTime()
+        } else if (sortBy === 'cost') {
+            diff = a.cost - b.cost
         } else {
             // date_added
             const aTime = a.createdAt?.getTime() || a.date.getTime()
@@ -1142,15 +1175,36 @@ const MaintenanceScreen = ({ logs, vehicles }: { logs: MaintenanceLog[], vehicle
                                         onPress={() => setShowSortDropdown(true)}
                                         style={[styles.sortButton, isDark && styles.sortButtonDark, { flex: 1 }]}
                                     >
-                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
                                             <ArrowUpDown size={16} color={isDark ? "#E5E5E0" : "#4A4A45"} />
-                                            <Text style={{ color: isDark ? '#FDFCF8' : '#1C1C1E', fontFamily: 'Outfit_700Bold', marginLeft: 8, fontSize: 14 }}>
+                                            <Text
+                                                numberOfLines={1}
+                                                ellipsizeMode="tail"
+                                                style={{
+                                                    color: isDark ? '#FDFCF8' : '#1C1C1E',
+                                                    fontFamily: 'Outfit_700Bold',
+                                                    marginLeft: 8,
+                                                    fontSize: 14,
+                                                    flex: 1
+                                                }}
+                                            >
                                                 {language === 'fr'
                                                     ? sortOptions.find(o => o.key === sortBy)?.labelFr
                                                     : sortOptions.find(o => o.key === sortBy)?.labelEn}
                                             </Text>
                                         </View>
-                                        <ChevronDown size={16} color="#9CA3AF" style={{ marginLeft: 8 }} />
+                                        <ChevronDown size={16} color="#9CA3AF" />
+                                    </Pressable>
+
+                                    <Pressable
+                                        onPress={() => setShowFilterDropdown(true)}
+                                        style={[
+                                            styles.sortIconContainer,
+                                            isDark && styles.sortIconContainerDark,
+                                            filterCategory !== 'all' && { borderColor: '#F97316', borderWidth: 1 }
+                                        ]}
+                                    >
+                                        <Filter size={20} color={filterCategory !== 'all' ? '#F97316' : (isDark ? "#E5E5E0" : "#4A4A45")} />
                                     </Pressable>
 
                                     <Pressable
@@ -1164,6 +1218,54 @@ const MaintenanceScreen = ({ logs, vehicles }: { logs: MaintenanceLog[], vehicle
                                         )}
                                     </Pressable>
                                 </View>
+
+                                {/* Filter Dropdown Modal */}
+                                <Modal visible={showFilterDropdown} transparent animationType="fade">
+                                    <Pressable
+                                        style={styles.sortModalOverlay}
+                                        onPress={() => setShowFilterDropdown(false)}
+                                    >
+                                        <View style={[styles.sortDropdown, isDark && styles.sortDropdownDark]}>
+                                            <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: isDark ? '#3A3A3C' : '#E6E5E0' }}>
+                                                <Text style={{ color: isDark ? '#FDFCF8' : '#1C1C1E', fontFamily: 'Outfit_700Bold', fontSize: 18, textAlign: 'center' }}>
+                                                    {language === 'fr' ? 'Filtrer par' : 'Filter by'}
+                                                </Text>
+                                            </View>
+                                            {filterOptions.map((option) => (
+                                                <Pressable
+                                                    key={option.key}
+                                                    onPress={() => {
+                                                        setFilterCategory(option.key as any)
+                                                        setShowFilterDropdown(false)
+                                                    }}
+                                                    style={[
+                                                        styles.sortOption,
+                                                        isDark && styles.sortOptionDark,
+                                                        filterCategory === option.key && styles.sortOptionActive
+                                                    ]}
+                                                >
+                                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                        <Text style={{ fontFamily: 'Outfit_700Bold', color: isDark ? '#E5E5E0' : '#4A4A45' }}>
+                                                            {language === 'fr' ? option.labelFr : option.labelEn}
+                                                        </Text>
+                                                        {option.key === 'periodic' && (
+                                                            <ClipboardList size={18} color={isDark ? option.darkColor : option.color} style={{ marginLeft: 8 }} />
+                                                        )}
+                                                        {option.key === 'repair' && (
+                                                            <Wrench size={18} color={isDark ? option.darkColor : option.color} style={{ marginLeft: 8 }} />
+                                                        )}
+                                                        {option.key === 'modification' && (
+                                                            <Zap size={18} color={isDark ? option.darkColor : option.color} style={{ marginLeft: 8 }} />
+                                                        )}
+                                                    </View>
+                                                    {filterCategory === option.key && (
+                                                        <Check size={20} color={isDark ? option.darkColor : option.color} />
+                                                    )}
+                                                </Pressable>
+                                            ))}
+                                        </View>
+                                    </Pressable>
+                                </Modal>
 
                                 {/* Sort Dropdown Modal */}
                                 <Modal visible={showSortDropdown} transparent animationType="fade">
@@ -1281,8 +1383,8 @@ const MaintenanceScreen = ({ logs, vehicles }: { logs: MaintenanceLog[], vehicle
                     log={editingLog}
                     vehicles={vehicles}
                 />
-            </View>
-        </SafeAreaView>
+            </View >
+        </SafeAreaView >
     )
 }
 

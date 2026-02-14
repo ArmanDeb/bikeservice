@@ -11,7 +11,7 @@ import * as FileSystem from 'expo-file-system/legacy'
 import Document from '../../src/database/models/Document'
 import { VehicleService } from '../../src/services/VehicleService'
 import Vehicle from '../../src/database/models/Vehicle'
-import { Camera, FileText, ChevronRight, ChevronLeft, Bike, FolderOpen, X, Plus, Pencil, ChevronDown, ChevronUp } from 'lucide-react-native'
+import { Camera, FileText, ChevronRight, ChevronLeft, Bike, FolderOpen, X, Plus, Pencil, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react-native'
 import { useVehicle } from '../../src/context/VehicleContext'
 import { useTheme } from '../../src/context/ThemeContext'
 import { useLanguage } from '../../src/context/LanguageContext'
@@ -835,7 +835,7 @@ const WalletScreen = ({ documents, vehicles }: { documents: Document[], vehicles
 
     // Reactive filtering: Show NOTHING if no vehicle is selected (Focus Mode)
     const filteredDocs = selectedVehicleId
-        ? documents.filter(d => d.vehicleId === selectedVehicleId || d.type === 'license')
+        ? documents.filter(d => (d.vehicleId === selectedVehicleId || d.type === 'license') && d.type !== 'maintenance_invoice')
         : []
 
     // Group documents: Legal vs History
@@ -936,14 +936,23 @@ const WalletScreen = ({ documents, vehicles }: { documents: Document[], vehicles
                             )}
 
                             {filteredDocs.length === 0 && (
-                                <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 80, paddingHorizontal: 40 }}>
+                                <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 80, paddingHorizontal: 0 }}>
                                     <View style={[styles.emptyStateIcon, isDark && styles.emptyStateIconDark]}>
                                         <FolderOpen size={40} color="#9CA3AF" />
                                     </View>
                                     <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 20, color: isDark ? '#FDFCF8' : '#1C1C1E', textAlign: 'center', marginBottom: 8 }}>{t('wallet.no_documents')}</Text>
-                                    <Text style={{ fontFamily: 'WorkSans_400Regular', fontSize: 16, color: '#666660', textAlign: 'center' }}>{t('wallet.no_documents_desc')}</Text>
+                                    <Text style={{ fontFamily: 'WorkSans_400Regular', fontSize: 16, color: '#666660', textAlign: 'center' }}>
+                                        {language === 'fr' ? "Ajouter vos documents administratifs (Permis, carte grise, assurance, etc..)" : "Add your administrative documents (License, registration, insurance, etc..)"}
+                                    </Text>
                                 </View>
                             )}
+
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 32, paddingHorizontal: 20, marginBottom: 20 }}>
+                                <AlertTriangle size={14} color="#9CA3AF" style={{ marginRight: 6 }} />
+                                <Text style={{ fontFamily: 'WorkSans_400Regular', fontSize: 12, color: '#9CA3AF', textAlign: 'center' }}>
+                                    {language === 'fr' ? "Attention : Ceci ne remplace pas vos documents officiels." : "Warning: This does not replace your official documents."}
+                                </Text>
+                            </View>
                         </ScrollView>
                     </>
                 ) : (
