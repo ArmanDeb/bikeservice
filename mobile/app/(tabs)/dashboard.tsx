@@ -24,6 +24,7 @@ import { DocumentService } from '../../src/services/DocumentService'
 import { ActivityIndicator } from 'react-native'
 import { BrandLogo } from '../../src/components/common/BrandLogo'
 import { ConfirmationModal } from '../../src/components/common/ConfirmationModal'
+import MaintenanceLogItem from '../../src/components/maintenance/MaintenanceLogItem'
 
 const styles = StyleSheet.create({
     container: {
@@ -246,20 +247,20 @@ const styles = StyleSheet.create({
         borderColor: '#3A3A3C',
     },
     tagRepair: {
-        backgroundColor: '#FFF1F2', // Very light red
-        borderColor: '#FECDD3',
+        backgroundColor: '#F5F5F0',
+        borderColor: '#E6E5E0',
     },
     tagRepairDark: {
-        backgroundColor: 'rgba(127, 29, 29, 0.3)',
-        borderColor: 'rgba(127, 29, 29, 0.5)',
+        backgroundColor: '#323234',
+        borderColor: '#3A3A3C',
     },
     tagMod: {
-        backgroundColor: '#F3E8FF', // Very light purple (minimal)
-        borderColor: '#E9D5FF',
+        backgroundColor: '#F5F5F0',
+        borderColor: '#E6E5E0',
     },
     tagModDark: {
-        backgroundColor: 'rgba(88, 28, 135, 0.3)',
-        borderColor: 'rgba(88, 28, 135, 0.5)',
+        backgroundColor: '#323234',
+        borderColor: '#3A3A3C',
     },
     tagText: {
         fontSize: 10,
@@ -267,12 +268,12 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
         letterSpacing: 0.5,
     },
-    tagTextPeriodic: { color: '#666660' }, // Neutral
-    tagTextPeriodicDark: { color: '#9CA3AF' },
+    tagTextPeriodic: { color: '#15803D' }, // Green-700
+    tagTextPeriodicDark: { color: '#4ADE80' }, // Green-400
     tagTextRepair: { color: '#BE123C' }, // Muted Red
     tagTextRepairDark: { color: '#FB7185' },
-    tagTextMod: { color: '#7E22CE' }, // Muted Purple
-    tagTextModDark: { color: '#C084FC' },
+    tagTextMod: { color: '#B45309' }, // Yellow-700/Orange-ish for readability
+    tagTextModDark: { color: '#FAC902' }, // Brand Yellow for Dark mode
 
     // Toggle Styles
     toggleContainer: {
@@ -476,26 +477,39 @@ const DashboardScreen = ({ vehicles, logs }: { vehicles: Vehicle[], logs: Mainte
                     </Text>
                 )}
 
-                {/* Total Cost Card */}
-                <View style={[styles.card, isDark ? styles.cardDark : styles.cardLight, { overflow: 'hidden', position: 'relative' }]}>
-                    {activeVehicle && (
-                        <View pointerEvents="none" style={{ position: 'absolute', right: -20, bottom: -40, opacity: 0.15, transform: [{ rotate: '-20deg' }] }}>
-                            <BrandLogo
-                                brand={activeVehicle.brand}
-                                variant="icon"
-                                size={180}
-                                color={undefined}
-                            />
+                {/* Total Cost & Count Section */}
+                <View style={{ flexDirection: 'row', gap: 12 }}>
+                    <View style={[styles.card, isDark ? styles.cardDark : styles.cardLight, { flex: 1, overflow: 'hidden', position: 'relative' }]}>
+                        {activeVehicle && (
+                            <View pointerEvents="none" style={{ position: 'absolute', right: -20, bottom: -40, opacity: 0.15, transform: [{ rotate: '-20deg' }] }}>
+                                <BrandLogo
+                                    brand={activeVehicle.brand}
+                                    variant="icon"
+                                    size={180}
+                                    color={undefined}
+                                />
+                            </View>
+                        )}
+                        <View style={styles.cardPadding}>
+                            <Text style={[styles.sectionLabel, isDark && styles.sectionLabelDark]}>
+                                {activeVehicle ? t('dashboard.total_cost_vehicle') : t('dashboard.total_cost_garage')}
+                            </Text>
+                            <Text style={[styles.costText, isDark && styles.costTextDark]} adjustsFontSizeToFit numberOfLines={1}>
+                                {totalGarageCost.toLocaleString()} <Text style={[styles.currencyText, isDark && styles.currencyTextDark]}>€</Text>
+                            </Text>
+                        </View>
+                    </View>
+
+                    {!activeVehicle && (
+                        <View style={[styles.card, isDark ? styles.cardDark : styles.cardLight, { width: '32%', justifyContent: 'center', alignItems: 'center' }]}>
+                            <Text style={[styles.costText, isDark && styles.costTextDark, { fontSize: 32, marginBottom: 4 }]}>
+                                {vehicles.length}
+                            </Text>
+                            <Text style={[styles.sectionLabel, isDark && styles.sectionLabelDark, { marginBottom: 0, textAlign: 'center', fontSize: 10 }]}>
+                                {vehicles.length > 1 ? (language === 'fr' ? 'Motos' : 'Bikes') : (language === 'fr' ? 'Moto' : 'Bike')}
+                            </Text>
                         </View>
                     )}
-                    <View style={styles.cardPadding}>
-                        <Text style={[styles.sectionLabel, isDark && styles.sectionLabelDark]}>
-                            {activeVehicle ? t('dashboard.total_cost_vehicle') : t('dashboard.total_cost_garage')}
-                        </Text>
-                        <Text style={[styles.costText, isDark && styles.costTextDark]} adjustsFontSizeToFit numberOfLines={1}>
-                            {totalGarageCost.toLocaleString()} <Text style={[styles.currencyText, isDark && styles.currencyTextDark]}>€</Text>
-                        </Text>
-                    </View>
                 </View>
 
                 {/* Cost Summary Table */}
@@ -507,7 +521,7 @@ const DashboardScreen = ({ vehicles, logs }: { vehicles: Vehicle[], logs: Mainte
                         {[
                             { label: t('dashboard.periodic_maintenance'), value: costBreakdown['periodic'] || 0 },
                             { label: t('dashboard.repairs'), value: costBreakdown['repair'] || 0 },
-                            { label: t('dashboard.modifications'), value: costBreakdown['modifications'] || 0 },
+                            { label: t('dashboard.modifications'), value: costBreakdown['modification'] || 0 },
                         ].map((row, idx) => (
                             <View key={idx} style={[styles.tableRow, isDark && styles.tableRowDark, idx === 2 && { borderBottomWidth: 0 }]}>
                                 <Text style={[styles.tableLabel, isDark && styles.tableLabelDark]}>{row.label}</Text>
@@ -531,80 +545,23 @@ const DashboardScreen = ({ vehicles, logs }: { vehicles: Vehicle[], logs: Mainte
                             const logVehicle = viewMode === 'all' ? vehicles.find(v => v.id === log.vehicleId) : null
 
                             return (
-                                <View key={log.id} style={{ marginBottom: 24, position: 'relative' }}>
-                                    {/* Timeline Dot */}
-                                    <View style={[styles.timelineDot, isDark && styles.timelineDotDark]} />
+                                <View key={log.id} style={{ marginBottom: 16, position: 'relative' }}>
+                                    {/* Timeline Dot positioned relative to card */}
+                                    <View style={[styles.timelineDot, isDark && styles.timelineDotDark, { top: logVehicle ? 36 : 16 }]} />
 
-                                    <Text style={[styles.sectionLabel, isDark && styles.sectionLabelDark, { marginBottom: 4, marginLeft: 8 }]}>
-                                        {log.date.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US')}
-                                    </Text>
-
-                                    <View style={[styles.logItem, isDark ? styles.logItemDark : styles.cardLight]}>
-
-                                        {/* OPTION A: Vehicle Header (Global View Only) */}
-                                        {logVehicle && (
-                                            <View style={{
-                                                flexDirection: 'row',
-                                                alignItems: 'center',
-                                                marginBottom: 12,
-                                                paddingBottom: 12,
-                                                borderBottomWidth: 1,
-                                                borderColor: isDark ? '#3A3A3C' : '#F5F5F0'
-                                            }}>
-                                                <View style={{
-                                                    width: 24,
-                                                    height: 24,
-                                                    borderRadius: 12,
-                                                    backgroundColor: isDark ? '#3A3A3C' : '#F5F5F0',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    marginRight: 8
-                                                }}>
-                                                    <BrandLogo
-                                                        brand={logVehicle.brand}
-                                                        variant="icon"
-                                                        size={14}
-                                                        color={isDark ? '#FDFCF8' : '#1C1C1E'}
-                                                    />
-                                                </View>
-                                                <Text style={{
-                                                    fontFamily: 'Outfit_700Bold',
-                                                    fontSize: 14,
-                                                    color: isDark ? '#FDFCF8' : '#1C1C1E',
-                                                    letterSpacing: 0.5
-                                                }}>
-                                                    {logVehicle.brand} {logVehicle.model}
-                                                </Text>
-                                            </View>
-                                        )}
-
-                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                                            <Text style={[styles.cardTitle, isDark && styles.cardTitleDark, { flex: 1, marginRight: 8 }]}>{log.title}</Text>
-                                            <View
-                                                style={[
-                                                    styles.tag,
-                                                    log.type === 'periodic' ? (isDark ? styles.tagPeriodicDark : styles.tagPeriodic) :
-                                                        log.type === 'repair' ? (isDark ? styles.tagRepairDark : styles.tagRepair) :
-                                                            (isDark ? styles.tagModDark : styles.tagMod)
-                                                ]}
-                                            >
-                                                <Text
-                                                    style={[
-                                                        styles.tagText,
-                                                        log.type === 'periodic' ? (isDark ? styles.tagTextPeriodicDark : styles.tagTextPeriodic) :
-                                                            log.type === 'repair' ? (isDark ? styles.tagTextRepairDark : styles.tagTextRepair) :
-                                                                (isDark ? styles.tagTextModDark : styles.tagTextMod)
-                                                    ]}
-                                                >
-                                                    {t(`maintenance.type.${log.type}`)}
-                                                </Text>
-                                            </View>
+                                    {logVehicle && (
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, marginLeft: 4 }}>
+                                            <BrandLogo brand={logVehicle.brand} variant="icon" size={14} color={isDark ? '#9CA3AF' : '#666660'} />
+                                            <Text style={{ fontFamily: 'WorkSans_700Bold', fontSize: 12, color: isDark ? '#9CA3AF' : '#666660', marginLeft: 6 }}>
+                                                {logVehicle.brand} {logVehicle.model}
+                                            </Text>
                                         </View>
-                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                                            <Text style={[styles.tableLabel, isDark && styles.tableLabelDark, { fontSize: 14 }]}>@{log.mileageAtLog.toLocaleString()} km</Text>
-                                            <Text style={[styles.tableValue, isDark && styles.tableValueDark]}>- {log.cost} €</Text>
-                                        </View>
-                                    </View>
+                                    )}
+
+                                    <MaintenanceLogItem
+                                        log={log}
+                                        onPress={() => { }}
+                                    />
                                 </View>
                             )
                         })
@@ -613,15 +570,7 @@ const DashboardScreen = ({ vehicles, logs }: { vehicles: Vehicle[], logs: Mainte
                     )}
                 </View>
 
-                {/* Quick Stats (Only show Global Vehicle count if NO vehicle is selected) */}
-                {!activeVehicle && (
-                    <View style={{ flexDirection: 'row', gap: 16, marginBottom: 24 }}>
-                        <View style={[styles.card, isDark ? styles.cardDark : styles.cardLight, { flex: 1, padding: 24, marginBottom: 0 }]}>
-                            <Text style={[styles.sectionLabel, isDark && styles.sectionLabelDark]}>{t('dashboard.vehicles_count')}</Text>
-                            <Text style={[styles.costText, isDark && styles.costTextDark, { fontSize: 32 }]}>{vehicles.length}</Text>
-                        </View>
-                    </View>
-                )}
+
 
             </ScrollView>
 

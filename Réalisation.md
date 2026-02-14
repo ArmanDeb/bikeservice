@@ -43,13 +43,13 @@ Pour transformer l'application en un véritable service SaaS, j'ai implémenté 
     *   **Côté Supabase :** J'ai activé le **Row Level Security (RLS)** sur toutes les tables. Chaque ligne de données possède désormais une colonne `user_id`. Des politiques SQL (`POLICIES`) vérifient que le `auth.uid()` de la session correspond au propriétaire de la donnée.
     *   **Côté Mobile :** J'ai migré le schéma WatermelonDB en **version 3** pour inclure cette colonne `user_id`. Le `SyncService` a été modifié pour injecter l'ID de l'utilisateur lors de chaque synchronisation.
 *   **Hygiène des Données (Clean Slate) :** Pour éviter que deux utilisateurs partageant le même téléphone ne puissent voir les données l'un de l'autre en cache, l'application exécute un `unsafeResetDatabase()` (Wipe local) dès qu'un utilisateur se déconnecte.
-34: 
-35: #### Détails de l'implémentation technique (Scanner)
-36: Pour réaliser cette fonctionnalité, j'ai dû orchestrer plusieurs briques techniques :
-37: 1.  **Capture d'image :** Utilisation de `expo-image-picker` pour accéder à la caméra/galerie et convertir l'image en Base64.
-38: 2.  **L'appel API (Prompt Engineering) :** Le défi était de forcer l'IA à répondre *uniquement* en JSON structuré pour que mon application puisse le lire. J'ai conçu un prompt système strict : *"You are an expert mechanic... Extract structured data... Return ONLY raw JSON"*.
-39: 3.  **Gestion des versions Gemini :** J'ai rencontré des problèmes de quota avec les modèles `gemini-2.0`. J'ai donc implémenté une stratégie de repli sur l'alias `gemini-flash-latest`, qui pointe dynamiquement vers le modèle le plus performant disponible dans le Free Tier.
-40: 4.  **Parsing et Injection :** L'application reçoit le JSON, le nettoie (suppression des balises markdown ```json) et mappe automatiquement les champs (titre, coût, date) dans le state du formulaire React.
+
+#### Détails de l'implémentation technique (Scanner)
+Pour réaliser cette fonctionnalité, j'ai dû orchestrer plusieurs briques techniques :
+1.  **Capture d'image :** Utilisation de `expo-image-picker` pour accéder à la caméra/galerie et convertir l'image en Base64.
+2.  **L'appel API (Prompt Engineering) :** Le défi était de forcer l'IA à répondre *uniquement* en JSON structuré pour que mon application puisse le lire. J'ai conçu un prompt système strict : *"You are an expert mechanic... Extract structured data... Return ONLY raw JSON"*.
+3.  **Gestion des versions Gemini :** J'ai rencontré des problèmes de quota avec les modèles `gemini-2.0`. J'ai donc implémenté une stratégie de repli sur l'alias `gemini-flash-latest`, qui pointe dynamiquement vers le modèle le plus performant disponible dans le Free Tier.
+4.  **Parsing et Injection :** L'application reçoit le JSON, le nettoie (suppression des balises markdown ```json) et mappe automatiquement les champs (titre, coût, date) dans le state du formulaire React.
 
 ## 3. Implémentation de la persistance (WatermelonDB & Supabase)
 
@@ -237,4 +237,21 @@ Cette section retrace l'évolution du projet au jour le jour, mes hésitations e
     *   **Problème Critique :** Des utilisateurs rapportaient perdre leurs données (garage vide) après une déconnexion/reconnexion.
     *   **Diagnostic :** Le `SyncService` gardait en mémoire le timestamp de la dernière synchro (`LAST_SYNC_KEY`) même après un changement d'utilisateur. Le serveur ne renvoyait donc que les "nouveautés" (delta), ignorant les données de base nécessaires au nouvel utilisateur.
     *   **Solution :** Modification du `AuthContext` pour **effacer systématiquement** la clé de synchronisation (`AsyncStorage.removeItem`) lors de la déconnexion ou du changement de compte. Chaque nouvelle session déclenche ainsi une "Full Sync" garantie.
+
+### 14 Février 2026 : Raffinement du Dashboard et Harmonisation UI
+
+*   **Optimisation du Dashboard (Hiérarchie de l'information) :**
+    *   **Restructuration des Stats :** Séparation du "Coût Total" et du "Nombre de Véhicules" en deux cartes distinctes. Cela permet une lecture plus rapide et équilibrée, particulièrement en mode "Tous les véhicules".
+    *   **Nettoyage :** Suppression des compteurs redondants en bas de page pour épurer l'interface et éviter la surcharge cognitive.
+*   **Harmonisation des composants (Logique de Design System) :**
+    *   **Unification :** Les "Activités Récentes" du Dashboard utilisent désormais le composant officiel `MaintenanceLogItem`. Cela garantit que toute amélioration de style sur le journal de maintenance se répercute instantanément sur le tableau de bord.
+    *   **Contextualisation :** Ajout d'un en-tête avec la marque et le modèle au-dessus des logs dans le mode "Global" pour identifier immédiatement quelle moto est concernée.
+*   **Refonte ergonomique de la carte de maintenance (`MaintenanceLogItem`) :**
+    *   **Gestion des débordements :** Refonte du footer pour permettre un retour à la ligne naturel en cas de textes longs, évitant que les informations ne sortent de la carte.
+    *   **Lisibilité accrue :**
+        *   Empilement vertical de la **Date** et du **Kilométrage** (suppression du séparateur central) pour un meilleur alignement.
+        *   Mise en avant du **Coût** : placé sur la droite, en gras (`Outfit_700Bold`), pour une lecture instantanée du montant.
+        *   Correction typographique : utilisation d'une espace insécable avant l'unité "km" pour éviter que celle-ci ne se retrouve seule à la ligne.
+*   **Fiabilisation des rapports de coûts :**
+    *   **Correction de mapping :** Résolution d'un bug dans le tableau "Répartition des coûts" qui ignorait les logs de type "Modification" suite à une erreur de clé (`modifications` vs `modification`). La répartition est désormais 100% fidèle à la réalité du garage.
 

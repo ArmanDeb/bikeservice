@@ -81,13 +81,13 @@ const styles = StyleSheet.create({
         color: '#FDFCF8',
     },
     sectionTitle: {
-        fontSize: 12,
+        fontSize: 11, // Reduced from 12 to fit longer words like KILOMÉTRAGE
         fontFamily: 'Outfit_700Bold',
         color: '#666660',
         textTransform: 'uppercase',
-        letterSpacing: 1,
-        marginBottom: 8,
-        marginTop: 24,
+        letterSpacing: 0.5, // Reduced from 1
+        marginBottom: 4, // Reduced from 8
+        marginTop: 16, // Reduced from 24
     },
     sectionTitleDark: {
         color: '#9CA3AF',
@@ -249,7 +249,7 @@ const MaintenanceDetailModalComponent = ({ visible, onClose, log, documents, onE
 
                     <ScrollView
                         style={{ flex: 1 }}
-                        contentContainerStyle={{ padding: 24, paddingBottom: 60, flexGrow: 1 }}
+                        contentContainerStyle={{ padding: 20, paddingBottom: 40, flexGrow: 1 }}
                         showsVerticalScrollIndicator={false}
                     >
                         {/* Title Section - Moved here */}
@@ -257,43 +257,50 @@ const MaintenanceDetailModalComponent = ({ visible, onClose, log, documents, onE
                             {log.title}
                         </Text>
                         {/* Info Section */}
-                        <View style={{ marginBottom: 32 }}>
+                        <View style={{ marginBottom: 24 }}>
                             {/* Date - Full Width */}
-                            <View style={{ marginBottom: 20 }}>
-                                <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>{t('maintenance.field.date')}</Text>
+                            <View style={{ marginBottom: 16 }}>
+                                <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]} numberOfLines={1} adjustsFontSizeToFit>{t('maintenance.field.date')}</Text>
                                 <Text style={[styles.valueText, isDark && styles.valueTextDark, { fontSize: 22, fontFamily: 'WorkSans_500Medium', textTransform: 'capitalize' }]}>
                                     {formatDate(log.date)}
                                 </Text>
                             </View>
 
-                            {/* Cost and Mileage - Row */}
-                            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
-                                <View style={{ flex: 1, backgroundColor: isDark ? '#323234' : '#FAFAF8', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: isDark ? '#4B5563' : '#E6E5E0' }}>
-                                    <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark, { marginTop: 0 }]}>{t('maintenance.field.cost')}</Text>
-                                    <Text style={[styles.valueText, isDark && styles.valueTextDark, { fontSize: 24, fontFamily: 'Outfit_700Bold', color: isDark ? '#FDFCF8' : '#1C1C1E' }]}>
-                                        {log.cost} €
-                                    </Text>
-                                </View>
-                                <View style={{ flex: 1, backgroundColor: isDark ? '#323234' : '#FAFAF8', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: isDark ? '#4B5563' : '#E6E5E0' }}>
-                                    <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark, { marginTop: 0 }]}>{t('maintenance.field.mileage')}</Text>
-                                    <Text style={[styles.valueText, isDark && styles.valueTextDark, { fontSize: 20, fontFamily: 'Outfit_700Bold' }]}>
-                                        {log.mileageAtLog.toLocaleString()} km
-                                    </Text>
-                                </View>
-                            </View>
-
-                            {/* Type */}
-                            <View style={{ flexDirection: 'row', marginBottom: 24 }}>
-                                <View style={{ flex: 1, backgroundColor: isDark ? '#323234' : '#FAFAF8', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: isDark ? '#4B5563' : '#E6E5E0' }}>
-                                    <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark, { marginTop: 0 }]}>{t('maintenance.field.type')}</Text>
-                                    <Text style={[styles.valueText, isDark && styles.valueTextDark, { fontSize: 18, fontFamily: 'WorkSans_500Medium' }]}>
+                            {/* Type - Moved here */}
+                            <View style={{ flexDirection: 'row', marginBottom: 12 }}>
+                                <View style={{ flex: 1, backgroundColor: isDark ? '#323234' : '#FAFAF8', padding: 12, borderRadius: 16, borderWidth: 1, borderColor: isDark ? '#4B5563' : '#E6E5E0' }}>
+                                    <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark, { marginTop: 0 }]} numberOfLines={1} adjustsFontSizeToFit>{t('maintenance.field.type')}</Text>
+                                    <Text style={[styles.valueText, isDark && styles.valueTextDark, { fontSize: 18, fontFamily: 'WorkSans_500Medium' },
+                                    log.type === 'periodic' && { color: isDark ? '#4ADE80' : '#15803D' },
+                                    log.type === 'repair' && { color: isDark ? '#EF6B6B' : '#BA4444' },
+                                    log.type === 'modification' && { color: isDark ? '#FACC15' : '#CA8A04' }
+                                    ]}>
                                         {t('maintenance.type.' + log.type)}
                                     </Text>
                                 </View>
                             </View>
 
+                            {/* Cost and Mileage - Row */}
+                            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
+                                <View style={{ flex: 1, backgroundColor: isDark ? '#323234' : '#FAFAF8', padding: 12, borderRadius: 16, borderWidth: 1, borderColor: isDark ? '#4B5563' : '#E6E5E0' }}>
+                                    <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark, { marginTop: 0 }]} numberOfLines={1} adjustsFontSizeToFit>{t('maintenance.field.cost')}</Text>
+                                    <Text style={[styles.valueText, isDark && styles.valueTextDark, { fontSize: 24, fontFamily: 'Outfit_700Bold', color: isDark ? '#FDFCF8' : '#1C1C1E' }]} numberOfLines={1} adjustsFontSizeToFit>
+                                        {log.cost} €
+                                    </Text>
+                                </View>
+                                <View style={{ flex: 1, backgroundColor: isDark ? '#323234' : '#FAFAF8', padding: 12, borderRadius: 16, borderWidth: 1, borderColor: isDark ? '#4B5563' : '#E6E5E0' }}>
+                                    <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark, { marginTop: 0 }]} numberOfLines={1} adjustsFontSizeToFit>{t('maintenance.field.mileage')}</Text>
+                                    <Text style={[styles.valueText, isDark && styles.valueTextDark, { fontSize: 20, fontFamily: 'Outfit_700Bold' }]} numberOfLines={1} adjustsFontSizeToFit>
+                                        {log.mileageAtLog.toLocaleString()} km
+                                    </Text>
+                                </View>
+                            </View>
+
+
+
+
                             {log.notes && (
-                                <View style={{ backgroundColor: isDark ? '#323234' : '#FAFAF8', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: isDark ? '#4B5563' : '#E6E5E0' }}>
+                                <View style={{ backgroundColor: isDark ? '#323234' : '#FAFAF8', padding: 12, borderRadius: 16, borderWidth: 1, borderColor: isDark ? '#4B5563' : '#E6E5E0' }}>
                                     <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark, { marginTop: 0 }]}>{t('maintenance.detail.notes')}</Text>
                                     <Text style={[styles.valueText, isDark && styles.valueTextDark, { lineHeight: 24 }]}>
                                         {log.notes}

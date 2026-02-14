@@ -271,9 +271,9 @@ export default function SettingsScreen() {
                                 <View style={styles.iconContainer}>
                                     <User size={20} color={iconColor} />
                                 </View>
-                                <View>
+                                <View style={{ flex: 1 }}>
                                     <Text style={styles.menuText}>{t('settings.user')}</Text>
-                                    <Text style={styles.menuSubText}>{user?.email}</Text>
+                                    <Text style={styles.menuSubText} numberOfLines={1} ellipsizeMode="tail">{user?.email}</Text>
                                 </View>
                             </View>
                         </View>
@@ -346,9 +346,6 @@ export default function SettingsScreen() {
                                 </View>
                             </View>
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                <View style={{ paddingHorizontal: 12, paddingVertical: 4, borderRadius: 8, borderWidth: 1, marginRight: 8, backgroundColor: isDark ? '#323234' : '#F5F5F0', borderColor: isDark ? '#3A3A3C' : '#E6E5E0' }}>
-                                    <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 12, color: isDark ? '#FDFCF8' : '#1C1C1E' }}>{language.toUpperCase()}</Text>
-                                </View>
                                 <ChevronRight size={20} color={chevronColor} style={{ transform: [{ rotate: '90deg' }] }} />
                             </View>
                         </Pressable>
@@ -449,7 +446,7 @@ export default function SettingsScreen() {
                                 <View style={styles.iconContainer}>
                                     <Shield size={20} color={iconColor} />
                                 </View>
-                                <View>
+                                <View style={{ flex: 1 }}>
                                     <Text style={styles.menuText}>{t('settings.privacy_policy')}</Text>
                                 </View>
                             </View>
@@ -464,7 +461,7 @@ export default function SettingsScreen() {
                                 <View style={styles.iconContainer}>
                                     <FileText size={20} color={iconColor} />
                                 </View>
-                                <View>
+                                <View style={{ flex: 1 }}>
                                     <Text style={styles.menuText}>{t('settings.terms_of_service')}</Text>
                                 </View>
                             </View>
