@@ -842,42 +842,49 @@ const WalletScreen = ({ documents, vehicles }: { documents: Document[], vehicles
     const legalDocs = filteredDocs.filter(d => ['registration', 'license', 'insurance', 'technical_control', 'coc'].includes(d.type))
     const historyDocs = filteredDocs.filter(d => ['invoice', 'other'].includes(d.type))
 
-    const renderDocItem = (item: Document) => (
-        <Pressable
-            key={item.id}
-            onPress={() => {
-                setViewingDoc(item)
-                setViewModalVisible(true)
-            }}
-            style={[styles.docItem, isDark && styles.docItemDark]}
-        >
-            <View
-                style={[styles.docIconContainer, isDark && styles.docIconContainerDark]}
+    const renderDocItem = (item: Document) => {
+        const typeLabel = t(`wallet.type.${item.type}`)
+        const showType = item.reference?.toLowerCase().trim() !== typeLabel.toLowerCase().trim()
+
+        return (
+            <Pressable
+                key={item.id}
+                onPress={() => {
+                    setViewingDoc(item)
+                    setViewModalVisible(true)
+                }}
+                style={[styles.docItem, isDark && styles.docItemDark]}
             >
-                <SmartImage
-                    localUri={item.localUri}
-                    remotePath={item.remotePath}
-                    style={{ width: '100%', height: '100%', borderRadius: 8 }}
-                    fallbackIconSize={20}
-                />
-            </View>
-            <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 18, color: isDark ? '#FDFCF8' : '#1C1C1E', marginBottom: 2 }} numberOfLines={1}>{item.reference || t('wallet.document.untitled')}</Text>
-                <Text style={{ fontFamily: 'WorkSans_500Medium', fontSize: 12, color: '#666660', textTransform: 'uppercase' }}>{t(`wallet.type.${item.type}`)}</Text>
-                {item.expiryDate && (
-                    <Text style={{ fontFamily: 'WorkSans_500Medium', fontSize: 12, color: '#BA4444', marginTop: 4 }}>
-                        {t('wallet.document.expires')}: {item.expiryDate.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US')}
-                    </Text>
-                )}
-            </View>
-            <ChevronRight size={20} color="#9CA3AF" />
-        </Pressable>
-    )
+                <View
+                    style={[styles.docIconContainer, isDark && styles.docIconContainerDark]}
+                >
+                    <SmartImage
+                        localUri={item.localUri}
+                        remotePath={item.remotePath}
+                        style={{ width: '100%', height: '100%', borderRadius: 8 }}
+                        fallbackIconSize={20}
+                    />
+                </View>
+                <View style={{ flex: 1 }}>
+                    <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 16, color: isDark ? '#FDFCF8' : '#1C1C1E', marginBottom: 2 }} numberOfLines={1}>{item.reference || t('wallet.document.untitled')}</Text>
+                    {showType && (
+                        <Text style={{ fontFamily: 'WorkSans_500Medium', fontSize: 12, color: '#666660', textTransform: 'uppercase' }}>{typeLabel}</Text>
+                    )}
+                    {item.expiryDate && (
+                        <Text style={{ fontFamily: 'WorkSans_500Medium', fontSize: 12, color: '#BA4444', marginTop: 4 }}>
+                            {t('wallet.document.expires')}: {item.expiryDate.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US')}
+                        </Text>
+                    )}
+                </View>
+                <ChevronRight size={20} color="#9CA3AF" />
+            </Pressable>
+        )
+    }
 
     return (
         <SafeAreaView style={[styles.container, isDark && styles.containerDark]} edges={['top']}>
             <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-            <View style={{ flex: 1, padding: 24 }}>
+            <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 24 }}>
                 {/* Header Contextuel */}
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                     <Text style={[styles.title, isDark && styles.titleDark]}>
@@ -913,7 +920,7 @@ const WalletScreen = ({ documents, vehicles }: { documents: Document[], vehicles
                             </View>
                         </View>
 
-                        <ScrollView showsVerticalScrollIndicator={false}>
+                        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
                             {legalDocs.length > 0 && (
                                 <View style={{ marginBottom: 24 }}>
                                     <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>{t('wallet.section.legal')}</Text>
@@ -940,7 +947,7 @@ const WalletScreen = ({ documents, vehicles }: { documents: Document[], vehicles
                         </ScrollView>
                     </>
                 ) : (
-                    <ScrollView showsVerticalScrollIndicator={false}>
+                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
                         <Text style={{ fontFamily: 'WorkSans_400Regular', fontSize: 18, color: '#666660', marginBottom: 24 }}>{t('wallet.select_bike_desc_full')}</Text>
                         {vehicles.map(v => (
                             <Pressable

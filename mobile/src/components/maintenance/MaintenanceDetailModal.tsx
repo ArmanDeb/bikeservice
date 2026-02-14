@@ -5,11 +5,13 @@ import { useTheme } from '../../context/ThemeContext'
 import MaintenanceLog from '../../database/models/MaintenanceLog'
 import Document from '../../database/models/Document'
 import { SmartImage } from '../SmartImage'
-import { Pencil, Trash2, X } from 'lucide-react-native'
+import { Pencil, Trash2, X, ChevronLeft } from 'lucide-react-native'
 import { database } from '../../database'
 import { Q } from '@nozbe/watermelondb'
 import { TableName } from '../../database/constants'
 import { withObservables } from '@nozbe/watermelondb/react'
+import ImageView from 'react-native-image-viewing'
+import { StorageService } from '../../services/StorageService'
 
 interface MaintenanceDetailModalProps {
     visible: boolean
@@ -38,6 +40,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 16,
         elevation: 10,
+        overflow: 'hidden', // Ensure content respects border radius
     },
     modalContentDark: {
         backgroundColor: '#2C2C2E',
@@ -47,19 +50,32 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 24,
+        paddingHorizontal: 24,
+        paddingTop: 24,
+        paddingBottom: 16,
         borderBottomWidth: 1,
         borderBottomColor: '#E6E5E0',
     },
     headerDark: {
         borderBottomColor: '#3A3A3C',
     },
+    bodyTitle: {
+        fontFamily: 'Outfit_700Bold',
+        fontSize: 28,
+        lineHeight: 34,
+        color: '#1C1C1E',
+        marginBottom: 24,
+    },
+    bodyTitleDark: {
+        color: '#FDFCF8',
+    },
     title: {
         fontFamily: 'Outfit_700Bold',
         fontSize: 24,
         color: '#1C1C1E',
         flex: 1,
-        marginRight: 16,
+        marginLeft: 12,
+        marginRight: 12,
     },
     titleDark: {
         color: '#FDFCF8',
@@ -98,46 +114,92 @@ const styles = StyleSheet.create({
         backgroundColor: '#3A3A3C',
         borderColor: '#4B5563',
     },
-    closeButton: {
-        padding: 12,
-        borderRadius: 12,
+    // closeButton style removed as it's no longer used at bottom
+    closeButtonHeader: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
         alignItems: 'center',
         justifyContent: 'center',
-        marginTop: 16,
+        backgroundColor: '#F5F5F0',
     },
+    closeButtonHeaderDark: {
+        backgroundColor: '#3A3A3C',
+    }
 })
-
-import ImageView from 'react-native-image-viewing'
-
-// ... existing imports ...
 
 const MaintenanceDetailModalComponent = ({ visible, onClose, log, documents, onEdit, onDelete }: MaintenanceDetailModalProps) => {
     const { t, language } = useLanguage()
     const { isDark } = useTheme()
     const [isImageViewVisible, setIsImageViewVisible] = useState(false)
-    const [pages, setPages] = useState<{ localUri: string, remotePath?: string }[]>([])
+    const [pages, setPages] = useState<{ localUri: string | null, remotePath: string | null }[]>([])
     const [currentImageIndex, setCurrentImageIndex] = useState(0)
+    const [galleryImages, setGalleryImages] = useState<{ uri: string }[]>([])
 
     const document = documents.length > 0 ? documents[0] : null
 
     useEffect(() => {
-        if (document) {
-            // Initial load
-            setPages([{ localUri: document.localUri || '', remotePath: document.remotePath }])
+        let isMounted = true
 
-            document.pages.fetch().then(fetchedPages => {
+        const loadImages = async () => {
+            if (!document) return
+
+            let initialPages: { localUri: string | null, remotePath: string | null }[] = [{
+                localUri: document.localUri || null,
+                remotePath: document.remotePath || null
+            }]
+
+            try {
+                // Fetch additional pages if any
+                const fetchedPages = await document.pages.fetch()
                 if (fetchedPages.length > 0) {
                     const sorted = fetchedPages.sort((a, b) => a.pageIndex - b.pageIndex)
-                    setPages(sorted.map(p => ({ localUri: p.localUri, remotePath: p.remotePath })))
+                    initialPages = sorted.map(p => ({
+                        localUri: p.localUri || null,
+                        remotePath: p.remotePath || null
+                    }))
                 }
-            })
-        } else {
-            setPages([])
+            } catch (e) {
+                console.error('Error fetching pages:', e)
+            }
+
+            if (!isMounted) return
+
+            setPages(initialPages)
+
+            // Resolve URIs for ImageView
+            const resolved = await Promise.all(initialPages.map(async (p) => {
+                // Try remote path first for reliability
+                if (p.remotePath) {
+                    try {
+                        const signed = await StorageService.downloadFile(p.remotePath)
+                        if (signed) return { uri: signed }
+                    } catch (e) {
+                        console.warn('Failed to resolve remote path:', e)
+                    }
+                }
+
+                // Fallback to local URI if remote failed or not available
+                if (p.localUri) return { uri: p.localUri }
+
+                return null
+            }))
+
+            if (isMounted) {
+                const validImages = resolved.filter((i): i is { uri: string } => i !== null)
+                setGalleryImages(validImages)
+            }
+        }
+
+        loadImages()
+
+        return () => {
+            isMounted = false
         }
     }, [document])
 
-    // Prepare images for ImageView
-    const images = pages.map(p => ({ uri: p.localUri }))
+    // Use resolved images for ImageView
+    const images = galleryImages
 
     if (!log) return null
 
@@ -151,13 +213,24 @@ const MaintenanceDetailModalComponent = ({ visible, onClose, log, documents, onE
     }
 
     return (
-        <Modal visible={visible} animationType="slide" transparent>
-            <Pressable style={styles.modalOverlay} onPress={onClose}>
-                <Pressable onPress={(e) => e.stopPropagation()} style={[styles.modalContent, isDark && styles.modalContentDark]}>
+        <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+            <View style={styles.modalOverlay}>
+                <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+                <View style={[styles.modalContent, isDark && styles.modalContentDark]}>
                     <View style={[styles.header, isDark && styles.headerDark]}>
-                        <Text style={[styles.title, isDark && styles.titleDark]} numberOfLines={1}>
-                            {log.title}
-                        </Text>
+                        <Pressable
+                            onPress={onClose}
+                            style={({ pressed }) => [
+                                styles.actionButton,
+                                isDark && styles.actionButtonDark,
+                                { opacity: pressed ? 0.7 : 1, width: 40, height: 40 }
+                            ]}
+                        >
+                            <ChevronLeft size={24} color={isDark ? '#FDFCF8' : '#1C1C1E'} />
+                        </Pressable>
+
+                        <View style={{ flex: 1 }} />
+
                         <View style={{ flexDirection: 'row', gap: 8 }}>
                             <Pressable
                                 onPress={onEdit}
@@ -174,8 +247,16 @@ const MaintenanceDetailModalComponent = ({ visible, onClose, log, documents, onE
                         </View>
                     </View>
 
-                    <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 40 }}>
-                        {/* Info Section - Reordered to be First */}
+                    <ScrollView
+                        style={{ flex: 1 }}
+                        contentContainerStyle={{ padding: 24, paddingBottom: 60, flexGrow: 1 }}
+                        showsVerticalScrollIndicator={false}
+                    >
+                        {/* Title Section - Moved here */}
+                        <Text style={[styles.bodyTitle, isDark && styles.bodyTitleDark]}>
+                            {log.title}
+                        </Text>
+                        {/* Info Section */}
                         <View style={{ marginBottom: 32 }}>
                             {/* Date - Full Width */}
                             <View style={{ marginBottom: 20 }}>
@@ -221,7 +302,7 @@ const MaintenanceDetailModalComponent = ({ visible, onClose, log, documents, onE
                             )}
                         </View>
 
-                        {/* Document Images - Now Second */}
+                        {/* Document Images */}
                         {document && pages.length > 0 && (
                             <View>
                                 <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>{t('maintenance.document.view')}</Text>
@@ -268,13 +349,8 @@ const MaintenanceDetailModalComponent = ({ visible, onClose, log, documents, onE
                                 )}
                             </View>
                         )}
-
-                        <Pressable onPress={onClose} style={styles.closeButton}>
-                            <Text style={{ fontFamily: 'WorkSans_600SemiBold', fontSize: 16, color: '#666660' }}>{t('common.close')}</Text>
-                        </Pressable>
                     </ScrollView>
 
-                    {/* Full Screen Image Viewer */}
                     <ImageView
                         images={images}
                         imageIndex={currentImageIndex}
@@ -283,8 +359,8 @@ const MaintenanceDetailModalComponent = ({ visible, onClose, log, documents, onE
                         swipeToCloseEnabled={true}
                         doubleTapToZoomEnabled={true}
                     />
-                </Pressable>
-            </Pressable>
+                </View>
+            </View>
         </Modal>
     )
 }

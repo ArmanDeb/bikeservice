@@ -1079,9 +1079,9 @@ const MaintenanceScreen = ({ logs, vehicles }: { logs: MaintenanceLog[], vehicle
     )
 
     return (
-        <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
+        <SafeAreaView style={[styles.container, isDark && styles.containerDark]} edges={['top']}>
             <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-            <View style={{ flex: 1, padding: 24 }}>
+            <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 24 }}>
                 {/* Header Contextuel */}
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                     <Text style={[styles.headerTitle, isDark && styles.headerTitleDark]}>
@@ -1201,6 +1201,7 @@ const MaintenanceScreen = ({ logs, vehicles }: { logs: MaintenanceLog[], vehicle
                                 <FlatList
                                     data={sortedLogs}
                                     keyExtractor={item => item.id}
+                                    contentContainerStyle={{ paddingBottom: 100 }}
                                     showsVerticalScrollIndicator={false}
                                     renderItem={renderItem}
                                     ListEmptyComponent={
@@ -1217,7 +1218,7 @@ const MaintenanceScreen = ({ logs, vehicles }: { logs: MaintenanceLog[], vehicle
                         );
                     })()
                 ) : (
-                    <ScrollView showsVerticalScrollIndicator={false}>
+                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
                         <Text style={{ color: isDark ? '#9CA3AF' : '#666660', marginBottom: 24, fontSize: 18, fontFamily: 'WorkSans_400Regular' }}>{t('maintenance.select_bike_desc_full')}</Text>
                         {vehicles.map(v => (
                             <Pressable
