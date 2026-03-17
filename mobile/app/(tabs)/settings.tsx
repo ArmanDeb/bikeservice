@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Switch, StatusBar, Alert, Linking, Modal, FlatList, StyleSheet, Pressable } from 'react-native'
+import { View, Text, ScrollView, Switch, StatusBar, Linking, Modal, FlatList, StyleSheet, Pressable } from 'react-native'
+import Constants from 'expo-constants'
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/context/AuthContext';
@@ -12,7 +13,7 @@ import { database } from '../../src/database';
 import { ConfirmationModal } from '../../src/components/common/ConfirmationModal';
 import { sync } from '../../src/services/SyncService';
 import {
-    User, Globe, Moon, Sun, BookOpen, LogOut, Bug, Lightbulb, Trash2, Check, Cloud, Bell, ChevronRight, Info,
+    User, Globe, Moon, Sun, BookOpen, LogOut, Trash2, Check, Cloud, Bell, ChevronRight,
     Shield, FileText, RefreshCw
 } from 'lucide-react-native';
 
@@ -54,11 +55,9 @@ export default function SettingsScreen() {
             const supported = await Linking.canOpenURL(url);
             if (supported) {
                 await Linking.openURL(url);
-            } else {
-                showAlert(t('alert.error'), t('settings.link_error'));
             }
         } catch (error) {
-            showAlert(t('alert.error'), t('settings.link_error'));
+            console.error('Link error:', error);
         }
     };
 
@@ -413,26 +412,6 @@ export default function SettingsScreen() {
                     </View>
                 </View>
 
-                {/* Support Section */}
-                <View style={{ marginBottom: 0, marginTop: 8 }}>
-                    <Text style={styles.sectionTitle}>{t('settings.support')}</Text>
-                    <View style={styles.sectionCard}>
-                        <Pressable
-                            onPress={() => openLink('mailto:support@bikeservice.app?subject=Bug Report')}
-                            style={styles.menuItem}
-                        >
-                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                <View style={styles.iconContainer}>
-                                    <Bug size={20} color={iconColor} />
-                                </View>
-                                <View>
-                                    <Text style={styles.menuText}>{t('settings.report_bug')}</Text>
-                                </View>
-                            </View>
-                            <ChevronRight size={20} color={chevronColor} />
-                        </Pressable>
-                    </View>
-                </View>
 
                 {/* Legal Section */}
                 <View style={{ marginBottom: 0, marginTop: 8 }}>
@@ -475,7 +454,7 @@ export default function SettingsScreen() {
                     <View style={[styles.sectionCard, { padding: 20 }]}>
                         <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
                             <Text style={styles.menuText}>BikeService</Text>
-                            <Text style={[styles.menuSubText, { marginLeft: 8 }]}>v1.0.0 (Alpha)</Text>
+                            <Text style={[styles.menuSubText, { marginLeft: 8 }]}>v{Constants.expoConfig?.version ?? '1.0.0'} (Alpha)</Text>
                         </View>
                     </View>
                 </View>
