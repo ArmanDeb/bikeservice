@@ -13,9 +13,9 @@ export default function AddFirstVehicleScreen() {
     const { isDark } = useTheme()
     const router = useRouter()
 
-    const handleSubmit = async (data: { brand: string, model: string, year: number, mileage: number, vin?: string }) => {
+    const handleSubmit = async (data: { brand: string, model: string, year: number, mileage: number, vin?: string, catalogId?: string }) => {
         try {
-            await VehicleService.createVehicle(data.brand, data.model, data.year, data.vin, data.mileage)
+            await VehicleService.createVehicle(data.brand, data.model, data.year, data.vin, data.mileage, data.catalogId)
             // Navigate to main app
             router.replace('/(tabs)')
         } catch (e) {

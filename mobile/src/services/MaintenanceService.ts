@@ -18,7 +18,7 @@ export const MaintenanceService = {
                 Q.where('vehicle_id', vehicleId),
                 Q.sortBy('date', Q.desc)
             )
-            .observe()
+            .observeWithColumns(['title', 'type', 'cost', 'date', 'mileage_at_log', 'notes'])
     },
 
     // Observe all logs, sorted by date desc
@@ -28,7 +28,7 @@ export const MaintenanceService = {
             .query(
                 Q.sortBy('date', Q.desc)
             )
-            .observe()
+            .observeWithColumns(['title', 'type', 'cost', 'date', 'mileage_at_log', 'notes'])
     },
 
     // Create a new maintenance log with STRICT validation

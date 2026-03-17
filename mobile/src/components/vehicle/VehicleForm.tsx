@@ -4,13 +4,13 @@ import { useLanguage } from '../../context/LanguageContext'
 import { useTheme } from '../../context/ThemeContext'
 import { SearchableSelector } from '../common/SearchableSelector'
 import { ModalInput } from '../common/ModalInput'
-import { MOTORCYCLE_DATA, BRANDS } from '../../data/motorcycleData'
+import { CatalogService, CatalogEntry } from '../../services/CatalogService'
 import { Trash2 } from 'lucide-react-native'
 import Vehicle from '../../database/models/Vehicle'
 
 interface VehicleFormProps {
     initialValues?: Vehicle | null
-    onSubmit: (data: { brand: string, model: string, year: number, mileage: number, vin?: string }) => Promise<void>
+    onSubmit: (data: { brand: string, model: string, year: number, mileage: number, vin?: string, catalogId?: string }) => Promise<void>
     onDelete?: () => void
     onCancel?: () => void
     submitLabel: string
@@ -23,40 +23,60 @@ export const VehicleForm = ({ initialValues, onSubmit, onDelete, onCancel, submi
 
     const [brand, setBrand] = useState('')
     const [model, setModel] = useState('')
+    const [catalogId, setCatalogId] = useState<string | undefined>(undefined)
     const [year, setYear] = useState('')
     const [mileage, setMileage] = useState('')
     const [vin, setVin] = useState('')
+
+    // Catalog state
+    const [brandsList, setBrandsList] = useState<string[]>([])
+    const [modelsList, setModelsList] = useState<CatalogEntry[]>([])
 
     // Alert state
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
+        CatalogService.getBrands().then(setBrandsList)
+    }, [])
+
+    useEffect(() => {
+        if (brand) {
+            CatalogService.getModelsForBrand(brand).then(setModelsList)
+        } else {
+            setModelsList([])
+        }
+    }, [brand])
+
+    useEffect(() => {
         if (initialValues) {
             setBrand(initialValues.brand)
             setModel(initialValues.model)
+            setCatalogId(initialValues.catalogId)
             setYear(initialValues.year?.toString() || '')
             setMileage(initialValues.currentMileage.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."))
             setVin(initialValues.vin || '')
         } else {
             setBrand('')
             setModel('')
+            setCatalogId(undefined)
             setYear('')
             setMileage('')
             setVin('')
         }
     }, [initialValues])
 
-    const getModelsForBrand = () => {
-        if (MOTORCYCLE_DATA[brand]) return MOTORCYCLE_DATA[brand]
-        const matchingBrand = BRANDS.find(b => b.toLowerCase() === brand.toLowerCase())
-        if (matchingBrand && MOTORCYCLE_DATA[matchingBrand]) return MOTORCYCLE_DATA[matchingBrand]
-        return []
-    }
-    const availableModels = getModelsForBrand()
+    const availableModelNames = modelsList.map(m => m.model)
 
     const handleBrandSelect = (selectedBrand: string) => {
         setBrand(selectedBrand)
         setModel('')
+        setCatalogId(undefined)
+    }
+
+    const handleModelSelect = (selectedModel: string) => {
+        setModel(selectedModel)
+        const matched = modelsList.find(m => m.model === selectedModel)
+        setCatalogId(matched?.id || undefined)
     }
 
     const handleSubmit = async () => {
@@ -74,7 +94,8 @@ export const VehicleForm = ({ initialValues, onSubmit, onDelete, onCancel, submi
             model,
             year: yearInt,
             mileage: mileageInt,
-            vin: vin || undefined
+            vin: vin || undefined,
+            catalogId
         })
     }
 
@@ -90,7 +111,7 @@ export const VehicleForm = ({ initialValues, onSubmit, onDelete, onCancel, submi
                 label={t('garage.modal.brand')}
                 value={brand}
                 onSelect={handleBrandSelect}
-                options={BRANDS.filter(b => b !== 'Other')}
+                options={brandsList.filter(b => b !== 'Other')}
                 placeholder={t('garage.modal.brand_placeholder')}
                 searchPlaceholder={t('common.search')}
                 containerStyle={{ marginBottom: 16 }}
@@ -102,8 +123,8 @@ export const VehicleForm = ({ initialValues, onSubmit, onDelete, onCancel, submi
             <SearchableSelector
                 label={t('garage.modal.model')}
                 value={model}
-                onSelect={setModel}
-                options={availableModels}
+                onSelect={handleModelSelect}
+                options={availableModelNames}
                 placeholder={brand ? t('garage.modal.model_placeholder') : t('garage.modal.model_placeholder_no_brand')}
                 searchPlaceholder={t('common.search')}
                 containerStyle={{ marginBottom: 16 }}

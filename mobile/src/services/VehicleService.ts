@@ -15,7 +15,7 @@ export const VehicleService = {
 
 
     // Create a new vehicle
-    createVehicle: async (brand: string, model: string, year: number | undefined, vin: string | undefined, initialMileage: number) => {
+    createVehicle: async (brand: string, model: string, year: number | undefined, vin: string | undefined, initialMileage: number, catalogId?: string) => {
         await database.write(async () => {
             // Get current max display order
             const currentVehicles = await database.collections.get<Vehicle>(TableName.VEHICLES).query().fetch()
@@ -28,13 +28,14 @@ export const VehicleService = {
                 vehicle.vin = vin
                 vehicle.currentMileage = initialMileage
                 vehicle.displayOrder = maxOrder + 1
+                vehicle.catalogId = catalogId
             })
         })
         sync()
     },
 
     // Update vehicle details
-    updateVehicle: async (vehicle: Vehicle, brand: string, model: string, year?: number, vin?: string, mileage?: number) => {
+    updateVehicle: async (vehicle: Vehicle, brand: string, model: string, year?: number, vin?: string, mileage?: number, catalogId?: string) => {
         await database.write(async () => {
             await vehicle.update(v => {
                 v.brand = brand
@@ -43,6 +44,9 @@ export const VehicleService = {
                 v.vin = vin
                 if (mileage !== undefined) {
                     v.currentMileage = mileage
+                }
+                if (catalogId !== undefined) {
+                    v.catalogId = catalogId
                 }
             })
         })

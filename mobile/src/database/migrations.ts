@@ -100,6 +100,18 @@ export const migrations = schemaMigrations({
                     })
                 }
             ]
+        },
+        {
+            toVersion: 7,
+            steps: [
+                {
+                    type: 'add_columns',
+                    table: 'vehicles',
+                    columns: [
+                        { name: 'catalog_id', type: 'string', isOptional: true }
+                    ]
+                }
+            ]
         }
     ],
 })

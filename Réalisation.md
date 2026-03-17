@@ -53,11 +53,53 @@ Pour réaliser cette fonctionnalité, j'ai dû orchestrer plusieurs briques tech
 
 ## 3. Implémentation de la persistance (WatermelonDB & Supabase)
 
-J'ai passé pas mal de temps sur la configuration du schéma de la base de données. Voici comment j'ai structuré mes modèles :
+Le système repose sur une architecture **Offline-First**. L'application stocke les données localement dans WatermelonDB (SQLite) et les synchronise de manière bidirectionnelle avec Supabase (PostgreSQL).
 
-1.  **Vehicle** : L'entité parente.
+> [!NOTE]
+> Pour une analyse technique détaillée de la structure des tables, des types de données et des décisions d'architecture (IDs Text, Sync Engine, RLS), consultez le document dédié : [DATABASE_ARCHITECTURE.md](./DATABASE_ARCHITECTURE.md).
+
+Voici un aperçu de la structure des modèles et du flux de données :
+
+```mermaid
+erDiagram
+    %% Local WatermelonDB Models
+    User ||--o{ Vehicle : owns
+    Vehicle ||--o{ MaintenanceLog : has
+    Vehicle ||--o{ Document : links_to
+    MaintenanceLog ||--o{ Document : supported_by
+    Document ||--o{ DocumentPage : contains
+    Vehicle }|--|| MotorcycleCatalog : "references (catalog_id)"
+
+    %% Architecture & Synchronisation
+    subgraph "Local (Offline-First)"
+        WatermelonDB [WatermelonDB SQLite]
+    end
+
+    subgraph "Cloud (Supabase)"
+        SupabaseDB [(PostgreSQL DB)]
+        Storage [Supabase Storage buckets]
+    end
+
+    WatermelonDB <-->|SyncService (bidirectional)| SupabaseDB
+    WatermelonDB -->|Upload files| Storage
+```
+
+### 3.1 Pourquoi des IDs de type "Text" ?
+
+Dans le schéma de la base de données (visible dans le diagramme ci-dessus), on remarque que la majorité des clés primaires (`id`) sont de type `text` plutôt que `integer`. C'est un choix d'architecture crucial pour plusieurs raisons :
+
+1.  **Conception Offline-First (Évitement de collisions) :** Dans une application classique, c'est le serveur qui attribue un numéro (1, 2, 3...) lors de l'insertion. Ici, l'utilisateur doit pouvoir créer une moto ou un log de maintenance alors qu'il est **hors ligne** dans son garage. Son téléphone génère donc immédiatement un ID unique (UUID ou chaîne aléatoire). Si deux utilisateurs créent des données hors ligne en même temps, l'utilisation de texte long garantit statistiquement qu'il n'y aura jamais de collision lors de la synchronisation cloud.
+2.  **Exigence de WatermelonDB :** La bibliothèque de base de données locale que j'utilise impose que les IDs soient des chaînes de caractères (`string`) pour pouvoir gérer ses propres mécanismes de suivi et de réconciliation de données de manière performante.
+3.  **Consistance de la Synchro :** En gardant le même type `text` sur Supabase, le `SyncService` n'a aucune transformation complexe à faire. L'ID né sur le téléphone reste l'ID unique dans le cloud, facilitant énormément le debugging et le traçage des relations entre les tables.
+
+### 3.2 Architecture du flux de synchronisation
+
+Le système repose sur quatre entités principales synchronisées :
+
+1.  **Vehicle** : L'entité parente contenant les informations générales et le `catalog_id` (référence vers le catalogue des motos).
 2.  **MaintenanceLog** : Relié au véhicule (Relation 1-N).
-3.  **Document** : Relié au véhicule ou au log.
+3.  **Document** : Relié au véhicule ou au log. Contient les métadonnées du fichier (titre, date).
+4.  **DocumentPage** : Nouvelle entité (v7) représentant les pages physiques d'un document multi-pages.
 
 Le passage à une architecture asynchrone a été un vrai challenge, car chaque écriture en base doit être traitée via des fonctions "action" pour garantir l'intégrité des données lors de la synchronisation.
 
@@ -254,4 +296,22 @@ Cette section retrace l'évolution du projet au jour le jour, mes hésitations e
         *   Correction typographique : utilisation d'une espace insécable avant l'unité "km" pour éviter que celle-ci ne se retrouve seule à la ligne.
 *   **Fiabilisation des rapports de coûts :**
     *   **Correction de mapping :** Résolution d'un bug dans le tableau "Répartition des coûts" qui ignorait les logs de type "Modification" suite à une erreur de clé (`modifications` vs `modification`). La répartition est désormais 100% fidèle à la réalité du garage.
+
+### 17 Mars 2026 : Refonte de la base de données, Catalogue Motos et Sécurité (V7)
+
+*   **Sécurisation totale des données (RLS Supabase) :**
+    *   **Problème :** Les politiques de sécurité (Row Level Security) sur Supabase étaient initialement des "placeholders" permissifs, créant une faille de confidentialité. L'ID utilisateur (`user_id`) manquait également sur le schéma Supabase de plusieurs tables (`vehicles`, `maintenance_logs`).
+    *   **Solution :** Refonte complète du fichier `supabase_schema.sql` (source de vérité) et création d'une migration stricte (`supabase_migration_v7.sql`). Le `user_id` est maintenant un champ obligatoire, et toutes les politiques RLS imposent la correspondance `auth.uid() = user_id`.
+*   **Création du Catalogue Motos (`motorcycle_catalog`) :**
+    *   **Objectif :** Remplacer le fichier statique TypeScript de 400 lignes par une véritable table en base de données, permettant d'ajouter facilement de nouveaux modèles sans avoir à mettre à jour l'application, et ouvrant la voie à des fiches techniques.
+    *   **Développement :** 
+        *   Création de la table `motorcycle_catalog` (sans RLS, lecture publique autorisée).
+        *   Ajout de la colonne `catalog_id` (ForeignKey) sur la table locale WatermelonDB `vehicles` (Migration V7) et sur Supabase.
+        *   Écriture d'un script Node.js (`seed_catalog.ts`) pour injecter et enrichir dynamiquement notre ancienne base locale vers Supabase (avec extraction heuristique de la cylindrée et de la catégorie).
+*   **Refonte de l'interface d'ajout de véhicule (UI/UX) :**
+    *   **Service de Cache :** Création du `CatalogService` pour récupérer les marques et modèles depuis Supabase, avec mise en cache locale (AsyncStorage, expiration 7 jours) et *fallback* sur la base locale en cas de perte de réseau.
+    *   **Interface :** Mise à jour du composant `VehicleForm` pour fonctionner de manière asynchrone avec ce nouveau service et sauvegarder le `catalog_id`.
+*   **Évolution du Sync Engine :**
+    *   **Nouvelles tables :** Intégration de la synchronisation bidirectionnelle pour la nouvelle table `document_pages` (liée au wallet).
+    *   **Assainissement des données :** Refonte de la fonction `sanitize` dans le `SyncService` pour "nettoyer" la donnée avant envoi au cloud (injection dynamique du `user_id` et suppression de champs purement locaux comme `local_uri` pour alléger la base de données).
 

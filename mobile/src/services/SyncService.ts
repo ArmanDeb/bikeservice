@@ -42,6 +42,14 @@ export async function sync() {
             if (docsError) throw new Error('Docs Fetch Error: ' + docsError.message)
             console.log(`📥 Sync: Fetched ${docs?.length || 0} docs`)
 
+            const { data: docPages, error: docPagesError } = await supabase
+                .from(TableName.DOCUMENT_PAGES)
+                .select('*')
+                .gt('updated_at', lastPulled)
+
+            if (docPagesError) throw new Error('Doc Pages Fetch Error: ' + docPagesError.message)
+            console.log(`📥 Sync: Fetched ${docPages?.length || 0} doc pages`)
+
             // 3. Format for WatermelonDB
             const safeTimestamp = (ts: any) => {
                 if (typeof ts === 'number') return ts
@@ -66,6 +74,7 @@ export async function sync() {
                 [TableName.VEHICLES]: processChanges(vehicles || []),
                 [TableName.MAINTENANCE_LOGS]: processChanges(logs || []),
                 [TableName.DOCUMENTS]: processChanges(docs || []),
+                [TableName.DOCUMENT_PAGES]: processChanges(docPages || []),
             }
 
             // 4. Return
@@ -81,11 +90,13 @@ export async function sync() {
                 console.warn("⚠️ Syncing without authenticated user - Supabase writes may fail if RLS is active")
             }
 
-            const sanitize = (record: any) => {
+            const sanitize = (record: any, opts?: { injectUserId?: boolean, stripFields?: string[] }) => {
                 const { _status, _changed, ...rest } = record
-                // Inject user_id if we have one and record doesn't (or overwrite to be safe)
-                if (user) {
+                if (opts?.injectUserId !== false && user) {
                     rest.user_id = user.id
+                }
+                if (opts?.stripFields) {
+                    for (const f of opts.stripFields) delete rest[f]
                 }
                 return rest
             }
@@ -96,10 +107,16 @@ export async function sync() {
             const { created: createdVehicles, updated: updatedVehicles, deleted: deletedVehicles } = changesSafe[TableName.VEHICLES]
             const { created: createdLogs, updated: updatedLogs, deleted: deletedLogs } = changesSafe[TableName.MAINTENANCE_LOGS]
             const { created: createdDocs, updated: updatedDocs, deleted: deletedDocs } = changesSafe[TableName.DOCUMENTS]
+            const { created: createdDocPages, updated: updatedDocPages, deleted: deletedDocPages } = changesSafe[TableName.DOCUMENT_PAGES] || { created: [], updated: [], deleted: [] }
 
             // ============================================
             // PHASE 1: DELETES (Reverse order for FK constraints)
             // ============================================
+
+            if (deletedDocPages && deletedDocPages.length > 0) {
+                const { error } = await supabase.from(TableName.DOCUMENT_PAGES).delete().in('id', deletedDocPages)
+                if (error) throw new Error(`Doc Page Delete Error: ${error.message}`)
+            }
 
             if (deletedDocs.length > 0) {
                 const { error } = await supabase.from(TableName.DOCUMENTS).delete().in('id', deletedDocs)
@@ -122,32 +139,42 @@ export async function sync() {
 
             // Vehicles
             if (createdVehicles.length > 0) {
-                const { error } = await supabase.from(TableName.VEHICLES).upsert(createdVehicles.map(sanitize))
+                const { error } = await supabase.from(TableName.VEHICLES).upsert(createdVehicles.map((r: any) => sanitize(r)))
                 if (error) throw new Error(`Vehicle Insert Error: ${error.message}`)
             }
             if (updatedVehicles.length > 0) {
-                const { error } = await supabase.from(TableName.VEHICLES).upsert(updatedVehicles.map(sanitize))
+                const { error } = await supabase.from(TableName.VEHICLES).upsert(updatedVehicles.map((r: any) => sanitize(r)))
                 if (error) throw new Error(`Vehicle Update Error: ${error.message}`)
             }
 
             // Logs
             if (createdLogs.length > 0) {
-                const { error } = await supabase.from(TableName.MAINTENANCE_LOGS).upsert(createdLogs.map(sanitize))
+                const { error } = await supabase.from(TableName.MAINTENANCE_LOGS).upsert(createdLogs.map((r: any) => sanitize(r)))
                 if (error) throw new Error(`Log Insert Error: ${error.message}`)
             }
             if (updatedLogs.length > 0) {
-                const { error } = await supabase.from(TableName.MAINTENANCE_LOGS).upsert(updatedLogs.map(sanitize))
+                const { error } = await supabase.from(TableName.MAINTENANCE_LOGS).upsert(updatedLogs.map((r: any) => sanitize(r)))
                 if (error) throw new Error(`Log Update Error: ${error.message}`)
             }
 
             // Documents
             if (createdDocs.length > 0) {
-                const { error } = await supabase.from(TableName.DOCUMENTS).upsert(createdDocs.map(sanitize))
+                const { error } = await supabase.from(TableName.DOCUMENTS).upsert(createdDocs.map((r: any) => sanitize(r, { stripFields: ['local_uri'] })))
                 if (error) throw new Error(`Doc Insert Error: ${error.message}`)
             }
             if (updatedDocs.length > 0) {
-                const { error } = await supabase.from(TableName.DOCUMENTS).upsert(updatedDocs.map(sanitize))
+                const { error } = await supabase.from(TableName.DOCUMENTS).upsert(updatedDocs.map((r: any) => sanitize(r, { stripFields: ['local_uri'] })))
                 if (error) throw new Error(`Doc Update Error: ${error.message}`)
+            }
+
+            // Document Pages
+            if (createdDocPages && createdDocPages.length > 0) {
+                const { error } = await supabase.from(TableName.DOCUMENT_PAGES).upsert(createdDocPages.map((r: any) => sanitize(r, { injectUserId: false, stripFields: ['local_uri'] })))
+                if (error) throw new Error(`Doc Page Insert Error: ${error.message}`)
+            }
+            if (updatedDocPages && updatedDocPages.length > 0) {
+                const { error } = await supabase.from(TableName.DOCUMENT_PAGES).upsert(updatedDocPages.map((r: any) => sanitize(r, { injectUserId: false, stripFields: ['local_uri'] })))
+                if (error) throw new Error(`Doc Page Update Error: ${error.message}`)
             }
         },
     })

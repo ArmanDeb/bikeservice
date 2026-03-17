@@ -2,98 +2,98 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Réalisation.md — Mandatory Update Rule
+
+After every session where code is changed, append an entry to `Réalisation.md`:
+- New dated section under `## 4. Journal de bord` in French, matching the existing tone
+- Bullet points for actions, decisions, and rationale (name specific files/services touched)
+- New row in `## 5. Problèmes rencontrés & Solutions` for every bug fixed
+
+## Agent Framework (Antigravity Kit)
+
+`.agent/` contains the full protocol — follow `AGENT_FLOW.md` before any code or design work:
+
+1. **Classify** the request (QUESTION / SURVEY / SIMPLE CODE / COMPLEX CODE / DESIGN / SLASH CMD)
+2. **Route** to the correct agent → read `.agent/agents/{agent}.md`, announce `Applying knowledge of @[agent-name]...`, load its `skills:`
+3. **Socratic Gate** — new features: ask ≥3 questions before coding; bug fixes: confirm impact
+4. **Load skills selectively** — read `SKILL.md` index first, then only relevant sections
+5. **Validate** with `python .agent/scripts/checklist.py .` before marking complete
+
+| Domain | Agent | Key Skills |
+|--------|-------|------------|
+| Mobile (RN/Expo) | `mobile-developer` | `mobile-design` |
+| Database / schema | `database-architect` | `database-design` |
+| Debugging | `debugger` | `systematic-debugging` |
+| Multi-domain | `orchestrator` | `parallel-agents`, `behavioral-modes` |
+| Planning | `project-planner` | `brainstorming`, `plan-writing` |
+
+**Mobile work always uses `mobile-developer`, never `frontend-specialist`.**
+
+Slash commands → read `.agent/workflows/{command}.md`. Available: `/brainstorm`, `/create`, `/debug`, `/deploy`, `/enhance`, `/orchestrate`, `/plan`, `/preview`, `/status`, `/test`, `/ui-ux-pro-max`
+
+Full reference: `.agent/ARCHITECTURE.md`
+
+---
+
 ## Project Overview
 
-Bike Service is a vehicle maintenance tracking app. It's a monorepo with two independent apps (no shared workspace tooling):
-
-- **`mobile/`** — React Native (Expo 54, SDK 54) mobile app (primary codebase)
-- **`web/`** — Next.js 16 marketing/docs site
+Monorepo with two independent apps:
+- **`mobile/`** — React Native (Expo 54) mobile app (primary codebase)
+- **`web/`** — Next.js 16 marketing site
 
 ## Commands
 
-### Mobile App (`mobile/`)
 ```bash
-cd mobile
-npm start          # Start Expo dev server
-npm run ios        # Run on iOS simulator
-npm run android    # Run on Android emulator
-```
+# Mobile (cd mobile first)
+npm start                                              # Expo dev server
+npm run ios / npm run android                         # Native simulator builds
 
-### Web App (`web/`)
-```bash
-cd web
-npm run dev        # Next.js dev server
-npm run build      # Production build
-npm run lint       # ESLint
+# EAS (from repo root)
+eas build --profile development --platform android    # Dev client APK
+eas build --profile preview --platform android        # Preview APK
+eas build --profile production                        # Store build
+
+# Web (cd web first)
+npm run dev / npm run build / npm run lint
 ```
 
 ## Architecture
 
-### Offline-First Data Sync
+### Offline-First Sync
 
-The core architectural pattern is **offline-first** using WatermelonDB (SQLite) as the local database with Supabase (PostgreSQL) as the cloud backend.
+**WatermelonDB** (SQLite) is the local DB; **Supabase** (PostgreSQL) is the cloud backend. `SyncService` pulls `updated_at > lastPulledAt`, then pushes local changes respecting FK order (deletes: documents → logs → vehicles; creates: reverse). Supabase uses soft deletes (`deleted_at`). Sync triggers on app launch in `mobile/app/_layout.tsx`.
 
-- **WatermelonDB** provides the local data layer with reactive queries via RxJS `.observe()`
-- **SyncService** (`mobile/src/services/SyncService.ts`) implements the WatermelonDB sync protocol: pull changes from Supabase where `updated_at > lastPulledAt`, then push local changes
-- Push phase respects FK constraints: deletes in reverse order (documents → logs → vehicles), creates/updates in forward order
-- Supabase uses **soft deletes** (`deleted_at` column) for sync consistency
-- Sync is triggered on app launch after authentication (in `mobile/app/_layout.tsx`)
+### Database Schema (v6)
 
-### Database Schema
-
-WatermelonDB schema at version 6 (`mobile/src/database/schema.ts`), with migrations in `mobile/src/database/migrations.ts`.
-
-Four tables: `vehicles`, `maintenance_logs`, `documents`, `document_pages`
-
-Key relationships:
+Four tables: `vehicles`, `maintenance_logs`, `documents`, `document_pages`. Key FKs:
 - `maintenance_logs.vehicle_id` → `vehicles.id`
-- `documents.vehicle_id` → `vehicles.id` (nullable — `null` for user-level docs like license)
-- `documents.log_id` → `maintenance_logs.id` (nullable — links invoices to logs)
+- `documents.vehicle_id` → nullable (null = user-level doc, e.g. license shared across vehicles)
+- `documents.log_id` → nullable (links invoices to logs)
 - `document_pages.document_id` → `documents.id`
 
-Models use WatermelonDB decorators (`@field`, `@children`, `@writer`) in `mobile/src/database/models/`.
+Models in `mobile/src/database/models/` use `@field`, `@children`, `@writer` decorators. Always use `TableName` enum from `mobile/src/database/constants.ts`, never raw strings. Schema changes require updating `schema.ts` + `migrations.ts` (bump version) + Supabase table.
 
-### Context Providers
+### State Management
 
-State management uses React Context (`mobile/src/context/`):
-- **AuthContext** — Supabase session, sign-out, account deletion with full data cleanup
-- **VehicleContext** — Currently selected vehicle
-- **ThemeContext** — Dark/light mode with CSS variable injection for NativeWind
-- **LanguageContext** — i18n with ~20 supported languages (translation strings inline)
-- **NetworkContext** — Online/offline detection
+React Context in `mobile/src/context/`:
+- **AuthContext** — Supabase session, sign-out, account deletion + local DB wipe
+- **VehicleContext** — currently selected vehicle
+- **ThemeContext** — `dark` / `paper` (warm cream) / `system`; injects CSS vars via NativeWind `vars()`
+- **LanguageContext** — FR/EN only; translation strings inline in the file
+- **NetworkContext** — online/offline detection, triggers auto-sync on reconnect
 
-### Services Layer
+### Services (`mobile/src/services/`)
 
-All business logic lives in `mobile/src/services/`:
-- **SyncService** — WatermelonDB ↔ Supabase sync
-- **VehicleService** — Vehicle CRUD, reordering, cascade delete
-- **MaintenanceService** — Maintenance log operations
-- **DocumentService** — Document lifecycle (upload/download/delete with Supabase Storage)
-- **PDFService** — PDF generation from maintenance records via `expo-print`
-- **AIService** — Google Gemini (`gemini-flash-latest`) invoice scanning: image → base64 → Gemini → extracted maintenance data
-- **StorageService** — Expo file system operations
-- **SecureStorage** — Secure token storage adapter for Supabase auth
-- **TCOService** — Total Cost of Ownership calculations
+`VehicleService`, `MaintenanceService`, `DocumentService` (Supabase Storage), `PDFService` (expo-print), `AIService` (Gemini `gemini-flash-latest`, invoice OCR), `StorageService`, `SecureStorage`, `TCOService`, `SyncService`
 
 ### Navigation
 
-Expo Router file-based routing (`mobile/app/`):
-- `intro.tsx` → `auth/login.tsx` → `onboarding.tsx` → `(tabs)/`
-- Root `_layout.tsx` handles auth gating and initial sync
-- Tabs: Garage (index), Maintenance, Dashboard, Wallet (documents), Settings
-
-### Environment Variables
-
-Mobile app uses `EXPO_PUBLIC_` prefix for client-side env vars:
-- `EXPO_PUBLIC_SUPABASE_URL`
-- `EXPO_PUBLIC_SUPABASE_ANON_KEY`
-
-Configured in `mobile/src/services/Supabase.ts`.
+Expo Router: `intro.tsx` → `auth/login.tsx` → `onboarding.tsx` → `(tabs)/`
+Tabs: Garage (index), Maintenance, Dashboard, Wallet, Settings. Auth gating in root `_layout.tsx`.
 
 ## Key Technical Details
 
-- **TypeScript strict mode** enabled in both apps
-- **Decorators** are used for WatermelonDB models — Babel config includes `@babel/plugin-proposal-decorators` with `legacy: true` and `react-native-reanimated/plugin`
-- **NativeWind** (Tailwind for React Native) with custom semantic color tokens defined via CSS variables in `mobile/tailwind.config.js`
-- Supabase schema with RLS policies is in `supabase_schema.sql` at the repo root
-- When adding new WatermelonDB tables/columns: update `schema.ts`, add a migration in `migrations.ts`, bump schema version, and update the corresponding Supabase table
+- **Decorators**: Babel config uses `@babel/plugin-proposal-decorators` (`legacy: true`) + `react-native-reanimated/plugin`
+- **NativeWind**: semantic color tokens via CSS variables in `mobile/tailwind.config.js`
+- **Env vars**: `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` (configured in `mobile/src/services/Supabase.ts`)
+- **RLS policies + full schema**: `supabase_schema.sql` at repo root

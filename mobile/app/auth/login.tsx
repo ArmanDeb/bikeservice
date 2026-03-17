@@ -249,10 +249,11 @@ export default function LoginScreen() {
                             onChangeText={setPassword}
                             placeholder="••••••••"
                             secureTextEntry={true}
+                            containerStyle={{ marginBottom: 0 }}
                         />
                         <Pressable
                             onPress={() => router.push('/auth/forgot-password')}
-                            style={{ alignSelf: 'flex-end', marginTop: 8 }}
+                            style={{ alignSelf: 'flex-end', marginTop: 8, marginBottom: 24 }}
                         >
                             <Text style={{
                                 fontFamily: 'WorkSans_600SemiBold',

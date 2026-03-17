@@ -598,6 +598,7 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                             </Pressable>
                         </View>
 
+                        <View style={{ paddingHorizontal: 24, paddingBottom: 24 }}>
 
                         {/* Selected Vehicle Display (ReadOnly) */}
                         {!log && (
@@ -1001,6 +1002,7 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                             <Text style={{ color: isDark ? '#9CA3AF' : '#666660', fontFamily: 'WorkSans_500Medium', fontSize: 16, fontWeight: '500' }}>{t('common.cancel')}</Text>
                         </Pressable>
 
+                        </View>
                     </Pressable>
                 </KeyboardAwareScrollView>
             </Pressable>

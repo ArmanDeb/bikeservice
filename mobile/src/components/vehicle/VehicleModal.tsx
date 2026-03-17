@@ -21,11 +21,11 @@ export const VehicleModal = ({ visible, onClose, vehicle }: VehicleModalProps) =
 
     const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false)
 
-    const handleSubmit = async (data: { brand: string, model: string, year: number, mileage: number, vin?: string }) => {
+    const handleSubmit = async (data: { brand: string, model: string, year: number, mileage: number, vin?: string, catalogId?: string }) => {
         if (vehicle) {
-            await VehicleService.updateVehicle(vehicle, data.brand, data.model, data.year, data.vin, data.mileage)
+            await VehicleService.updateVehicle(vehicle, data.brand, data.model, data.year, data.vin, data.mileage, data.catalogId)
         } else {
-            await VehicleService.createVehicle(data.brand, data.model, data.year, data.vin, data.mileage)
+            await VehicleService.createVehicle(data.brand, data.model, data.year, data.vin, data.mileage, data.catalogId)
         }
         onClose()
     }

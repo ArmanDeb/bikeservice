@@ -13,6 +13,7 @@ export default class Vehicle extends Model {
     @field('year') year?: number
     @field('current_mileage') currentMileage!: number
     @field('display_order') displayOrder!: number
+    @field('catalog_id') catalogId?: string
 
     @readonly @date('created_at') createdAt!: Date
     @readonly @date('updated_at') updatedAt!: Date
