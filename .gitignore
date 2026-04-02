@@ -1,21 +1,30 @@
 # Dependencies
 node_modules/
 
-# Expo / Mobile folders (if not tracking them here)
-# mobile/node_modules/
-# mobile/.expo/
-
 # System
 .DS_Store
+Thumbs.db
 
-# Environment
+# Environment & Secrets
 .env
 .env.*
 !.env.example
+.env_backup_temp
 
-# AG Kit specific
-.temp_ag_kit/
-antigravity-doc/
+# Expo / Mobile
+mobile/.expo/
+mobile/android/
+mobile/ios/
+
+# AI/Agent tooling (local development only)
+.agent/
+.claude/
+GEMINI.md
+design-system/
+
+# Build artifacts
+*.tgz
+dist/
 
 # Logs
 npm-debug.*
@@ -25,3 +34,10 @@ yarn-error.*
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+
+# Temporary
+.temp_ag_kit/
+antigravity-doc/
+scripts/
