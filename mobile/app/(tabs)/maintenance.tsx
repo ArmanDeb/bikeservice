@@ -46,11 +46,10 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: 32,
         borderTopRightRadius: 32,
         borderWidth: 1,
-        borderColor: '#D6D5D0', // Darker border
-        // maxHeight constraint removed to allow scrolling
-        // maxHeight: '90%',
+        borderColor: '#D6D5D0',
+        paddingHorizontal: 24,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: -6 }, // Deeper shadow for modal
+        shadowOffset: { width: 0, height: -6 },
         shadowOpacity: 0.1,
         shadowRadius: 16,
         elevation: 10,
@@ -64,7 +63,6 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 24,
-        paddingHorizontal: 24,
         paddingTop: 24,
     },
     aiScanButton: {
@@ -386,6 +384,7 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
     const [title, setTitle] = useState('')
     const [cost, setCost] = useState('')
     const [mileageAtLog, setMileageAtLog] = useState('')
+    const [fieldErrors, setFieldErrors] = useState({ title: false, cost: false, mileageAtLog: false })
     const [notes, setNotes] = useState('')
     const [type, setType] = useState<'periodic' | 'repair' | 'modification'>('periodic')
     const [vehicleId, setVehicleId] = useState('')
@@ -517,9 +516,11 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
         if (submitting) return
 
         if (!title || !cost || !mileageAtLog || !vehicleId) {
-            showAlert(t('alert.error'), 'Please fill in all required fields')
+            setFieldErrors({ title: !title, cost: !cost, mileageAtLog: !mileageAtLog })
+            showAlert(t('alert.error'), t('maintenance.alert.required_fields'))
             return
         }
+        setFieldErrors({ title: false, cost: false, mileageAtLog: false })
 
         const selectedVehicle = vehicles.find(v => v.id === vehicleId)
         if (!selectedVehicle) {
@@ -831,29 +832,30 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                         <ModalInput
                             label={t('maintenance.field.title')}
                             value={title}
-                            onChangeText={setTitle}
+                            onChangeText={(text) => { setTitle(text); if (text) setFieldErrors(e => ({ ...e, title: false })) }}
                             placeholder={t('maintenance.field.title')}
+                            error={fieldErrors.title}
                         />
 
                         <View style={{ flexDirection: 'row', gap: 16 }}>
                             <ModalInput
                                 label={t('maintenance.field.cost')}
                                 value={cost}
-                                onChangeText={setCost}
+                                onChangeText={(text) => { setCost(text); if (text) setFieldErrors(e => ({ ...e, cost: false })) }}
                                 placeholder="0"
                                 keyboardType="numeric"
                                 containerStyle={{ flex: 1 }}
+                                error={fieldErrors.cost}
                             />
 
                             <ModalInput
                                 label={t('maintenance.field.mileage') + ' (km)'}
                                 value={mileageAtLog}
                                 onChangeText={(text) => {
-                                    // Remove non-numeric characters first
                                     const numeric = text.replace(/[^0-9]/g, '');
-                                    // Format with dots
                                     const formatted = numeric.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
                                     setMileageAtLog(formatted);
+                                    if (numeric) setFieldErrors(e => ({ ...e, mileageAtLog: false }))
                                 }}
                                 formatValue={(text) => {
                                     const numeric = text.replace(/[^0-9]/g, '');
@@ -862,6 +864,7 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                                 placeholder="0"
                                 keyboardType="numeric"
                                 containerStyle={{ flex: 1 }}
+                                error={fieldErrors.mileageAtLog}
                             />
                         </View>
 

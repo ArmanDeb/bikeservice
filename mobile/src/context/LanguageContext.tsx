@@ -115,6 +115,7 @@ export const translations: Translations = {
     'maintenance.alert.ia_success_desc': { fr: 'Données extraites avec succès ! L\'image sera sauvegardée dans le Wallet.', en: 'Data extracted successfully! The image will be saved in the Wallet.' },
     'maintenance.alert.ia_error': { fr: 'Erreur IA', en: 'AI Error' },
     'maintenance.alert.ia_error_desc': { fr: 'Impossible d\'analyser l\'image.', en: 'Unable to analyze the image.' },
+    'maintenance.alert.required_fields': { fr: 'Veuillez remplir tous les champs obligatoires.', en: 'Please fill in all required fields.' },
     'maintenance.select_bike_title': { fr: 'Choisir une moto', en: 'Select a Bike' },
     'maintenance.select_bike_desc_full': { fr: 'Sélectionnez une machine pour consulter son carnet d\'entretien complet.', en: 'Select a machine to view its full maintenance log.' },
 
@@ -197,6 +198,7 @@ export const translations: Translations = {
     'settings.maintenance_reminders': { fr: "Rappels d'entretien (à venir)", en: 'Maintenance Reminders (Coming Soon)' },
     'settings.maintenance_reminders_desc': { fr: 'Alertes maintenance et échéances', en: 'Maintenance alerts and due dates' },
     'settings.support': { fr: 'Aide & Support', en: 'Help & Support' },
+    'settings.send_feedback': { fr: 'Envoyer un feedback', en: 'Send Feedback' },
     'settings.report_bug': { fr: 'Signaler un problème', en: 'Report a Bug' },
     'settings.suggest_idea': { fr: 'Suggérer une idée', en: 'Suggest an Idea' },
     'settings.about': { fr: 'À propos', en: 'About' },

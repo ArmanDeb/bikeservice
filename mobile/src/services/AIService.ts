@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { posthog } from './analytics'
 
 // Initialize the API
 // Note: In production, we should proxy this through a backend to protect the Key,
@@ -6,7 +7,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 const API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY || ''
 const genAI = new GoogleGenerativeAI(API_KEY)
 
-const MODEL_NAME = 'gemini-flash-latest'
+const MODEL_NAME = 'gemini-2.5-flash-lite'
 
 export interface InvoiceData {
     title?: string
@@ -75,6 +76,7 @@ export const AIService = {
                 throw new Error(data.error)
             }
 
+            posthog.capture('ai_scan_used', { success: true })
             return {
                 title: data.title,
                 cost: typeof data.cost === 'number' ? data.cost : parseFloat(data.cost),

@@ -22,6 +22,7 @@ interface ModalInputProps {
     inputStyle?: any;
     formatValue?: (text: string) => string;
     maxLength?: number;
+    error?: boolean;
 }
 
 export const ModalInput: React.FC<ModalInputProps> = ({
@@ -37,6 +38,7 @@ export const ModalInput: React.FC<ModalInputProps> = ({
     inputStyle,
     formatValue,
     maxLength,
+    error = false,
 }) => {
     const { isDark } = useTheme();
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -47,11 +49,11 @@ export const ModalInput: React.FC<ModalInputProps> = ({
 
     return (
         <View style={[styles.container, containerStyle]}>
-            <Text style={[styles.label, isDark && styles.labelDark, labelStyle]}>
+            <Text style={[styles.label, isDark && styles.labelDark, error && styles.labelError, labelStyle]}>
                 {label}
             </Text>
 
-            <View style={[styles.inputWrapper, isDark && styles.inputWrapperDark, inputStyle]}>
+            <View style={[styles.inputWrapper, isDark && styles.inputWrapperDark, error && styles.inputWrapperError, inputStyle]}>
                 <TextInput
                     style={[
                         styles.input,
@@ -131,5 +133,12 @@ const styles = StyleSheet.create({
     eyeButton: {
         marginLeft: 12,
         padding: 4,
+    },
+    labelError: {
+        color: '#EF4444',
+    },
+    inputWrapperError: {
+        borderColor: '#EF4444',
+        backgroundColor: 'rgba(239, 68, 68, 0.05)',
     },
 });
