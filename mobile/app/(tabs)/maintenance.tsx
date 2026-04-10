@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { withObservables } from '@nozbe/watermelondb/react'
 import * as ImagePicker from 'expo-image-picker'
 import { useRouter } from 'expo-router'
-import { Scan, ChevronLeft, Bike, Calendar, Wrench, FlaskConical, FileText, ChevronRight, X, Plus, ChevronDown, ArrowUpDown, Check, Minus, ArrowUp, ArrowDown, Filter, ClipboardList, Zap } from 'lucide-react-native'
+import { Scan, ChevronLeft, Bike, Calendar, Wrench, FlaskConical, FileText, ChevronRight, X, Plus, ChevronDown, ArrowUpDown, Check, Minus, ArrowUp, ArrowDown } from 'lucide-react-native'
 import { database } from '../../src/database'
 import { useTheme } from '../../src/context/ThemeContext'
 import { useLanguage } from '../../src/context/LanguageContext'
@@ -46,11 +46,10 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: 32,
         borderTopRightRadius: 32,
         borderWidth: 1,
-        borderColor: '#D6D5D0', // Darker border
-        // maxHeight constraint removed to allow scrolling
-        // maxHeight: '90%',
+        borderColor: '#D6D5D0',
+        paddingHorizontal: 24,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: -6 }, // Deeper shadow for modal
+        shadowOffset: { width: 0, height: -6 },
         shadowOpacity: 0.1,
         shadowRadius: 16,
         elevation: 10,
@@ -64,7 +63,6 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 24,
-        paddingHorizontal: 24,
         paddingTop: 24,
     },
     aiScanButton: {
@@ -83,12 +81,10 @@ const styles = StyleSheet.create({
     },
     typeButton: {
         flex: 1,
-        paddingVertical: 12,
-        paddingHorizontal: 4,
+        padding: 12,
         borderRadius: 12,
         borderWidth: 1,
         alignItems: 'center',
-        justifyContent: 'center',
         backgroundColor: '#FFFFFF', // White background
         borderColor: '#D6D5D0',
     },
@@ -322,7 +318,7 @@ const styles = StyleSheet.create({
     sortButton: {
         backgroundColor: '#F5F5F0',
         paddingHorizontal: 16,
-        height: 48,
+        paddingVertical: 12,
         borderRadius: 12,
         borderWidth: 1,
         borderColor: '#E6E5E0',
@@ -378,7 +374,6 @@ const styles = StyleSheet.create({
         backgroundColor: '#3A3A3C',
         borderColor: '#4B5563',
     },
-
 });
 
 // Maintenance Modal Component
@@ -389,6 +384,7 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
     const [title, setTitle] = useState('')
     const [cost, setCost] = useState('')
     const [mileageAtLog, setMileageAtLog] = useState('')
+    const [fieldErrors, setFieldErrors] = useState({ title: false, cost: false, mileageAtLog: false })
     const [notes, setNotes] = useState('')
     const [type, setType] = useState<'periodic' | 'repair' | 'modification'>('periodic')
     const [vehicleId, setVehicleId] = useState('')
@@ -397,7 +393,6 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
     const [showDatePicker, setShowDatePicker] = useState(false)
     const [scannedDocumentUri, setScannedDocumentUri] = useState<string | null>(null)
     const [submitting, setSubmitting] = useState(false)
-    const [errors, setErrors] = useState<{ [key: string]: boolean }>({})
 
     // Alert state
     const [alertVisible, setAlertVisible] = useState(false)
@@ -430,11 +425,7 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                 setNotes('')
                 setType('periodic')
                 setDate(new Date())
-                setNotes('')
-                setType('periodic')
-                setDate(new Date())
                 setScannedDocumentUri(null)
-                setErrors({})
             }
         }
     }, [visible, log, selectedVehicleId, vehicles])
@@ -524,16 +515,12 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
     const handleSubmit = async () => {
         if (submitting) return
 
-        const newErrors: { [key: string]: boolean } = {}
-        if (!title) newErrors.title = true
-        if (!cost) newErrors.cost = true
-        if (!mileageAtLog) newErrors.mileageAtLog = true
-        if (!vehicleId) newErrors.vehicleId = true // Only check vehicle check if likely to be empty, though it usually defaults
-
-        if (Object.keys(newErrors).length > 0) {
-            setErrors(newErrors)
+        if (!title || !cost || !mileageAtLog || !vehicleId) {
+            setFieldErrors({ title: !title, cost: !cost, mileageAtLog: !mileageAtLog })
+            showAlert(t('alert.error'), t('maintenance.alert.required_fields'))
             return
         }
+        setFieldErrors({ title: false, cost: false, mileageAtLog: false })
 
         const selectedVehicle = vehicles.find(v => v.id === vehicleId)
         if (!selectedVehicle) {
@@ -598,17 +585,11 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                             </Pressable>
                         </View>
 
-                        <View style={{ paddingHorizontal: 24, paddingBottom: 24 }}>
 
                         {/* Selected Vehicle Display (ReadOnly) */}
                         {!log && (
                             <View style={{ marginBottom: 16 }}>
-                                <View style={[
-                                    styles.vehicleSelect,
-                                    isDark && styles.vehicleSelectDark,
-                                    { opacity: 0.8 },
-                                    errors.vehicleId && { borderColor: '#EF4444', borderWidth: 1 }
-                                ]}>
+                                <View style={[styles.vehicleSelect, isDark && styles.vehicleSelectDark, { opacity: 0.8 }]}>
                                     {vehicleId ? (
                                         <BrandLogo
                                             brand={vehicles.find(v => v.id === vehicleId)?.brand || ''}
@@ -640,17 +621,7 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                                         type === tType && styles.typeButtonSelected
                                     ]}
                                 >
-                                    <Text
-                                        numberOfLines={1}
-                                        adjustsFontSizeToFit
-                                        style={{
-                                            fontFamily: 'Outfit_700Bold',
-                                            fontSize: 12,
-                                            textTransform: 'uppercase',
-                                            textAlign: 'center',
-                                            color: type === tType ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#666660')
-                                        }}
-                                    >
+                                    <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 12, textTransform: 'uppercase', color: type === tType ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#666660') }}>
                                         {t('maintenance.type.' + tType)}
                                     </Text>
                                 </Pressable>
@@ -858,42 +829,33 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                             </Modal>
                         </View>
 
-
                         <ModalInput
                             label={t('maintenance.field.title')}
                             value={title}
-                            onChangeText={(text) => {
-                                setTitle(text)
-                                if (errors.title) setErrors({ ...errors, title: false })
-                            }}
+                            onChangeText={(text) => { setTitle(text); if (text) setFieldErrors(e => ({ ...e, title: false })) }}
                             placeholder={t('maintenance.field.title')}
-                            error={errors.title}
+                            error={fieldErrors.title}
                         />
 
                         <View style={{ flexDirection: 'row', gap: 16 }}>
                             <ModalInput
                                 label={t('maintenance.field.cost')}
                                 value={cost}
-                                onChangeText={(text) => {
-                                    setCost(text)
-                                    if (errors.cost) setErrors({ ...errors, cost: false })
-                                }}
+                                onChangeText={(text) => { setCost(text); if (text) setFieldErrors(e => ({ ...e, cost: false })) }}
                                 placeholder="0"
                                 keyboardType="numeric"
                                 containerStyle={{ flex: 1 }}
-                                error={errors.cost}
+                                error={fieldErrors.cost}
                             />
 
                             <ModalInput
                                 label={t('maintenance.field.mileage') + ' (km)'}
                                 value={mileageAtLog}
                                 onChangeText={(text) => {
-                                    // Remove non-numeric characters first
                                     const numeric = text.replace(/[^0-9]/g, '');
-                                    // Format with dots
                                     const formatted = numeric.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
                                     setMileageAtLog(formatted);
-                                    if (errors.mileageAtLog) setErrors({ ...errors, mileageAtLog: false })
+                                    if (numeric) setFieldErrors(e => ({ ...e, mileageAtLog: false }))
                                 }}
                                 formatValue={(text) => {
                                     const numeric = text.replace(/[^0-9]/g, '');
@@ -902,7 +864,7 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                                 placeholder="0"
                                 keyboardType="numeric"
                                 containerStyle={{ flex: 1 }}
-                                error={errors.mileageAtLog}
+                                error={fieldErrors.mileageAtLog}
                             />
                         </View>
 
@@ -1002,7 +964,6 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                             <Text style={{ color: isDark ? '#9CA3AF' : '#666660', fontFamily: 'WorkSans_500Medium', fontSize: 16, fontWeight: '500' }}>{t('common.cancel')}</Text>
                         </Pressable>
 
-                        </View>
                     </Pressable>
                 </KeyboardAwareScrollView>
             </Pressable>
@@ -1037,38 +998,20 @@ const MaintenanceScreen = ({ logs, vehicles }: { logs: MaintenanceLog[], vehicle
     const [viewingLog, setViewingLog] = useState<MaintenanceLog | null>(null)
     const [detailModalVisible, setDetailModalVisible] = useState(false)
     const [loading, setLoading] = useState(false)
-    const [sortBy, setSortBy] = useState<'date_added' | 'mileage' | 'service_date' | 'cost'>('date_added')
+    const [sortBy, setSortBy] = useState<'date_added' | 'mileage' | 'service_date'>('date_added')
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
     const [showSortDropdown, setShowSortDropdown] = useState(false)
-    const [showFilterDropdown, setShowFilterDropdown] = useState(false)
-    const [filterCategory, setFilterCategory] = useState<'all' | 'periodic' | 'repair' | 'modification'>('all')
 
     const sortOptions = [
         { key: 'date_added' as const, labelFr: 'Date d\'ajout', labelEn: 'Date added' },
         { key: 'service_date' as const, labelFr: 'Date d\'intervention', labelEn: 'Service date' },
         { key: 'mileage' as const, labelFr: 'Kilométrage', labelEn: 'Mileage' },
-        { key: 'cost' as const, labelFr: 'Prix', labelEn: 'Price' },
-    ]
-
-    const filterOptions = [
-        { key: 'all', labelFr: 'Tous', labelEn: 'All', color: '#4A4A45', darkColor: '#A1A1AA' },
-        { key: 'periodic', labelFr: 'Entretien', labelEn: 'Maintenance', color: '#15803D', darkColor: '#4ADE80' },
-        { key: 'repair', labelFr: 'Réparation', labelEn: 'Repair', color: '#BA4444', darkColor: '#EF6B6B' },
-        { key: 'modification', labelFr: 'Modification', labelEn: 'Modification', color: '#CA8A04', darkColor: '#FACC15' },
     ]
 
     // Reactive filtering: Show NOTHING if no vehicle is selected (Focus Mode)
-    const filteredLogs = useMemo(() => {
-        if (!selectedVehicleId) return []
-
-        let logsFiltered = logs.filter(l => l.vehicleId === selectedVehicleId)
-
-        if (filterCategory !== 'all') {
-            logsFiltered = logsFiltered.filter(l => l.type === filterCategory)
-        }
-
-        return logsFiltered
-    }, [selectedVehicleId, logs, filterCategory])
+    const filteredLogs = selectedVehicleId
+        ? logs.filter(l => l.vehicleId === selectedVehicleId)
+        : []
 
     const sortedLogs = [...filteredLogs].sort((a, b) => {
         let diff = 0
@@ -1076,8 +1019,6 @@ const MaintenanceScreen = ({ logs, vehicles }: { logs: MaintenanceLog[], vehicle
             diff = a.mileageAtLog - b.mileageAtLog
         } else if (sortBy === 'service_date') {
             diff = a.date.getTime() - b.date.getTime()
-        } else if (sortBy === 'cost') {
-            diff = a.cost - b.cost
         } else {
             // date_added
             const aTime = a.createdAt?.getTime() || a.date.getTime()
@@ -1114,9 +1055,9 @@ const MaintenanceScreen = ({ logs, vehicles }: { logs: MaintenanceLog[], vehicle
     )
 
     return (
-        <SafeAreaView style={[styles.container, isDark && styles.containerDark]} edges={['top']}>
+        <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
             <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-            <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 24 }}>
+            <View style={{ flex: 1, padding: 24 }}>
                 {/* Header Contextuel */}
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                     <Text style={[styles.headerTitle, isDark && styles.headerTitleDark]}>
@@ -1177,36 +1118,15 @@ const MaintenanceScreen = ({ logs, vehicles }: { logs: MaintenanceLog[], vehicle
                                         onPress={() => setShowSortDropdown(true)}
                                         style={[styles.sortButton, isDark && styles.sortButtonDark, { flex: 1 }]}
                                     >
-                                        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                             <ArrowUpDown size={16} color={isDark ? "#E5E5E0" : "#4A4A45"} />
-                                            <Text
-                                                numberOfLines={1}
-                                                ellipsizeMode="tail"
-                                                style={{
-                                                    color: isDark ? '#FDFCF8' : '#1C1C1E',
-                                                    fontFamily: 'Outfit_700Bold',
-                                                    marginLeft: 8,
-                                                    fontSize: 14,
-                                                    flex: 1
-                                                }}
-                                            >
+                                            <Text style={{ color: isDark ? '#FDFCF8' : '#1C1C1E', fontFamily: 'Outfit_700Bold', marginLeft: 8, fontSize: 14 }}>
                                                 {language === 'fr'
                                                     ? sortOptions.find(o => o.key === sortBy)?.labelFr
                                                     : sortOptions.find(o => o.key === sortBy)?.labelEn}
                                             </Text>
                                         </View>
-                                        <ChevronDown size={16} color="#9CA3AF" />
-                                    </Pressable>
-
-                                    <Pressable
-                                        onPress={() => setShowFilterDropdown(true)}
-                                        style={[
-                                            styles.sortIconContainer,
-                                            isDark && styles.sortIconContainerDark,
-                                            filterCategory !== 'all' && { borderColor: '#F97316', borderWidth: 1 }
-                                        ]}
-                                    >
-                                        <Filter size={20} color={filterCategory !== 'all' ? '#F97316' : (isDark ? "#E5E5E0" : "#4A4A45")} />
+                                        <ChevronDown size={16} color="#9CA3AF" style={{ marginLeft: 8 }} />
                                     </Pressable>
 
                                     <Pressable
@@ -1220,54 +1140,6 @@ const MaintenanceScreen = ({ logs, vehicles }: { logs: MaintenanceLog[], vehicle
                                         )}
                                     </Pressable>
                                 </View>
-
-                                {/* Filter Dropdown Modal */}
-                                <Modal visible={showFilterDropdown} transparent animationType="fade">
-                                    <Pressable
-                                        style={styles.sortModalOverlay}
-                                        onPress={() => setShowFilterDropdown(false)}
-                                    >
-                                        <View style={[styles.sortDropdown, isDark && styles.sortDropdownDark]}>
-                                            <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: isDark ? '#3A3A3C' : '#E6E5E0' }}>
-                                                <Text style={{ color: isDark ? '#FDFCF8' : '#1C1C1E', fontFamily: 'Outfit_700Bold', fontSize: 18, textAlign: 'center' }}>
-                                                    {language === 'fr' ? 'Filtrer par' : 'Filter by'}
-                                                </Text>
-                                            </View>
-                                            {filterOptions.map((option) => (
-                                                <Pressable
-                                                    key={option.key}
-                                                    onPress={() => {
-                                                        setFilterCategory(option.key as any)
-                                                        setShowFilterDropdown(false)
-                                                    }}
-                                                    style={[
-                                                        styles.sortOption,
-                                                        isDark && styles.sortOptionDark,
-                                                        filterCategory === option.key && styles.sortOptionActive
-                                                    ]}
-                                                >
-                                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                                        <Text style={{ fontFamily: 'Outfit_700Bold', color: isDark ? '#E5E5E0' : '#4A4A45' }}>
-                                                            {language === 'fr' ? option.labelFr : option.labelEn}
-                                                        </Text>
-                                                        {option.key === 'periodic' && (
-                                                            <ClipboardList size={18} color={isDark ? option.darkColor : option.color} style={{ marginLeft: 8 }} />
-                                                        )}
-                                                        {option.key === 'repair' && (
-                                                            <Wrench size={18} color={isDark ? option.darkColor : option.color} style={{ marginLeft: 8 }} />
-                                                        )}
-                                                        {option.key === 'modification' && (
-                                                            <Zap size={18} color={isDark ? option.darkColor : option.color} style={{ marginLeft: 8 }} />
-                                                        )}
-                                                    </View>
-                                                    {filterCategory === option.key && (
-                                                        <Check size={20} color={isDark ? option.darkColor : option.color} />
-                                                    )}
-                                                </Pressable>
-                                            ))}
-                                        </View>
-                                    </Pressable>
-                                </Modal>
 
                                 {/* Sort Dropdown Modal */}
                                 <Modal visible={showSortDropdown} transparent animationType="fade">
@@ -1305,7 +1177,6 @@ const MaintenanceScreen = ({ logs, vehicles }: { logs: MaintenanceLog[], vehicle
                                 <FlatList
                                     data={sortedLogs}
                                     keyExtractor={item => item.id}
-                                    contentContainerStyle={{ paddingBottom: 100 }}
                                     showsVerticalScrollIndicator={false}
                                     renderItem={renderItem}
                                     ListEmptyComponent={
@@ -1322,7 +1193,7 @@ const MaintenanceScreen = ({ logs, vehicles }: { logs: MaintenanceLog[], vehicle
                         );
                     })()
                 ) : (
-                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+                    <ScrollView showsVerticalScrollIndicator={false}>
                         <Text style={{ color: isDark ? '#9CA3AF' : '#666660', marginBottom: 24, fontSize: 18, fontFamily: 'WorkSans_400Regular' }}>{t('maintenance.select_bike_desc_full')}</Text>
                         {vehicles.map(v => (
                             <Pressable
@@ -1385,8 +1256,8 @@ const MaintenanceScreen = ({ logs, vehicles }: { logs: MaintenanceLog[], vehicle
                     log={editingLog}
                     vehicles={vehicles}
                 />
-            </View >
-        </SafeAreaView >
+            </View>
+        </SafeAreaView>
     )
 }
 

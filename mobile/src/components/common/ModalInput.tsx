@@ -51,22 +51,11 @@ export const ModalInput: React.FC<ModalInputProps> = ({
 
     return (
         <View style={[styles.container, containerStyle]}>
-            <Text style={[
-                styles.label,
-                isDark && styles.labelDark,
-                labelStyle,
-                error && { color: '#EF4444' }
-            ]}>
+            <Text style={[styles.label, isDark && styles.labelDark, error && styles.labelError, labelStyle]}>
                 {label}
             </Text>
 
-            <View style={[
-                styles.inputWrapper,
-                isDark && styles.inputWrapperDark,
-                inputStyle,
-                error && { borderColor: '#EF4444', borderWidth: 1 }
-            ]}>
-
+            <View style={[styles.inputWrapper, isDark && styles.inputWrapperDark, error && styles.inputWrapperError, inputStyle]}>
                 <TextInput
                     style={[
                         styles.input,
@@ -147,5 +136,12 @@ const styles = StyleSheet.create({
     eyeButton: {
         marginLeft: 12,
         padding: 4,
+    },
+    labelError: {
+        color: '#EF4444',
+    },
+    inputWrapperError: {
+        borderColor: '#EF4444',
+        backgroundColor: 'rgba(239, 68, 68, 0.05)',
     },
 });
