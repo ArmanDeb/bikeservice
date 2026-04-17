@@ -62,7 +62,7 @@ export default function PrivacyPolicyScreen() {
             <ScrollView contentContainerStyle={styles.content}>
                 <Text style={styles.title}>Politique de Confidentialité</Text>
 
-                <Text style={styles.paragraph}>Dernière mise à jour : 05 Février 2026</Text>
+                <Text style={styles.paragraph}>Dernière mise à jour : 10 Avril 2026</Text>
 
                 <Text style={styles.sectionTitle}>1. Introduction</Text>
                 <Text style={styles.paragraph}>
@@ -75,6 +75,8 @@ export default function PrivacyPolicyScreen() {
                     {'\n'}• Informations de compte (email, identifiant).
                     {'\n'}• Données des véhicules (marque, modèle, VIN, année, kilométrage).
                     {'\n'}• Historiques d'entretien et documents associés (photos, factures).
+                    {'\n'}• Données de diagnostic anonymisées (rapports de plantage, erreurs techniques).
+                    {'\n'}• Données d'utilisation anonymisées (écrans visités, fonctionnalités utilisées).
                 </Text>
 
                 <Text style={styles.sectionTitle}>3. Utilisation des données</Text>
@@ -95,9 +97,20 @@ export default function PrivacyPolicyScreen() {
                     Vous pouvez supprimer votre compte et toutes vos données associées à tout moment depuis les réglages de l'application (Zone de Danger → Supprimer mon compte).
                 </Text>
 
-                <Text style={styles.sectionTitle}>6. Contact</Text>
+                <Text style={styles.sectionTitle}>6. Services tiers</Text>
                 <Text style={styles.paragraph}>
-                    Pour toute question concernant cette politique, veuillez nous contacter à support@bikeservice.app.
+                    BikeService utilise les services tiers suivants pour améliorer la stabilité et la qualité de l'application :
+                </Text>
+                <Text style={styles.paragraph}>
+                    <Text style={{ fontFamily: 'WorkSans_400Regular', fontWeight: '600' }}>Sentry</Text> — Outil de suivi des erreurs et plantages. En cas de crash, une trace technique anonymisée est transmise à Sentry (sentry.io) afin d'identifier et corriger les problèmes. Aucune donnée personnelle identifiable n'est incluse dans ces rapports.
+                </Text>
+                <Text style={styles.paragraph}>
+                    <Text style={{ fontFamily: 'WorkSans_400Regular', fontWeight: '600' }}>PostHog</Text> — Outil d'analyse d'usage hébergé en Europe (EU Cloud). Des événements anonymisés sont enregistrés (ex. : écran consulté, entretien ajouté, document importé) pour comprendre comment l'application est utilisée et orienter son développement. Aucun contenu personnel (noms de véhicules, documents) n'est transmis.
+                </Text>
+
+                <Text style={styles.sectionTitle}>7. Contact</Text>
+                <Text style={styles.paragraph}>
+                    Pour toute question concernant cette politique, veuillez nous contacter à armand@omistudio.be.
                 </Text>
             </ScrollView>
         </View>
