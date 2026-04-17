@@ -110,7 +110,7 @@ export default function PrivacyPolicyScreen() {
 
                 <Text style={styles.sectionTitle}>7. Contact</Text>
                 <Text style={styles.paragraph}>
-                    Pour toute question concernant cette politique, veuillez nous contacter à armand@omistudio.be.
+                    Pour toute question concernant cette politique, veuillez nous contacter à arman@omistudio.be.
                 </Text>
             </ScrollView>
         </View>
