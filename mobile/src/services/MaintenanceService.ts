@@ -4,6 +4,7 @@ import MaintenanceLog from '../database/models/MaintenanceLog'
 import Vehicle from '../database/models/Vehicle'
 import { Q } from '@nozbe/watermelondb'
 import { sync } from './SyncService'
+import { posthog } from './analytics'
 import Document from '../database/models/Document'
 import { StorageService } from './StorageService'
 import { supabase } from './Supabase'
@@ -122,6 +123,7 @@ export const MaintenanceService = {
                 }
             }
         })
+        posthog.capture('maintenance_log_created', { type, cost, hasDocuments: !!documentUris?.length })
         sync()
     },
     // Delete a maintenance log (with cascade delete of linked documents)

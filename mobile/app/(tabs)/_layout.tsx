@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router'
 import { View, Text, Platform } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../../src/context/ThemeContext'
 import { useLanguage } from '../../src/context/LanguageContext'
 import { useVehicle } from '../../src/context/VehicleContext'
@@ -9,8 +10,6 @@ import Vehicle from '../../src/database/models/Vehicle'
 import { BrandLogo } from '../../src/components/common/BrandLogo'
 
 import { Bike, BarChart2, Wrench, Folder, Settings, Wallet } from 'lucide-react-native'
-
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Enhanced icon component for the Garage tab
 const GarageIconBase = ({ vehicles, color }: { vehicles: Vehicle[], color: string }) => {
@@ -42,6 +41,8 @@ export default function TabsLayout() {
     const { t } = useLanguage();
     const insets = useSafeAreaInsets();
 
+    const tabBarHeight = 60 + insets.bottom;
+
     return (
         <Tabs
             screenOptions={{
@@ -54,8 +55,8 @@ export default function TabsLayout() {
                     elevation: 0,
                     shadowOpacity: 0,
                     paddingTop: 8,
-                    height: 60 + insets.bottom,
-                    paddingBottom: insets.bottom + 8,
+                    height: tabBarHeight,
+                    paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
                 },
                 tabBarActiveTintColor: isDark ? '#E5E5E0' : '#1C1C1E',
                 tabBarInactiveTintColor: isDark ? '#666660' : '#9CA3AF',

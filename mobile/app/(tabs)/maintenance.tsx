@@ -391,6 +391,7 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
     const [date, setDate] = useState<Date>(new Date())
     const [isScanning, setIsScanning] = useState(false)
     const [showDatePicker, setShowDatePicker] = useState(false)
+    const [calendarViewDate, setCalendarViewDate] = useState<Date>(new Date())
     const [scannedDocumentUri, setScannedDocumentUri] = useState<string | null>(null)
     const [submitting, setSubmitting] = useState(false)
 
@@ -416,6 +417,7 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                 setNotes(log.notes || '')
                 setType(log.type as 'periodic' | 'repair' | 'modification')
                 setDate(new Date(log.date))
+                setCalendarViewDate(new Date(log.date))
             } else {
                 // For new log, use selectedVehicleId or first vehicle
                 setVehicleId(selectedVehicleId || (vehicles.length > 0 ? vehicles[0].id : ''))
@@ -425,7 +427,9 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                 setNotes('')
                 setType('periodic')
                 setDate(new Date())
+                setCalendarViewDate(new Date())
                 setScannedDocumentUri(null)
+                setFieldErrors({ title: false, cost: false, mileageAtLog: false })
             }
         }
     }, [visible, log, selectedVehicleId, vehicles])
@@ -515,8 +519,8 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
     const handleSubmit = async () => {
         if (submitting) return
 
-        if (!title || !cost || !mileageAtLog || !vehicleId) {
-            setFieldErrors({ title: !title, cost: !cost, mileageAtLog: !mileageAtLog })
+        if (!cost || !mileageAtLog || !vehicleId) {
+            setFieldErrors({ title: false, cost: !cost, mileageAtLog: !mileageAtLog })
             showAlert(t('alert.error'), t('maintenance.alert.required_fields'))
             return
         }
@@ -621,7 +625,7 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                                         type === tType && styles.typeButtonSelected
                                     ]}
                                 >
-                                    <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 12, textTransform: 'uppercase', color: type === tType ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#666660') }}>
+                                    <Text numberOfLines={1} style={{ fontFamily: 'Outfit_700Bold', fontSize: 12, textTransform: 'uppercase', color: type === tType ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#666660') }}>
                                         {t('maintenance.type.' + tType)}
                                     </Text>
                                 </Pressable>
@@ -660,168 +664,137 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                                     <Pressable
                                         style={{
                                             backgroundColor: isDark ? '#2C2C2E' : '#FFFFFF',
-                                            borderRadius: 16,
-                                            width: '85%',
+                                            borderRadius: 20,
+                                            width: '90%',
                                             overflow: 'hidden',
                                             borderWidth: 1,
                                             borderColor: isDark ? '#3A3A3C' : '#E6E5E0'
                                         }}
                                         onPress={(e) => e.stopPropagation()}
                                     >
+                                        {/* Title */}
                                         <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: isDark ? '#3A3A3C' : '#E6E5E0' }}>
                                             <Text style={{ color: isDark ? '#FDFCF8' : '#1C1C1E', fontFamily: 'Outfit_700Bold', fontSize: 18, textAlign: 'center' }}>
                                                 {language === 'fr' ? 'Choisir la date' : 'Choose date'}
                                             </Text>
                                         </View>
 
-                                        <View style={{ padding: 24 }}>
-                                            {/* Quick date buttons */}
-                                            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 24 }}>
-                                                <Pressable
-                                                    onPress={() => setDate(new Date())}
-                                                    style={{
-                                                        flex: 1,
-                                                        backgroundColor: 'rgba(74, 74, 69, 0.1)',
-                                                        padding: 12,
-                                                        borderRadius: 12,
-                                                        alignItems: 'center'
-                                                    }}
-                                                >
-                                                    <Text style={{ color: '#4A4A45', fontFamily: 'Outfit_700Bold', fontSize: 14 }}>
-                                                        {language === 'fr' ? "Aujourd'hui" : 'Today'}
-                                                    </Text>
-                                                </Pressable>
+                                        <View style={{ padding: 16 }}>
+                                            {/* Month navigation */}
+                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                                                 <Pressable
                                                     onPress={() => {
-                                                        const yesterday = new Date()
-                                                        yesterday.setDate(yesterday.getDate() - 1)
-                                                        setDate(yesterday)
+                                                        const d = new Date(calendarViewDate)
+                                                        d.setDate(1)
+                                                        d.setMonth(d.getMonth() - 1)
+                                                        setCalendarViewDate(d)
                                                     }}
-                                                    style={[styles.typeButton, isDark && styles.typeButtonDark, { flex: 1 }]}
+                                                    style={[styles.dateControlButton, isDark ? styles.dateControlButtonDark : styles.dateControlButtonLight]}
                                                 >
-                                                    <Text style={{ color: isDark ? '#FDFCF8' : '#1C1C1E', fontFamily: 'Outfit_700Bold', fontSize: 14 }}>
-                                                        {language === 'fr' ? 'Hier' : 'Yesterday'}
-                                                    </Text>
+                                                    <ChevronLeft size={18} color={isDark ? '#E5E5E0' : '#4A4A45'} />
+                                                </Pressable>
+                                                <Text style={{ color: isDark ? '#FDFCF8' : '#1C1C1E', fontFamily: 'Outfit_700Bold', fontSize: 16, textTransform: 'capitalize' }}>
+                                                    {calendarViewDate.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', { month: 'long', year: 'numeric' })}
+                                                </Text>
+                                                <Pressable
+                                                    onPress={() => {
+                                                        const d = new Date(calendarViewDate)
+                                                        d.setDate(1)
+                                                        d.setMonth(d.getMonth() + 1)
+                                                        const today = new Date()
+                                                        if (d.getFullYear() < today.getFullYear() || (d.getFullYear() === today.getFullYear() && d.getMonth() <= today.getMonth())) {
+                                                            setCalendarViewDate(d)
+                                                        }
+                                                    }}
+                                                    style={[styles.dateControlButton, isDark ? styles.dateControlButtonDark : styles.dateControlButtonLight]}
+                                                >
+                                                    <ChevronRight size={18} color={isDark ? '#E5E5E0' : '#4A4A45'} />
                                                 </Pressable>
                                             </View>
 
-                                            {/* Date display */}
-                                            <View style={[styles.vehicleSelect, isDark && styles.vehicleSelectDark, { justifyContent: 'center', marginBottom: 24 }]}>
-                                                <Text style={{ color: isDark ? '#FDFCF8' : '#1C1C1E', fontFamily: 'Outfit_700Bold', fontSize: 20 }}>
-                                                    {date.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', {
-                                                        day: 'numeric',
-                                                        month: 'long',
-                                                        year: 'numeric'
-                                                    })}
-                                                </Text>
-                                            </View>
+                                            {/* Calendar grid */}
+                                            {(() => {
+                                                const viewYear = calendarViewDate.getFullYear()
+                                                const viewMonth = calendarViewDate.getMonth()
+                                                const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
+                                                const firstDay = new Date(viewYear, viewMonth, 1).getDay()
+                                                // Monday-first offset
+                                                const offset = (firstDay + 6) % 7
+                                                const totalCells = Math.ceil((offset + daysInMonth) / 7) * 7
+                                                const today = new Date()
+                                                const dayHeaders = language === 'fr'
+                                                    ? ['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di']
+                                                    : ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
 
-                                            {/* Day/Month/Year adjusters */}
-                                            <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'space-between' }}>
-                                                {/* Day */}
-                                                <View style={{ alignItems: 'center' }}>
-                                                    <Text style={{ color: isDark ? '#9CA3AF' : '#666660', fontSize: 12, textTransform: 'uppercase', marginBottom: 8, fontFamily: 'Outfit_700Bold' }}>
-                                                        {language === 'fr' ? 'Jour' : 'Day'}
-                                                    </Text>
-                                                    <View style={{ alignItems: 'center', gap: 8 }}>
-                                                        <Pressable
-                                                            onPress={() => {
-                                                                const newDate = new Date(date)
-                                                                newDate.setDate(newDate.getDate() + 1)
-                                                                if (newDate <= new Date()) setDate(newDate)
-                                                            }}
-                                                            style={[styles.dateControlButton, isDark ? styles.dateControlButtonDark : styles.dateControlButtonLight]}
-                                                        >
-                                                            <Plus size={20} color={isDark ? '#E5E5E0' : '#4A4A45'} />
-                                                        </Pressable>
-                                                        <Text style={{ color: isDark ? '#FDFCF8' : '#1C1C1E', fontFamily: 'Outfit_700Bold', fontSize: 20, height: 28, textAlign: 'center' }}>
-                                                            {date.getDate()}
-                                                        </Text>
-                                                        <Pressable
-                                                            onPress={() => {
-                                                                const newDate = new Date(date)
-                                                                newDate.setDate(newDate.getDate() - 1)
-                                                                if (newDate <= new Date()) setDate(newDate)
-                                                            }}
-                                                            style={[styles.dateControlButton, isDark ? styles.dateControlButtonDark : styles.dateControlButtonLight]}
-                                                        >
-                                                            <Minus size={20} color={isDark ? '#E5E5E0' : '#4A4A45'} />
-                                                        </Pressable>
-                                                    </View>
-                                                </View>
+                                                const rows: (number | null)[][] = []
+                                                for (let r = 0; r < totalCells / 7; r++) {
+                                                    const row: (number | null)[] = []
+                                                    for (let c = 0; c < 7; c++) {
+                                                        const i = r * 7 + c
+                                                        const dayNum = i - offset + 1
+                                                        row.push(dayNum >= 1 && dayNum <= daysInMonth ? dayNum : null)
+                                                    }
+                                                    rows.push(row)
+                                                }
 
-                                                {/* Month */}
-                                                <View style={{ alignItems: 'center', flex: 1 }}>
-                                                    <Text style={{ color: isDark ? '#9CA3AF' : '#666660', fontSize: 12, textTransform: 'uppercase', marginBottom: 8, fontFamily: 'Outfit_700Bold' }}>
-                                                        {language === 'fr' ? 'Mois' : 'Month'}
-                                                    </Text>
-                                                    <View style={{ alignItems: 'center', gap: 8 }}>
-                                                        <Pressable
-                                                            onPress={() => {
-                                                                const newDate = new Date(date)
-                                                                newDate.setMonth(newDate.getMonth() + 1)
-                                                                if (newDate <= new Date()) setDate(newDate)
-                                                            }}
-                                                            style={[styles.dateControlButton, isDark ? styles.dateControlButtonDark : styles.dateControlButtonLight]}
-                                                        >
-                                                            <Plus size={20} color={isDark ? '#E5E5E0' : '#4A4A45'} />
-                                                        </Pressable>
-                                                        <Text style={{ color: isDark ? '#FDFCF8' : '#1C1C1E', fontFamily: 'Outfit_700Bold', fontSize: 20, height: 28, textAlign: 'center' }}>
-                                                            {date.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', { month: 'short' })}
-                                                        </Text>
-                                                        <Pressable
-                                                            onPress={() => {
-                                                                const newDate = new Date(date)
-                                                                newDate.setMonth(newDate.getMonth() - 1)
-                                                                if (newDate <= new Date()) setDate(newDate)
-                                                            }}
-                                                            style={[styles.dateControlButton, isDark ? styles.dateControlButtonDark : styles.dateControlButtonLight]}
-                                                        >
-                                                            <Minus size={20} color={isDark ? '#E5E5E0' : '#4A4A45'} />
-                                                        </Pressable>
+                                                return (
+                                                    <View>
+                                                        {/* Day headers */}
+                                                        <View style={{ flexDirection: 'row', marginBottom: 4 }}>
+                                                            {dayHeaders.map(h => (
+                                                                <View key={h} style={{ flex: 1, alignItems: 'center', paddingVertical: 4 }}>
+                                                                    <Text style={{ color: isDark ? '#9CA3AF' : '#666660', fontSize: 11, fontFamily: 'Outfit_700Bold', textTransform: 'uppercase' }}>{h}</Text>
+                                                                </View>
+                                                            ))}
+                                                        </View>
+                                                        {/* Day rows */}
+                                                        {rows.map((row, ri) => (
+                                                            <View key={ri} style={{ flexDirection: 'row', marginBottom: 2 }}>
+                                                                {row.map((dayNum, ci) => {
+                                                                    if (!dayNum) return <View key={ci} style={{ flex: 1, height: 38 }} />
+                                                                    const cellDate = new Date(viewYear, viewMonth, dayNum)
+                                                                    const isFuture = cellDate > today
+                                                                    const isSelected = date.getDate() === dayNum && date.getMonth() === viewMonth && date.getFullYear() === viewYear
+                                                                    const isTodayCell = today.getDate() === dayNum && today.getMonth() === viewMonth && today.getFullYear() === viewYear
+                                                                    return (
+                                                                        <Pressable
+                                                                            key={ci}
+                                                                            onPress={() => { if (!isFuture) setDate(cellDate) }}
+                                                                            disabled={isFuture}
+                                                                            style={{ flex: 1, height: 38, alignItems: 'center', justifyContent: 'center' }}
+                                                                        >
+                                                                            <View style={{
+                                                                                width: 34, height: 34, borderRadius: 17,
+                                                                                alignItems: 'center', justifyContent: 'center',
+                                                                                backgroundColor: isSelected ? '#F97316' : 'transparent',
+                                                                                borderWidth: isTodayCell && !isSelected ? 1.5 : 0,
+                                                                                borderColor: '#F97316',
+                                                                            }}>
+                                                                                <Text style={{
+                                                                                    color: isSelected ? '#FFFFFF' : isFuture ? (isDark ? '#3A3A3C' : '#D6D5D0') : (isDark ? '#FDFCF8' : '#1C1C1E'),
+                                                                                    fontFamily: isSelected || isTodayCell ? 'Outfit_700Bold' : 'WorkSans_400Regular',
+                                                                                    fontSize: 14,
+                                                                                }}>
+                                                                                    {dayNum}
+                                                                                </Text>
+                                                                            </View>
+                                                                        </Pressable>
+                                                                    )
+                                                                })}
+                                                            </View>
+                                                        ))}
                                                     </View>
-                                                </View>
-
-                                                {/* Year */}
-                                                <View style={{ alignItems: 'center' }}>
-                                                    <Text style={{ color: isDark ? '#9CA3AF' : '#666660', fontSize: 12, textTransform: 'uppercase', marginBottom: 8, fontFamily: 'Outfit_700Bold' }}>
-                                                        {language === 'fr' ? 'Année' : 'Year'}
-                                                    </Text>
-                                                    <View style={{ alignItems: 'center', gap: 8 }}>
-                                                        <Pressable
-                                                            onPress={() => {
-                                                                const newDate = new Date(date)
-                                                                newDate.setFullYear(newDate.getFullYear() + 1)
-                                                                if (newDate <= new Date()) setDate(newDate)
-                                                            }}
-                                                            style={[styles.dateControlButton, isDark ? styles.dateControlButtonDark : styles.dateControlButtonLight]}
-                                                        >
-                                                            <Plus size={20} color={isDark ? '#E5E5E0' : '#4A4A45'} />
-                                                        </Pressable>
-                                                        <Text style={{ color: isDark ? '#FDFCF8' : '#1C1C1E', fontFamily: 'Outfit_700Bold', fontSize: 20, height: 28, textAlign: 'center' }}>
-                                                            {date.getFullYear()}
-                                                        </Text>
-                                                        <Pressable
-                                                            onPress={() => {
-                                                                const newDate = new Date(date)
-                                                                newDate.setFullYear(newDate.getFullYear() - 1)
-                                                                setDate(newDate)
-                                                            }}
-                                                            style={[styles.dateControlButton, isDark ? styles.dateControlButtonDark : styles.dateControlButtonLight]}
-                                                        >
-                                                            <Minus size={20} color={isDark ? '#E5E5E0' : '#4A4A45'} />
-                                                        </Pressable>
-                                                    </View>
-                                                </View>
-                                            </View>
+                                                )
+                                            })()}
                                         </View>
 
+                                        {/* OK button */}
                                         <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: isDark ? '#3A3A3C' : '#E6E5E0' }}>
                                             <Pressable
                                                 onPress={() => setShowDatePicker(false)}
-                                                style={{ backgroundColor: '#4A4A45', padding: 16, borderRadius: 12, alignItems: 'center' }}
+                                                style={{ backgroundColor: isDark ? '#E5E5E0' : '#1C1C1E', padding: 14, borderRadius: 12, alignItems: 'center' }}
                                             >
-                                                <Text style={{ color: '#FFFFFF', fontFamily: 'Outfit_700Bold', fontSize: 18 }}>OK</Text>
+                                                <Text style={{ color: isDark ? '#1C1C1E' : '#FDFCF8', fontFamily: 'Outfit_700Bold', fontSize: 18 }}>OK</Text>
                                             </Pressable>
                                         </View>
                                     </Pressable>
@@ -830,14 +803,13 @@ const MaintenanceModal = ({ visible, onClose, log, vehicles }: { visible: boolea
                         </View>
 
                         <ModalInput
-                            label={t('maintenance.field.title')}
+                            label={t('maintenance.field.title') + (language === 'fr' ? ' (optionnel)' : ' (optional)')}
                             value={title}
-                            onChangeText={(text) => { setTitle(text); if (text) setFieldErrors(e => ({ ...e, title: false })) }}
+                            onChangeText={setTitle}
                             placeholder={t('maintenance.field.title')}
-                            error={fieldErrors.title}
                         />
 
-                        <View style={{ flexDirection: 'row', gap: 16 }}>
+                        <View style={{ flexDirection: 'row', gap: 16, alignItems: 'flex-end' }}>
                             <ModalInput
                                 label={t('maintenance.field.cost')}
                                 value={cost}

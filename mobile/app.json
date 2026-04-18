@@ -26,7 +26,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.mobile"
+      "bundleIdentifier": "com.armandebongnie.bikeservice"
     },
     "android": {
       "adaptiveIcon": {
@@ -36,7 +36,8 @@
       "softwareKeyboardLayoutMode": "pan",
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.mobile",
+      "package": "com.armandebongnie.bikeservice",
+      "versionCode": 2,
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.CAMERA",

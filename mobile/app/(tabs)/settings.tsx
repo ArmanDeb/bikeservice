@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Switch, StatusBar, Linking, Modal, FlatList, StyleSheet, Pressable } from 'react-native'
-import Constants from 'expo-constants'
+import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/context/AuthContext';
@@ -13,9 +13,12 @@ import { database } from '../../src/database';
 import { ConfirmationModal } from '../../src/components/common/ConfirmationModal';
 import { sync } from '../../src/services/SyncService';
 import {
-    User, Globe, Moon, Sun, BookOpen, LogOut, Trash2, Check, Cloud, Bell, ChevronRight,
+    User, Globe, Moon, Sun, BookOpen, LogOut, Bug, Lightbulb, Trash2, Check, Cloud, Bell, ChevronRight, Info,
     Shield, FileText, RefreshCw
 } from 'lucide-react-native';
+
+const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0'
+const FEEDBACK_FORM_URL = `https://docs.google.com/forms/d/e/1FAIpQLScQ9PhI5dtPozUdJ2FX_qfP-7xF3SrS2EaPIFZRo326EY-mZA/viewform?usp=pp_url&entry.1725831997=${APP_VERSION}`
 
 export default function SettingsScreen() {
     const { user, signOut, deleteAccount } = useAuth();
@@ -55,9 +58,11 @@ export default function SettingsScreen() {
             const supported = await Linking.canOpenURL(url);
             if (supported) {
                 await Linking.openURL(url);
+            } else {
+                showAlert(t('alert.error'), t('settings.link_error'));
             }
         } catch (error) {
-            console.error('Link error:', error);
+            showAlert(t('alert.error'), t('settings.link_error'));
         }
     };
 
@@ -270,9 +275,9 @@ export default function SettingsScreen() {
                                 <View style={styles.iconContainer}>
                                     <User size={20} color={iconColor} />
                                 </View>
-                                <View style={{ flex: 1 }}>
+                                <View>
                                     <Text style={styles.menuText}>{t('settings.user')}</Text>
-                                    <Text style={styles.menuSubText} numberOfLines={1} ellipsizeMode="tail">{user?.email}</Text>
+                                    <Text style={styles.menuSubText}>{user?.email}</Text>
                                 </View>
                             </View>
                         </View>
@@ -345,6 +350,9 @@ export default function SettingsScreen() {
                                 </View>
                             </View>
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <View style={{ paddingHorizontal: 12, paddingVertical: 4, borderRadius: 8, borderWidth: 1, marginRight: 8, backgroundColor: isDark ? '#323234' : '#F5F5F0', borderColor: isDark ? '#3A3A3C' : '#E6E5E0' }}>
+                                    <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 12, color: isDark ? '#FDFCF8' : '#1C1C1E' }}>{language.toUpperCase()}</Text>
+                                </View>
                                 <ChevronRight size={20} color={chevronColor} style={{ transform: [{ rotate: '90deg' }] }} />
                             </View>
                         </Pressable>
@@ -412,6 +420,40 @@ export default function SettingsScreen() {
                     </View>
                 </View>
 
+                {/* Support Section */}
+                <View style={{ marginBottom: 0, marginTop: 8 }}>
+                    <Text style={styles.sectionTitle}>{t('settings.support')}</Text>
+                    <View style={styles.sectionCard}>
+                        <Pressable
+                            onPress={() => openLink(FEEDBACK_FORM_URL)}
+                            style={[styles.menuItem, styles.menuItemBorder]}
+                        >
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <View style={styles.iconContainer}>
+                                    <Lightbulb size={20} color={iconColor} />
+                                </View>
+                                <View>
+                                    <Text style={styles.menuText}>{t('settings.send_feedback')}</Text>
+                                </View>
+                            </View>
+                            <ChevronRight size={20} color={chevronColor} />
+                        </Pressable>
+                        <Pressable
+                            onPress={() => openLink('mailto:support@bikeservice.app?subject=Bug Report')}
+                            style={styles.menuItem}
+                        >
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <View style={styles.iconContainer}>
+                                    <Bug size={20} color={iconColor} />
+                                </View>
+                                <View>
+                                    <Text style={styles.menuText}>{t('settings.report_bug')}</Text>
+                                </View>
+                            </View>
+                            <ChevronRight size={20} color={chevronColor} />
+                        </Pressable>
+                    </View>
+                </View>
 
                 {/* Legal Section */}
                 <View style={{ marginBottom: 0, marginTop: 8 }}>
@@ -425,7 +467,7 @@ export default function SettingsScreen() {
                                 <View style={styles.iconContainer}>
                                     <Shield size={20} color={iconColor} />
                                 </View>
-                                <View style={{ flex: 1 }}>
+                                <View>
                                     <Text style={styles.menuText}>{t('settings.privacy_policy')}</Text>
                                 </View>
                             </View>
@@ -440,7 +482,7 @@ export default function SettingsScreen() {
                                 <View style={styles.iconContainer}>
                                     <FileText size={20} color={iconColor} />
                                 </View>
-                                <View style={{ flex: 1 }}>
+                                <View>
                                     <Text style={styles.menuText}>{t('settings.terms_of_service')}</Text>
                                 </View>
                             </View>
@@ -454,7 +496,7 @@ export default function SettingsScreen() {
                     <View style={[styles.sectionCard, { padding: 20 }]}>
                         <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
                             <Text style={styles.menuText}>BikeService</Text>
-                            <Text style={[styles.menuSubText, { marginLeft: 8 }]}>v{Constants.expoConfig?.version ?? '1.0.0'} (Alpha)</Text>
+                            <Text style={[styles.menuSubText, { marginLeft: 8 }]}>v1.0.0 (Alpha)</Text>
                         </View>
                     </View>
                 </View>

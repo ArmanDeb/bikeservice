@@ -2,7 +2,7 @@ import { database } from '../database'
 import { TableName } from '../database/constants'
 import Vehicle from '../database/models/Vehicle'
 import { sync } from './SyncService'
-
+import { posthog } from './analytics'
 import { Q } from '@nozbe/watermelondb'
 
 export const VehicleService = {
@@ -31,6 +31,7 @@ export const VehicleService = {
                 vehicle.catalogId = catalogId
             })
         })
+        posthog.capture('vehicle_added', { brand, model, year })
         sync()
     },
 
