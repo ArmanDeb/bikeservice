@@ -1,6 +1,15 @@
 import 'react-native-gesture-handler';
+import * as Sentry from '@sentry/react-native';
+import { PostHogProvider } from 'posthog-react-native';
+import { posthog } from '../src/services/analytics';
+
+Sentry.init({
+  dsn: 'https://f6afacef3269c11b8237f1be95e94b60@o4511191249911808.ingest.de.sentry.io/4511191597318224',
+  sendDefaultPii: true,
+  enableLogs: true,
+});
 import { useEffect, useState } from 'react'
-import { Stack, useRouter, useSegments } from 'expo-router'
+import { Stack, useRouter, useSegments, usePathname } from 'expo-router'
 import { ThemeProvider as NavThemeProvider, DarkTheme, DefaultTheme } from '@react-navigation/native';
 import { useFonts, Outfit_300Light, Outfit_400Regular, Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold } from '@expo-google-fonts/outfit';
 import { WorkSans_300Light, WorkSans_400Regular, WorkSans_500Medium, WorkSans_600SemiBold, WorkSans_700Bold } from '@expo-google-fonts/work-sans';
@@ -24,8 +33,13 @@ function RootLayoutNav() {
     const { isDark, resolvedTheme } = useTheme()
     const segments = useSegments()
     const router = useRouter()
+    const pathname = usePathname()
     const { isConnected } = useNetwork()
     const [isNavigating, setIsNavigating] = useState(false)
+
+    useEffect(() => {
+        posthog.capture('screen_view', { screen: pathname })
+    }, [pathname])
 
     useEffect(() => {
         if (isLoading || isNavigating) return
@@ -119,7 +133,7 @@ function RootLayoutNav() {
     )
 }
 
-export default function RootLayout() {
+function RootLayout() {
     const [fontsLoaded] = useFonts({
         Outfit_300Light,
         Outfit_400Regular,
@@ -144,16 +158,20 @@ export default function RootLayout() {
     }
 
     return (
-        <AuthProvider>
-            <NetworkProvider>
-                <LanguageProvider>
-                    <ThemeProvider>
-                        <VehicleProvider>
-                            <RootLayoutNav />
-                        </VehicleProvider>
-                    </ThemeProvider>
-                </LanguageProvider>
-            </NetworkProvider>
-        </AuthProvider>
+        <PostHogProvider client={posthog}>
+            <AuthProvider>
+                <NetworkProvider>
+                    <LanguageProvider>
+                        <ThemeProvider>
+                            <VehicleProvider>
+                                <RootLayoutNav />
+                            </VehicleProvider>
+                        </ThemeProvider>
+                    </LanguageProvider>
+                </NetworkProvider>
+            </AuthProvider>
+        </PostHogProvider>
     )
 }
+
+export default Sentry.wrap(RootLayout);

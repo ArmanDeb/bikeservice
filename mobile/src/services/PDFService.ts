@@ -15,6 +15,7 @@ import Document from '../database/models/Document';
 import { Alert, Platform } from 'react-native';
 import { BRAND_LOGOS } from '../data/brandLogos';
 import { StorageService } from './StorageService';
+import { posthog } from './analytics';
 
 const SAVED_DIRECTORY_KEY = '@BikeService:savedPdfDirectory';
 
@@ -393,6 +394,7 @@ export const PDFService = {
                         const pathSegment = decoded.split(':').pop() || '';
                         const folderName = pathSegment.replace(/\//g, ' / ');
 
+                        posthog.capture('pdf_exported', { method: 'save', vehicle: `${vehicle.brand} ${vehicle.model}` });
                         return {
                             success: true,
                             title: language === 'fr' ? "Rapport Enregistré ✅" : "Report Saved ✅",
@@ -417,6 +419,7 @@ export const PDFService = {
                 UTI: 'com.adobe.pdf',
             });
 
+            posthog.capture('pdf_exported', { method: 'share', vehicle: `${vehicle.brand} ${vehicle.model}` });
             return {
                 success: true,
                 title: language === 'fr' ? "Rapport Généré" : "Report Generated",

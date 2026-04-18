@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Switch, StatusBar, Alert, Linking, Modal, FlatList, StyleSheet, Pressable } from 'react-native'
+import { View, Text, ScrollView, Switch, StatusBar, Linking, Modal, FlatList, StyleSheet, Pressable } from 'react-native'
+import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/context/AuthContext';
@@ -15,6 +16,9 @@ import {
     User, Globe, Moon, Sun, BookOpen, LogOut, Bug, Lightbulb, Trash2, Check, Cloud, Bell, ChevronRight, Info,
     Shield, FileText, RefreshCw
 } from 'lucide-react-native';
+
+const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0'
+const FEEDBACK_FORM_URL = `https://docs.google.com/forms/d/e/1FAIpQLScQ9PhI5dtPozUdJ2FX_qfP-7xF3SrS2EaPIFZRo326EY-mZA/viewform?usp=pp_url&entry.1725831997=${APP_VERSION}`
 
 export default function SettingsScreen() {
     const { user, signOut, deleteAccount } = useAuth();
@@ -420,6 +424,20 @@ export default function SettingsScreen() {
                 <View style={{ marginBottom: 0, marginTop: 8 }}>
                     <Text style={styles.sectionTitle}>{t('settings.support')}</Text>
                     <View style={styles.sectionCard}>
+                        <Pressable
+                            onPress={() => openLink(FEEDBACK_FORM_URL)}
+                            style={[styles.menuItem, styles.menuItemBorder]}
+                        >
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <View style={styles.iconContainer}>
+                                    <Lightbulb size={20} color={iconColor} />
+                                </View>
+                                <View>
+                                    <Text style={styles.menuText}>{t('settings.send_feedback')}</Text>
+                                </View>
+                            </View>
+                            <ChevronRight size={20} color={chevronColor} />
+                        </Pressable>
                         <Pressable
                             onPress={() => openLink('mailto:support@bikeservice.app?subject=Bug Report')}
                             style={styles.menuItem}

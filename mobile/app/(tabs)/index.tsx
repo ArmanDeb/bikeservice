@@ -15,10 +15,7 @@ import { Grid, Plus, Edit2 } from 'lucide-react-native'
 import { BrandLogo } from '../../src/components/common/BrandLogo'
 import { VehicleModal } from '../../src/components/vehicle/VehicleModal'
 
-// Observer wrapper for individual list item to ensure reactivity
-const VehicleListItem = withObservables(['vehicle'], ({ vehicle }) => ({
-    vehicle: vehicle.observe()
-}))(({ vehicle, isDark, onPress, onEdit, isSelected, drag, isActive }: { vehicle: Vehicle, isDark: boolean, onPress: () => void, onEdit: () => void, isSelected: boolean, drag: () => void, isActive: boolean }) => {
+const VehicleListItem = React.memo(({ vehicle, isDark, onPress, onEdit, isSelected, drag, isActive }: { vehicle: Vehicle, isDark: boolean, onPress: () => void, onEdit: () => void, isSelected: boolean, drag: () => void, isActive: boolean }) => {
     return (
         <View style={[styles.itemContainer, isActive && { opacity: 0.8, transform: [{ scale: 1.02 }] }]}>
             <View style={[
@@ -117,18 +114,29 @@ const GarageScreen = ({ vehicles }: { vehicles: Vehicle[] }) => {
     const { t } = useLanguage()
 
 
-    // Local state for optimistic updates
     const [localVehicles, setLocalVehicles] = useState(vehicles)
+    const [isDragging, setIsDragging] = useState(false)
+    const pendingOrderRef = React.useRef<string | null>(null)
 
-    // Sync local state when prop changes
     React.useEffect(() => {
+        if (isDragging) {
+            if (pendingOrderRef.current) {
+                const incomingIds = vehicles.map(v => v.id).join(',')
+                if (incomingIds === pendingOrderRef.current) {
+                    pendingOrderRef.current = null
+                    setIsDragging(false)
+                    setLocalVehicles(vehicles)
+                }
+            }
+            return
+        }
         const newIds = vehicles.map(v => v.id).join(',')
         setLocalVehicles(prev => {
             const prevIds = prev.map(v => v.id).join(',')
             if (prevIds === newIds) return prev
             return vehicles
         })
-    }, [vehicles])
+    }, [vehicles, isDragging])
 
     // Auto-select first vehicle
     React.useEffect(() => {
@@ -174,8 +182,9 @@ const GarageScreen = ({ vehicles }: { vehicles: Vehicle[] }) => {
 
                     <DraggableFlatList
                         data={localVehicles}
+                        onDragBegin={() => setIsDragging(true)}
                         onDragEnd={({ data }) => {
-                            setLocalVehicles(data)
+                            pendingOrderRef.current = data.map(v => v.id).join(',')
                             VehicleService.reorderVehicles(data)
                         }}
                         keyExtractor={item => item.id}

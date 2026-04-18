@@ -226,4 +226,223 @@ Cette section retrace l'évolution du projet au jour le jour, mes hésitations e
 
 ---
 
+## 6. Lancement (Préparation au déploiement)
+
+Cette section documente la phase de lancement de l'application : la mise en place des outils de monitoring, la préparation du Play Store et les étapes nécessaires pour passer d'un projet de développement à un produit utilisable par de vrais utilisateurs.
+
+### 9 Avril 2026 : Comptes & Infrastructure de lancement
+
+*   **Décision :** Avant de distribuer l'application, il est indispensable de pouvoir (1) détecter les crashs à distance et (2) comprendre comment les utilisateurs se servent de l'app. Deux outils gratuits répondent à ces besoins : **Sentry** et **PostHog**.
+*   **Supabase Pro :** Migration vers le plan Pro ($25/mois). Le Free Tier met l'instance en pause après 1 semaine d'inactivité — incompatible avec des bêta-testeurs qui dépendent du backend.
+*   **Google Play Developer :** Création du compte développeur ($25 unique). Vérification d'identité en cours.
+*   **Comptes créés :** Sentry (sentry.io) et PostHog (posthog.com), tous deux sur leur Free Tier.
+
+---
+
+### Étape 6.1 : Sentry — Suivi des erreurs et crashs
+
+**Qu'est-ce que Sentry ?**
+Sentry est un outil de **surveillance des erreurs en temps réel**. Quand l'application plante ou rencontre une erreur sur le téléphone d'un utilisateur, Sentry capture automatiquement la trace complète (quel écran, quelle fonction, quelle ligne de code) et l'envoie sur un tableau de bord en ligne. Sans cet outil, un crash chez un testeur resterait invisible — l'utilisateur quitterait l'app sans jamais signaler le problème.
+
+**Actions :**
+*   **Installation :** `npx expo install @sentry/react-native` dans le dossier `mobile/`
+*   **Configuration :** Récupérer le **DSN** (Data Source Name) depuis le dashboard Sentry → Project Settings → Client Keys
+*   **Variable d'environnement :** Ajouter `EXPO_PUBLIC_SENTRY_DSN` dans le fichier `.env`
+*   **Initialisation :** Configurer Sentry dans `app/_layout.tsx` (point d'entrée racine) pour capturer toutes les erreurs non gérées
+*   **Plugin Expo :** Ajouter `@sentry/react-native/expo` dans le tableau `plugins` de `app.json` pour activer les source maps (traces lisibles)
+*   **Alertes :** Configurer une règle d'alerte dans le dashboard Sentry : notification par email dès la première occurrence d'une nouvelle erreur
+*   **Test :** Déclencher un `throw new Error('Sentry test')` manuellement et vérifier qu'il apparaît dans le dashboard
+
+**Fichiers modifiés :**
+*   `mobile/app/_layout.tsx` — initialisation Sentry
+*   `mobile/app.json` — ajout du plugin Sentry
+*   `mobile/.env` — ajout du DSN
+
+---
+
+### Étape 6.2 : PostHog — Analyse d'usage ✅
+
+**Qu'est-ce que PostHog ?**
+PostHog est un outil d'**analytics produit**. Il enregistre ce que les utilisateurs font réellement dans l'application : quels écrans ils visitent, quelles fonctionnalités ils utilisent, où ils abandonnent. Contrairement à Sentry qui détecte les problèmes, PostHog mesure l'**adoption**. Exemple concret : on pourrait supposer que le scanner IA est la fonctionnalité phare, mais PostHog pourrait révéler que 80% des utilisateurs ne l'essaient jamais — c'est une donnée exploitable pour prioriser les améliorations.
+
+**Actions :**
+*   **Installation :** `npx expo install posthog-react-native` dans le dossier `mobile/` ✅
+*   **Configuration :** Clé API récupérée depuis le dashboard PostHog (EU Cloud) ✅
+*   **Variable d'environnement :** `EXPO_PUBLIC_POSTHOG_KEY` ajouté dans `.env` ✅
+*   **Initialisation :** Application enveloppée dans `<PostHogProvider>` dans `app/_layout.tsx` ✅
+*   **Événements instrumentés :** ✅
+    *   `screen_view` — chaque changement de route via `usePathname()` d'Expo Router
+    *   `vehicle_added` — ajout d'un véhicule (avec `brand`, `model`, `year`)
+    *   `maintenance_log_created` — création d'un log (avec `type`, `cost`, `hasDocuments`)
+    *   `document_uploaded` — upload d'un document (avec `type`, `pageCount`)
+    *   `ai_scan_used` — utilisation du scanner IA (sur succès uniquement)
+    *   `pdf_exported` — export PDF (avec `method: 'save' | 'share'` et nom du véhicule)
+*   **Test :** Événements `screen_view` et `Application Opened` visibles dans PostHog → Live Events ✅
+
+**Décision d'architecture — Singleton analytics :**
+Les fichiers de services (`VehicleService`, `MaintenanceService`, etc.) sont du TypeScript pur, sans accès au contexte React. Il est donc impossible d'y utiliser le hook `usePostHog()`. J'ai résolu ce problème en créant un fichier `src/services/analytics.ts` qui instancie un client PostHog singleton (pattern classique pour les services non-React). Ce singleton est importé directement dans chaque service, tandis que le `<PostHogProvider>` dans `_layout.tsx` utilise ce même client via la prop `client={posthog}` — garantissant qu'il n'existe qu'une seule instance dans toute l'application.
+
+**Fichiers modifiés :**
+*   `mobile/src/services/analytics.ts` — singleton PostHog (EU host)
+*   `mobile/app/_layout.tsx` — `PostHogProvider` + `screen_view` sur chaque changement de pathname
+*   `mobile/.env` — ajout de `EXPO_PUBLIC_POSTHOG_KEY`
+*   `mobile/src/services/VehicleService.ts` — `vehicle_added`
+*   `mobile/src/services/MaintenanceService.ts` — `maintenance_log_created`
+*   `mobile/src/services/DocumentService.ts` — `document_uploaded`
+*   `mobile/src/services/AIService.ts` — `ai_scan_used`
+*   `mobile/src/services/PDFService.ts` — `pdf_exported` (deux chemins : save & share)
+
+**Dashboard PostHog — "Bike Service Beta" ✅ (2026-04-10)**
+
+Un dashboard de suivi a été créé manuellement dans PostHog avec 4 insights :
+
+1. **Écrans les plus visités** (Trends) — event `screen_view`, breakdown par propriété `screen`. Affiche quels écrans sont le plus consultés. Aggregation : Unique users.
+2. **Fonctionnalités utilisées** (Trends) — 5 séries : `vehicle_added`, `maintenance_log_created`, `document_uploaded`, `ai_scan_used`, `pdf_exported`. Permet de voir quelles fonctionnalités sont réellement utilisées.
+3. **Funnel adoption core** (Funnel) — Step 1 : `vehicle_added` → Step 2 : `maintenance_log_created`. Indique le % d'utilisateurs qui vont jusqu'à enregistrer un entretien après avoir ajouté une moto.
+4. **Utilisateurs actifs par jour** (Trends) — event `screen_view`, aggregation Unique users, last 30 days.
+
+Les events ont été vérifiés en conditions réelles (utilisation manuelle des fonctionnalités) — toutes les données arrivent correctement dans PostHog. *Captures d'écran disponibles pour le rapport.*
+
+---
+
+### Étape 6.3 : Bouton de feedback in-app ✅
+
+**Raison :** Les analytics montrent le "quoi", mais pas le "pourquoi". Un formulaire de feedback permet aux testeurs d'exprimer ce qui fonctionne et ce qui frustre.
+
+**Actions :**
+*   **Google Form créé :** "Formulaire de Feedback — BikeService" avec les champs suivants :
+    *   Note globale (1–5 étoiles) — `entry.2134169288`
+    *   Fonctionnalités utilisées (cases à cocher : Journal d'entretien / Dashboard / Wallet / Scanner IA / Export PDF) — `entry.2135198560`
+    *   Ce qui a bien fonctionné (texte libre) — `entry.2075602113`
+    *   Ce qui était frustrant ou confus (texte libre) — `entry.1929144732`
+    *   Recommanderiez-vous l'app ? (Oui / Peut-être / Non) — `entry.2119261993`
+    *   Version de l'app (pré-rempli automatiquement) — `entry.1725831997`
+*   **Formulaire publié** avec accès "Tous les utilisateurs" en mode Répondant ✅
+*   **Bouton intégré** dans l'écran Settings (section Support, icône `Lightbulb`), via `Linking.openURL` ✅
+*   **Pré-remplissage automatique** de la version (`Constants.expoConfig?.version`) via le paramètre `entry.1725831997` dans l'URL ✅
+
+**Fichiers modifiés :**
+*   `mobile/app/(tabs)/settings.tsx` — bouton feedback + constante `FEEDBACK_FORM_URL` avec l'URL réelle
+*   `mobile/src/context/LanguageContext.tsx` — clé de traduction `settings.send_feedback`
+
+---
+
+### Étape 6.4 : Mise à jour des pages légales ✅ (2026-04-10)
+
+**Raison :** L'intégration de Sentry et PostHog implique une collecte de données supplémentaire (traces d'erreurs, événements d'usage). La politique de confidentialité doit être mise à jour pour rester conforme, et c'est une exigence du Play Store.
+
+**Actions réalisées :**
+*   **Date** mise à jour : 05 Février → 10 Avril 2026
+*   **Section 2 (Données collectées)** — 2 nouvelles puces ajoutées :
+    *   "Données de diagnostic anonymisées (rapports de plantage, erreurs techniques)"
+    *   "Données d'utilisation anonymisées (écrans visités, fonctionnalités utilisées)"
+*   **Nouvelle section 6 (Services tiers)** ajoutée :
+    *   **Sentry** : traces d'erreurs anonymisées, aucune donnée personnelle identifiable
+    *   **PostHog** : événements anonymisés, hébergement EU Cloud, pas de contenu personnel transmis
+*   Ancienne section 6 (Contact) devient section 7
+*   **Accessibilité :** La route `/legal` est déjà whitelistée dans `_layout.tsx` — accessible sans être connecté (exigence Play Store confirmée).
+
+**Fichiers modifiés :**
+*   `mobile/app/legal/privacy.tsx` — date, section 2, nouvelle section 6 Services tiers
+
+---
+
+### Étape 6.5 : Vérifications backend ✅ (2026-04-10)
+
+**Actions réalisées :**
+
+*   **Supabase Storage ✅ :** Bucket `documents` vérifié via MCP. Bucket privé (`public: false`). 4 policies en place (SELECT, INSERT, UPDATE, DELETE) — toutes isolées par `auth.uid() = foldername[1]`. Aucune correction nécessaire.
+
+*   **Backup schéma ✅ :** `database/schema.sql` entièrement réécrit pour refléter l'état de production. Ajouts vs brouillon initial :
+    *   Colonnes `user_id` sur `vehicles`, `maintenance_logs`, `documents`
+    *   Colonnes `display_order` et `catalog_id` sur `vehicles`
+    *   Table `document_pages` (avec colonnes `width`, `height`)
+    *   Table `motorcycle_catalog` (catalogue de référence, lecture publique)
+    *   `cost` en `numeric` (était `integer` dans le brouillon)
+    *   Vraies policies RLS par `user_id` (les placeholders "all authenticated" supprimés)
+    *   Indexes `user_id` ajoutés sur les 3 tables principales
+    *   Section commentée résumant les policies Storage
+
+*   **Quotas Gemini ✅ :** Free Tier actuel — 15 req/min, 1 500 req/jour, 1M tokens/min. Largement suffisant pour le MVP. Alerte budget à configurer manuellement dans Google Cloud Console → Billing → Budgets & alerts (seuils recommandés : $1, $5).
+
+**Fichiers modifiés :**
+*   `database/schema.sql` — réécriture complète (snapshot production 2026-04-10)
+
+---
+
+### Étape 6.6 : Préparation Play Store ✅ (2026-04-16)
+
+**Prérequis :** Vérification du compte Google Play terminée (2026-04-16).
+
+**Problème rencontré — nom de package déjà pris :**
+`com.bikeservice.app` était associé à 4 certificats de signature appartenant à d'autres développeurs dans l'écosystème Android. Google Play Console affiche une erreur de conflit à l'enregistrement. Solution : changement du package en `com.armandebongnie.bikeservice` (namespace personnel, garantit l'unicité).
+
+**Fichiers modifiés :**
+*   `mobile/app.json` — `ios.bundleIdentifier` et `android.package` mis à jour vers `com.armandebongnie.bikeservice`
+
+**Enregistrement du nom de package :**
+*   Via Play Console → Validation des développeurs Android → Noms des packages
+*   Saisie de `com.armandebongnie.bikeservice`
+*   Ajout de la clé : empreinte **SHA-256** du keystore EAS de production (`mobile/@armano__mobile.jks`) — `C6:E6:C8:AF:ED:9F:A6:46:99:D9:F7:22:E8:0F:42:61:54:E7:D4:2B:6C:97:94:65:17:33:4B:58:DF:91:A5:A1`
+*   Validation confirmée par Play Console ✅
+
+**Création de l'application :**
+*   Play Console → Accueil → Créer une application
+*   Nom : `BikeService`, langue : Français (France), type : Appli, gratuite
+*   Application créée avec succès ✅
+
+**Prochaines actions (fiche Play Store) :**
+*   Upload AAB sur le track Tests internes
+*   Icône haute résolution 512×512 PNG
+*   Feature Graphic 1024×500 PNG
+*   Screenshots (minimum 2)
+*   Description courte (80 chars max) : *"Carnet d'entretien moto — hors-ligne, assisté par IA"*
+*   URL politique de confidentialité (hébergement public requis)
+*   Questionnaire de classification de contenu
+
+---
+
+### Étape 6.7 : Build de production & distribution ✅ (2026-04-16)
+
+**Build EAS — 2ème build :**
+*   Relancé après le changement de package (`com.armandebongnie.bikeservice`), avec le keystore existant
+*   Commande : `eas build --profile production --platform android` depuis `mobile/`
+*   AAB signé téléchargé depuis le dashboard EAS ✅
+
+**Prochaine action :** Upload de l'AAB sur Play Console → Tests internes → Créer une version
+
+---
+
+### Étape 6.8 : Publication Tests internes & Politique de confidentialité publique ✅ (2026-04-17)
+
+**AAB uploadé sur Play Console :**
+*   Version `1.0.0 (1)` publiée sur le track **Tests internes** ✅
+*   Notes de version en français ajoutées
+*   Erreur bloquante résolue : l'AAB initial avait l'ancien package `com.bikeservice.app` — le bon AAB (2ème build EAS) a été utilisé
+
+**Politique de confidentialité hébergée publiquement :**
+*   Exigence déclenchée par la permission `android.permission.CAMERA` (Play Console l'impose)
+*   Fichier `docs/privacy.html` créé et hébergé via **GitHub Pages** : `https://armandeb.github.io/bikeservice/privacy.html`
+*   URL renseignée dans Play Console → Surveiller et améliorer → Règles et programmes → Contenu de l'application → Règles de confidentialité
+*   Email de contact corrigé : `arman@omistudio.be`
+
+**Fichiers modifiés :**
+*   `docs/privacy.html` — nouvelle page HTML publique
+*   `mobile/app/legal/privacy.tsx` — email de contact mis à jour
+
+---
+
+### Checklist de validation finale
+
+| Vérification | Statut |
+| :--- | :--- |
+| Crash test → visible dans Sentry | ◻️ |
+| Navigation → événements dans PostHog Live Events | ✅ |
+| Bouton feedback → Google Form s'ouvre avec version pré-remplie | ◻️ |
+| Pages légales accessibles sans connexion | ◻️ |
+| Build de production compile sans erreurs | ◻️ |
+| AAB uploadé sur Play Console sans warnings | ◻️ |
+
+---
+
 *(Note : Ce document est mis à jour à chaque étape clé du développement.)*

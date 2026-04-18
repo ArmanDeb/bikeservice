@@ -41,3 +41,6 @@ yarn-error.*
 .temp_ag_kit/
 antigravity-doc/
 scripts/
+
+# Local launch planning (private, not for repo)
+launch/

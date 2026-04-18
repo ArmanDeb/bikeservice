@@ -3,6 +3,7 @@ import { TableName } from '../database/constants'
 import Document from '../database/models/Document'
 import { Q } from '@nozbe/watermelondb'
 import { sync } from './SyncService'
+import { posthog } from './analytics'
 import { StorageService } from './StorageService'
 import { supabase } from './Supabase'
 import DocumentPage from '../database/models/DocumentPage'
@@ -143,6 +144,7 @@ export const DocumentService = {
                 await database.batch(...batch)
             }
         })
+        posthog.capture('document_uploaded', { type, pageCount: filePaths.length })
         sync()
     },
 

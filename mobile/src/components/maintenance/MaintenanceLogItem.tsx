@@ -104,7 +104,9 @@ const MaintenanceLogItem = ({ log, documents, onPress }: MaintenanceLogItemProps
 
             <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                    <Text style={{ color: isDark ? '#FDFCF8' : '#1C1C1E', fontFamily: 'Outfit_700Bold', fontSize: 18, flex: 1, marginRight: 8 }} numberOfLines={1}>{log.title}</Text>
+                    <Text style={{ color: isDark ? '#FDFCF8' : '#1C1C1E', fontFamily: 'Outfit_700Bold', fontSize: 18, flex: 1, marginRight: 8 }} numberOfLines={1}>
+                        {log.title || `${t('maintenance.type.' + log.type)} • ${log.mileageAtLog.toLocaleString()} km`}
+                    </Text>
                     <Text style={{ color: isDark ? '#E5E5E0' : '#4A4A45', fontFamily: 'Outfit_700Bold', fontSize: 18 }}>{log.cost} €</Text>
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
