@@ -253,6 +253,8 @@ export const translations: Translations = {
     'intro.feature3.title': { fr: 'Digital Wallet', en: 'Digital Wallet' },
     'intro.feature3.desc': { fr: 'Tous vos papiers (carte grise, assurance) toujours sur vous.', en: 'All your papers (registration, insurance) always with you.' },
     'intro.button': { fr: 'Démarrer l\'aventure', en: 'Start the Adventure' },
+    'intro.next': { fr: 'Suivant', en: 'Next' },
+    'intro.skip': { fr: 'Passer', en: 'Skip' },
 
     // Onboarding
     'onboarding.welcome.title': { fr: 'Bienvenue sur Bike Service', en: 'Welcome to Bike Service' },
