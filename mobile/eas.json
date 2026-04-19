@@ -25,11 +25,7 @@
         "production": {
             "node": "20.18.0",
             "env": {
-                "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
-                "EXPO_PUBLIC_SUPABASE_URL": "https://bizihpiomnjtkgmcpxln.supabase.co",
-                "EXPO_PUBLIC_SUPABASE_ANON_KEY": "***SUPABASE_ANON_KEY_REMOVED***",
-                "EXPO_PUBLIC_GEMINI_API_KEY": "***GEMINI_KEY_REMOVED***",
-                "EXPO_PUBLIC_POSTHOG_KEY": "***POSTHOG_KEY_REMOVED***"
+                "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
             }
         }
     },

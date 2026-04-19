@@ -19,6 +19,9 @@ import { posthog } from './analytics';
 
 const SAVED_DIRECTORY_KEY = '@BikeService:savedPdfDirectory';
 
+const escapeHtml = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
 /**
  * Helper to get data URI for brand logo
  * Uses simple URL encoding for maximum compatibility and minimal risk of encoding errors.
@@ -134,8 +137,8 @@ const buildHtml = (
         </head>
         <body>
             <div class="header">
-                ${brandLogoUri ? `<img src="${brandLogoUri}" class="brand-logo" alt="${vehicle.brand}" />` : ''}
-                <h1>${labels.title} : ${vehicle.brand} ${vehicle.model}</h1>
+                ${brandLogoUri ? `<img src="${brandLogoUri}" class="brand-logo" alt="${escapeHtml(vehicle.brand)}" />` : ''}
+                <h1>${labels.title} : ${escapeHtml(vehicle.brand)} ${escapeHtml(vehicle.model)}</h1>
                 <p>${labels.generated} ${dateStr}</p>
             </div>
 
@@ -143,7 +146,7 @@ const buildHtml = (
             <div class="section">
                 <div class="section-title">${labels.summary}</div>
                 <div class="summary-box">
-                    ${summary.replace(/\n/g, '<br/>')}
+                    ${escapeHtml(summary).replace(/\n/g, '<br/>')}
                 </div>
             </div>
             ` : ''}
@@ -153,7 +156,7 @@ const buildHtml = (
                 <div class="info-grid">
                     <div class="info-item">
                         <div class="info-label">${labels.brandModel}</div>
-                        <div class="info-value">${vehicle.brand} ${vehicle.model}</div>
+                        <div class="info-value">${escapeHtml(vehicle.brand)} ${escapeHtml(vehicle.model)}</div>
                     </div>
                     <div class="info-item">
                         <div class="info-label">${labels.mileage}</div>
@@ -218,7 +221,7 @@ const buildHtml = (
                                 ${logsInGroup.map(log => `
                                 <tr>
                                     <td>${log.date.toLocaleDateString(dateLocale)}</td>
-                                    <td><strong>${log.title}</strong></td>
+                                    <td><strong>${escapeHtml(log.title)}</strong></td>
                                     <td>${log.mileageAtLog.toLocaleString()}</td>
                                     <td style="font-weight: bold;">${log.cost} €</td>
                                 </tr>
@@ -241,7 +244,7 @@ const buildHtml = (
                 ${invoiceDocs.map((doc, idx) => `
                     <div class="annex-container">
                         <div class="section-title">${labels.annex} ${idx + 1} : ${doc.type.toUpperCase()}</div>
-                        ${doc.reference ? `<p style="font-size: 11px; margin-bottom: 10px;">Réf: ${doc.reference}</p>` : ''}
+                        ${doc.reference ? `<p style="font-size: 11px; margin-bottom: 10px;">Réf: ${escapeHtml(doc.reference)}</p>` : ''}
                         ${doc.base64 ? `<img src="data:image/jpeg;base64,${doc.base64}" class="annex-image" />` : `<p style="color: #999;">${labels.noImage}</p>`}
                     </div>
                     ${idx < invoiceDocs.length - 1 ? '<div class="page-break"></div>' : ''}

@@ -5,7 +5,7 @@ import { posthog } from '../src/services/analytics';
 
 Sentry.init({
   dsn: 'https://f6afacef3269c11b8237f1be95e94b60@o4511191249911808.ingest.de.sentry.io/4511191597318224',
-  sendDefaultPii: true,
+  sendDefaultPii: false,
   enableLogs: true,
 });
 import { useEffect, useState } from 'react'
