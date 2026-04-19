@@ -1,161 +1,192 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, Dimensions, StatusBar, Image } from 'react-native';
+import React, { useRef, useState } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    Pressable,
+    Dimensions,
+    StatusBar,
+    Image,
+    FlatList,
+    TouchableOpacity,
+} from 'react-native';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
-    withDelay,
+    useAnimatedScrollHandler,
     withSpring,
     withTiming,
+    interpolate,
+    interpolateColor,
+    Extrapolation,
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Bike, Wrench, Wallet } from 'lucide-react-native';
 import { useLanguage } from '../src/context/LanguageContext';
 import { useTheme } from '../src/context/ThemeContext';
-import {
-    SPRING_ENTRANCE,
-    SPRING_SNAPPY,
-    FADE_IN_CONFIG,
-    STAGGER_DELAY,
-    ENTRANCE_TRANSLATE_Y,
-} from '../src/utils/animations';
+import { SPRING_SNAPPY, FADE_IN_CONFIG } from '../src/utils/animations';
 
 const { width } = Dimensions.get('window');
-
+const AnimatedFlatList = Animated.createAnimatedComponent(FlatList<SlideData>);
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+interface SlideData {
+    id: string;
+    type: 'hero' | 'feature';
+    icon?: React.FC<{ size: number; color: string; strokeWidth: number }>;
+    titleKey: string;
+    descKey: string;
+}
+
+const SLIDES: SlideData[] = [
+    { id: 'welcome', type: 'hero', titleKey: 'intro.title', descKey: 'intro.subtitle' },
+    { id: 'garage', type: 'feature', icon: Bike, titleKey: 'intro.feature_garage.title', descKey: 'intro.feature_garage.desc' },
+    { id: 'maintenance', type: 'feature', icon: Wrench, titleKey: 'intro.feature1.title', descKey: 'intro.feature1.desc' },
+    { id: 'wallet', type: 'feature', icon: Wallet, titleKey: 'intro.feature3.title', descKey: 'intro.feature3.desc' },
+];
+
+const LAST_INDEX = SLIDES.length - 1;
+
+async function markSeen() {
+    await AsyncStorage.setItem('has_seen_intro', '1');
+}
 
 export default function IntroScreen() {
     const router = useRouter();
     const { t } = useLanguage();
     const { isDark } = useTheme();
 
-    // Staggered entrance triggers (0 = hidden, 1 = visible)
-    const logoProgress = useSharedValue(0);
-    const nameProgress = useSharedValue(0);
-    const titleProgress = useSharedValue(0);
-    const subtitleProgress = useSharedValue(0);
-    const primaryBtnProgress = useSharedValue(0);
-    const secondaryBtnProgress = useSharedValue(0);
+    const scrollX = useSharedValue(0);
+    const [activeIndex, setActiveIndex] = useState(0);
+    const listRef = useRef<FlatList<SlideData>>(null);
 
-    // Button press scales
     const primaryScale = useSharedValue(1);
     const secondaryScale = useSharedValue(1);
 
-    useEffect(() => {
-        // Stagger content elements
-        logoProgress.value = 1;
-        nameProgress.value = 1;
-        titleProgress.value = 1;
-        subtitleProgress.value = 1;
-        // Buttons after content
-        primaryBtnProgress.value = 1;
-        secondaryBtnProgress.value = 1;
-    }, []);
-
-    // Logo: fade + slide up + scale
-    const logoStyle = useAnimatedStyle(() => ({
-        opacity: withDelay(0, withTiming(logoProgress.value, FADE_IN_CONFIG)),
-        transform: [
-            { translateY: withDelay(0, withSpring(logoProgress.value === 1 ? 0 : ENTRANCE_TRANSLATE_Y, SPRING_ENTRANCE)) },
-            { scale: withDelay(0, withSpring(logoProgress.value === 1 ? 1 : 0.85, SPRING_ENTRANCE)) },
-        ],
-    }));
-
-    // App name: fade + slide up
-    const nameStyle = useAnimatedStyle(() => ({
-        opacity: withDelay(STAGGER_DELAY, withTiming(nameProgress.value, FADE_IN_CONFIG)),
-        transform: [
-            { translateY: withDelay(STAGGER_DELAY, withSpring(nameProgress.value === 1 ? 0 : ENTRANCE_TRANSLATE_Y, SPRING_ENTRANCE)) },
-        ],
-    }));
-
-    // Title: fade + slide up
-    const titleStyle = useAnimatedStyle(() => ({
-        opacity: withDelay(STAGGER_DELAY * 2, withTiming(titleProgress.value, FADE_IN_CONFIG)),
-        transform: [
-            { translateY: withDelay(STAGGER_DELAY * 2, withSpring(titleProgress.value === 1 ? 0 : ENTRANCE_TRANSLATE_Y, SPRING_ENTRANCE)) },
-        ],
-    }));
-
-    // Subtitle: fade + slide up
-    const subtitleStyle = useAnimatedStyle(() => ({
-        opacity: withDelay(STAGGER_DELAY * 3, withTiming(subtitleProgress.value, FADE_IN_CONFIG)),
-        transform: [
-            { translateY: withDelay(STAGGER_DELAY * 3, withSpring(subtitleProgress.value === 1 ? 0 : ENTRANCE_TRANSLATE_Y, SPRING_ENTRANCE)) },
-        ],
-    }));
-
-    // Primary button: fade + slide up (after content)
     const primaryBtnStyle = useAnimatedStyle(() => ({
-        opacity: withDelay(STAGGER_DELAY * 5, withTiming(primaryBtnProgress.value, FADE_IN_CONFIG)),
-        transform: [
-            { translateY: withDelay(STAGGER_DELAY * 5, withSpring(primaryBtnProgress.value === 1 ? 0 : 20, SPRING_ENTRANCE)) },
-            { scale: primaryScale.value },
-        ],
+        transform: [{ scale: primaryScale.value }],
     }));
 
-    // Secondary button: fade + slide up
     const secondaryBtnStyle = useAnimatedStyle(() => ({
-        opacity: withDelay(STAGGER_DELAY * 6, withTiming(secondaryBtnProgress.value, FADE_IN_CONFIG)),
-        transform: [
-            { translateY: withDelay(STAGGER_DELAY * 6, withSpring(secondaryBtnProgress.value === 1 ? 0 : 20, SPRING_ENTRANCE)) },
-            { scale: secondaryScale.value },
-        ],
+        transform: [{ scale: secondaryScale.value }],
     }));
 
-    const handleJoin = () => {
-        router.push('/auth/');
+    const scrollHandler = useAnimatedScrollHandler({
+        onScroll: (e) => {
+            scrollX.value = e.contentOffset.x;
+        },
+    });
+
+    const goTo = (index: number) => {
+        listRef.current?.scrollToIndex({ index, animated: true });
+        setActiveIndex(index);
     };
 
-    const handleSignIn = () => {
-        router.push('/auth/login');
+    const handlePrimary = async () => {
+        if (activeIndex < LAST_INDEX) {
+            goTo(activeIndex + 1);
+        } else {
+            await markSeen();
+            router.replace('/auth/');
+        }
+    };
+
+    const handleSecondaryOrSkip = async () => {
+        await markSeen();
+        router.replace('/auth/login');
+    };
+
+    const colors = {
+        bg: isDark ? '#1C1C1E' : '#FDFCF8',
+        text: isDark ? '#FFFFFF' : '#1C1C1E',
+        textSecondary: isDark ? '#A1A1AA' : '#666660',
+        iconCircle: isDark ? 'rgba(250,201,2,0.15)' : 'rgba(250,201,2,0.12)',
+        dotInactive: isDark ? '#3A3A3C' : '#D4D4D4',
+        secondaryText: isDark ? '#A1A1AA' : '#1C1C1E',
+    };
+
+    const isLastSlide = activeIndex === LAST_INDEX;
+
+    const renderSlide = ({ item }: { item: SlideData }) => {
+        if (item.type === 'hero') {
+            return (
+                <View style={styles.slide}>
+                    <View style={styles.heroLogoContainer}>
+                        <Image
+                            source={require('../assets/logo.png')}
+                            style={styles.heroLogo}
+                        />
+                    </View>
+                    <Text style={[styles.appName, { color: colors.text }]}>Bike Service</Text>
+                    <Text style={[styles.heroTitle, { color: colors.text }]}>{t(item.titleKey)}</Text>
+                    <Text style={[styles.slideDesc, { color: colors.textSecondary }]}>{t(item.descKey)}</Text>
+                </View>
+            );
+        }
+
+        const Icon = item.icon!;
+        return (
+            <View style={styles.slide}>
+                <View style={[styles.iconCircle, { backgroundColor: colors.iconCircle }]}>
+                    <Icon size={52} color="#FAC902" strokeWidth={1.5} />
+                </View>
+                <Text style={[styles.featureTitle, { color: colors.text }]}>{t(item.titleKey)}</Text>
+                <Text style={[styles.slideDesc, { color: colors.textSecondary }]}>{t(item.descKey)}</Text>
+            </View>
+        );
     };
 
     return (
-        <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
-            <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
+            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
-            <View style={styles.content}>
-                <Animated.View style={[{ alignItems: 'center' }, logoStyle]}>
-                    <View style={styles.logoContainer}>
-                        <Image
-                            source={require('../assets/logo.png')}
-                            style={styles.logo}
-                        />
-                    </View>
-                </Animated.View>
-
-                <Animated.View style={nameStyle}>
-                    <Text style={[styles.appName, isDark && styles.appNameDark]}>
-                        Bike Service
-                    </Text>
-                </Animated.View>
-
-                <Animated.View style={titleStyle}>
-                    <Text style={[styles.title, isDark && styles.titleDark]}>
-                        {t('intro.title')}
-                    </Text>
-                </Animated.View>
-
-                <Animated.View style={subtitleStyle}>
-                    <Text style={[styles.subtitle, isDark && styles.subtitleDark]}>
-                        {t('intro.subtitle')}
-                    </Text>
-                </Animated.View>
+            <View style={styles.skipRow}>
+                {!isLastSlide && (
+                    <TouchableOpacity onPress={handleSecondaryOrSkip} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                        <Text style={[styles.skipText, { color: colors.textSecondary }]}>{t('intro.skip')}</Text>
+                    </TouchableOpacity>
+                )}
             </View>
 
+            <AnimatedFlatList
+                ref={listRef as any}
+                data={SLIDES}
+                keyExtractor={(item) => item.id}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                scrollEventThrottle={16}
+                onScroll={scrollHandler}
+                onMomentumScrollEnd={(e) => {
+                    const newIndex = Math.round(e.nativeEvent.contentOffset.x / width);
+                    setActiveIndex(newIndex);
+                }}
+                renderItem={renderSlide}
+            />
+
             <View style={styles.footer}>
+                <View style={styles.dotsRow}>
+                    {SLIDES.map((_, i) => (
+                        <DotIndicator
+                            key={i}
+                            index={i}
+                            scrollX={scrollX}
+                            inactiveColor={colors.dotInactive}
+                            onPress={() => goTo(i)}
+                        />
+                    ))}
+                </View>
+
                 <AnimatedPressable
-                    style={[
-                        styles.button,
-                        isDark && styles.buttonDark,
-                        primaryBtnStyle,
-                    ]}
+                    style={[styles.primaryButton, primaryBtnStyle]}
                     onPressIn={() => { primaryScale.value = withSpring(0.96, SPRING_SNAPPY); }}
                     onPressOut={() => { primaryScale.value = withSpring(1, SPRING_SNAPPY); }}
-                    onPress={handleJoin}
+                    onPress={handlePrimary}
                 >
-                    <Text style={[styles.buttonText, isDark && styles.buttonTextDark]}>
-                        {t('auth.join_the_club') || "Join the Club"}
+                    <Text style={styles.primaryButtonText}>
+                        {isLastSlide ? t('auth.join_the_club') : t('intro.next')}
                     </Text>
                 </AnimatedPressable>
 
@@ -163,10 +194,10 @@ export default function IntroScreen() {
                     style={[styles.secondaryButton, secondaryBtnStyle]}
                     onPressIn={() => { secondaryScale.value = withSpring(0.96, SPRING_SNAPPY); }}
                     onPressOut={() => { secondaryScale.value = withSpring(1, SPRING_SNAPPY); }}
-                    onPress={handleSignIn}
+                    onPress={handleSecondaryOrSkip}
                 >
-                    <Text style={[styles.secondaryButtonText, isDark && styles.secondaryButtonTextDark]}>
-                        {t('auth.have_account') || "I have an account"}
+                    <Text style={[styles.secondaryButtonText, { color: colors.secondaryText }]}>
+                        {t('auth.have_account')}
                     </Text>
                 </AnimatedPressable>
             </View>
@@ -174,30 +205,69 @@ export default function IntroScreen() {
     );
 }
 
+function DotIndicator({
+    index,
+    scrollX,
+    inactiveColor,
+    onPress,
+}: {
+    index: number;
+    scrollX: Animated.SharedValue<number>;
+    inactiveColor: string;
+    onPress: () => void;
+}) {
+    const dotStyle = useAnimatedStyle(() => {
+        const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
+        const dotWidth = interpolate(scrollX.value, inputRange, [8, 24, 8], Extrapolation.CLAMP);
+        const opacity = interpolate(scrollX.value, inputRange, [0.5, 1, 0.5], Extrapolation.CLAMP);
+        const backgroundColor = interpolateColor(
+            scrollX.value,
+            inputRange,
+            [inactiveColor, '#FAC902', inactiveColor],
+        );
+        return {
+            width: withSpring(dotWidth, SPRING_SNAPPY),
+            opacity: withTiming(opacity, FADE_IN_CONFIG),
+            backgroundColor,
+        };
+    });
+
+    return (
+        <TouchableOpacity onPress={onPress} hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}>
+            <Animated.View style={[styles.dot, dotStyle]} />
+        </TouchableOpacity>
+    );
+}
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FDFCF8',
     },
-    containerDark: {
-        backgroundColor: '#1C1C1E',
+    skipRow: {
+        height: 44,
+        alignItems: 'flex-end',
+        justifyContent: 'center',
+        paddingHorizontal: 24,
     },
-    content: {
+    skipText: {
+        fontFamily: 'WorkSans_500Medium',
+        fontSize: 15,
+    },
+    slide: {
+        width,
         flex: 1,
-        justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 32,
+        justifyContent: 'center',
+        paddingHorizontal: 40,
     },
-    logoContainer: {
-        width: width * 0.5,
-        height: width * 0.5,
-        marginBottom: 40,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderRadius: 40,
+    heroLogoContainer: {
+        width: width * 0.44,
+        height: width * 0.44,
+        marginBottom: 36,
+        borderRadius: 36,
         overflow: 'hidden',
     },
-    logo: {
+    heroLogo: {
         width: '100%',
         height: '100%',
         resizeMode: 'cover',
@@ -205,80 +275,80 @@ const styles = StyleSheet.create({
     appName: {
         fontSize: 32,
         fontFamily: 'Outfit_700Bold',
-        color: '#1C1C1E',
-        marginBottom: 16,
+        marginBottom: 12,
         textAlign: 'center',
     },
-    appNameDark: {
-        color: '#FFFFFF',
-    },
-    title: {
-        fontSize: 24,
+    heroTitle: {
+        fontSize: 22,
         fontFamily: 'WorkSans_600SemiBold',
-        color: '#1C1C1E',
         textAlign: 'center',
-        marginBottom: 16,
+        marginBottom: 14,
     },
-    titleDark: {
-        color: '#E5E5E5',
+    iconCircle: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 40,
     },
-    subtitle: {
+    featureTitle: {
+        fontSize: 26,
+        fontFamily: 'Outfit_700Bold',
+        textAlign: 'center',
+        marginBottom: 14,
+    },
+    slideDesc: {
         fontSize: 16,
         fontFamily: 'WorkSans_400Regular',
-        color: '#666660',
         textAlign: 'center',
-        lineHeight: 24,
-        maxWidth: '90%',
-    },
-    subtitleDark: {
-        color: '#A1A1AA',
+        lineHeight: 26,
+        maxWidth: '85%',
     },
     footer: {
         paddingHorizontal: 24,
-        paddingBottom: 40,
-        width: '100%',
-        gap: 16,
+        paddingBottom: 36,
+        gap: 14,
+        alignItems: 'center',
     },
-    button: {
-        backgroundColor: '#FAC902', // Brand Gold/Orange
+    dotsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 8,
+    },
+    dot: {
+        height: 8,
+        borderRadius: 4,
+    },
+    primaryButton: {
+        backgroundColor: '#FAC902',
         paddingVertical: 18,
         borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
         width: '100%',
-        elevation: 5,
         shadowColor: '#FAC902',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
+        elevation: 5,
     },
-    buttonDark: {
-        backgroundColor: '#FAC902',
-        shadowColor: '#FAC902',
-        shadowOpacity: 0.3,
-    },
-    buttonText: {
-        color: '#1C1C1E', // Dark text for contrast on Gold
+    primaryButtonText: {
+        color: '#1C1C1E',
         fontFamily: 'Outfit_700Bold',
         fontSize: 18,
         letterSpacing: 0.5,
     },
-    buttonTextDark: {
-        color: '#1C1C1E', // Dark text for contrast on Gold
-    },
     secondaryButton: {
-        paddingVertical: 12,
+        paddingVertical: 10,
         alignItems: 'center',
         justifyContent: 'center',
         width: '100%',
     },
     secondaryButtonText: {
-        color: '#1C1C1E',
         fontFamily: 'WorkSans_600SemiBold',
-        fontSize: 16,
+        fontSize: 15,
         textAlign: 'center',
-    },
-    secondaryButtonTextDark: {
-        color: '#A1A1AA',
     },
 });

@@ -268,6 +268,25 @@ Cette section retrace l'évolution du projet au jour le jour, mes hésitations e
 
 ---
 
+### 19 Avril 2026 : Onboarding Carrousel Pré-Authentification
+
+*   **Contexte & Motivation :** L'écran `intro.tsx` existant était un simple écran de bienvenue avec deux boutons (Rejoindre / Se connecter), sans expliquer à l'utilisateur ce que l'application offre. Objectif : convaincre l'utilisateur de s'inscrire en lui présentant les fonctionnalités clés avant toute demande de compte.
+*   **Architecture :** Remplacement complet de `intro.tsx` par un carrousel horizontal à 4 slides construit sur `Animated.FlatList` avec `pagingEnabled` et `useAnimatedScrollHandler` de Reanimated 4. Zéro nouvelle dépendance ajoutée.
+*   **Slides :**
+    1.  **Bienvenue** — Logo + nom de l'app + tagline existant (`intro.title` / `intro.subtitle`).
+    2.  **Mon Garage** — Icône `Bike` (lucide) dans un cercle doré translucide + titre `intro.feature_garage.*`.
+    3.  **Suivi d'Entretien** — Icône `Wrench` + titre `intro.feature1.*`.
+    4.  **Digital Wallet** — Icône `Wallet` + titre `intro.feature3.*`.
+*   **UX & Interactions :**
+    *   **Indicateur de progression** : 4 points animés (width + couleur interpolés via `interpolateColor`) qui réagissent au scroll en temps réel. Tappables pour sauter à n'importe quel slide.
+    *   **Bouton principal** : Label dynamique — "Suivant" (slides 0–2) → "Rejoindre le Club" (slide 3).
+    *   **Bouton secondaire** : "Déjà un compte ?" visible sur tous les slides.
+    *   **Bouton Passer** : Affiché en haut à droite sur les slides 0–2 pour les utilisateurs pressés.
+*   **Correction de bug :** `_layout.tsx` lit `AsyncStorage.getItem('has_seen_intro')` pour décider de router vers `/intro` ou `/auth`. L'ancien `intro.tsx` n'écrivait jamais cette clé → l'écran réapparaissait à chaque démarrage. Désormais, **toutes les sorties** du carrousel (CTA, secondaire, Skip) appellent `AsyncStorage.setItem('has_seen_intro', '1')` avant la navigation.
+*   **Fichiers modifiés :** `mobile/app/intro.tsx` (réécriture complète), `mobile/src/context/LanguageContext.tsx` (ajout clés `intro.next`, `intro.skip`).
+
+---
+
 ## 6. Lancement (Préparation au déploiement)
 
 Cette section documente la phase de lancement de l'application : la mise en place des outils de monitoring, la préparation du Play Store et les étapes nécessaires pour passer d'un projet de développement à un produit utilisable par de vrais utilisateurs.
@@ -534,3 +553,23 @@ Les events ont été vérifiés en conditions réelles (utilisation manuelle des
     *   **Nouvelles tables :** Intégration de la synchronisation bidirectionnelle pour la nouvelle table `document_pages` (liée au wallet).
     *   **Assainissement des données :** Refonte de la fonction `sanitize` dans le `SyncService` pour "nettoyer" la donnée avant envoi au cloud (injection dynamique du `user_id` et suppression de champs purement locaux comme `local_uri` pour alléger la base de données).
 
+
+### 19 Avril 2026 : Audit de Sécurité & Purge des Secrets
+
+*   **Suppression des secrets dans `eas.json` :**
+    *   Les quatre variables `EXPO_PUBLIC_*` (Gemini, Supabase URL, Supabase anon key, PostHog) étaient codées en dur dans `mobile/eas.json` et donc exposées publiquement sur GitHub.
+    *   **Solution :** Déplacement de toutes les variables vers les **EAS Secrets** (dashboard expo.dev) et suppression des valeurs dans `eas.json`. Les secrets sont désormais injectés automatiquement au moment du build.
+
+*   **Purge de l'historique Git (`git filter-repo`) :**
+    *   Les secrets étaient présents dans plusieurs commits passés. Suppression par réécriture complète de l'historique git via `git-filter-repo --replace-text`.
+    *   Force push sur `main` et `develop` pour propager la réécriture.
+
+*   **Correction Sentry (`sendDefaultPii: false`) :**
+    *   `sendDefaultPii: true` dans `app/_layout.tsx` envoyait les IPs, logs console et données utilisateur à Sentry, en contradiction avec la politique de confidentialité. Passé à `false`.
+
+*   **Protection contre l'injection HTML dans le PDF (`PDFService.ts`) :**
+    *   Les champs saisis par l'utilisateur (marque, modèle, titre du log, résumé IA, référence document) étaient interpolés directement dans le template HTML du PDF sans échappement.
+    *   **Solution :** Ajout d'une fonction `escapeHtml()` et application systématique sur tous les champs utilisateur avant injection dans le HTML.
+| **Secrets exposés dans `eas.json`** | Déplacement vers EAS Secrets (expo.dev) + purge de l'historique git via `git filter-repo` + force push sur `main` et `develop`. |
+| **PII envoyés à Sentry** | `sendDefaultPii: true` → `false` dans `app/_layout.tsx`. |
+| **Injection HTML dans PDFService** | Ajout de `escapeHtml()` appliqué sur tous les champs utilisateur interpolés dans le template HTML. |
