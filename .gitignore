@@ -19,8 +19,13 @@ mobile/ios/
 # AI/Agent tooling (local development only)
 .agent/
 .claude/
+CLAUDE.md
 GEMINI.md
+.mcp.json
 design-system/
+
+# Stray root Expo stub
+/app.json
 
 # Build artifacts
 *.tgz
@@ -44,3 +49,9 @@ scripts/
 
 # Local launch planning (private, not for repo)
 launch/
+
+# Personal oral defense notes (private, not for repo)
+PRESENTATION_ORALE.md
+
+# Google Workspace CLI (local tooling, not for repo)
+googleworkspacecli/

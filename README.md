@@ -25,6 +25,35 @@ Bike Service est une application mobile conçue pour les propriétaires de motos
 
 ---
 
+## 📸 Aperçu
+
+<table>
+  <tr>
+    <td align="center" width="20%">
+      <img src="assets/images/screen-welcome.png" width="180" alt="Écran d'accueil" /><br/>
+      <sub><b>Bienvenue</b><br/>Gérez votre garage comme un pro</sub>
+    </td>
+    <td align="center" width="20%">
+      <img src="assets/images/screen-garage.png" width="180" alt="Garage multi-véhicules" /><br/>
+      <sub><b>Garage</b><br/>Toutes vos motos, un seul endroit</sub>
+    </td>
+    <td align="center" width="20%">
+      <img src="assets/images/screen-ai-modal.png" width="180" alt="Scanner IA" /><br/>
+      <sub><b>Scanner IA</b><br/>La facture se saisit toute seule</sub>
+    </td>
+    <td align="center" width="20%">
+      <img src="assets/images/screen-dashboard.png" width="180" alt="Tableau de bord TCO" /><br/>
+      <sub><b>Tableau de bord</b><br/>Le coût réel de votre moto</sub>
+    </td>
+    <td align="center" width="20%">
+      <img src="assets/images/screen-portefeuille.png" width="180" alt="Portefeuille documentaire" /><br/>
+      <sub><b>Portefeuille</b><br/>Papiers à jour, alertes d'expiration</sub>
+    </td>
+  </tr>
+</table>
+
+---
+
 ## 🏗️ Architecture
 
 L'application suit une architecture **Offline-First** (Client Lourd) :
