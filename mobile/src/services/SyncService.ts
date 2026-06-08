@@ -3,8 +3,38 @@ import { database } from '../database'
 import { supabase } from './Supabase'
 import { TableName } from '../database/constants'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import * as Sentry from '@sentry/react-native'
 
 export const LAST_SYNC_KEY = '@BikeService:lastSyncTimestamp'
+
+// A failed fetch with no connectivity is expected for an offline-first app
+// (airplane mode, tunnel, etc.). The local write already succeeded; the cloud
+// sync will retry on the next mutation or app launch.
+const isNetworkError = (error: unknown): boolean => {
+    const message = error instanceof Error ? error.message : String(error)
+    return /Network request failed|Failed to fetch|fetch failed/i.test(message)
+}
+
+/**
+ * Fire-and-forget sync that never produces an unhandled rejection.
+ * Offline network failures are swallowed (logged as a breadcrumb); any other
+ * failure is reported to Sentry so real sync bugs stay visible.
+ */
+export function safeSync(): void {
+    sync().catch((error) => {
+        if (isNetworkError(error)) {
+            console.log('⚠️ Sync skipped (offline) — will retry later')
+            Sentry.addBreadcrumb({
+                category: 'sync',
+                level: 'info',
+                message: 'Sync skipped: device offline',
+            })
+            return
+        }
+        console.warn('❌ Sync failed:', error)
+        Sentry.captureException(error)
+    })
+}
 
 export async function sync() {
     await synchronize({

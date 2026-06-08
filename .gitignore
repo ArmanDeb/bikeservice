@@ -50,8 +50,8 @@ scripts/
 # Local launch planning (private, not for repo)
 launch/
 
-# Personal oral defense notes (private, not for repo)
-PRESENTATION_ORALE.md
+# Personal oral defense notes & deck (private, not for repo)
+présentation orale/
 
 # Google Workspace CLI (local tooling, not for repo)
 googleworkspacecli/

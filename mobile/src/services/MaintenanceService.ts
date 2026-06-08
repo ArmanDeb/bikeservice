@@ -3,7 +3,7 @@ import { TableName } from '../database/constants'
 import MaintenanceLog from '../database/models/MaintenanceLog'
 import Vehicle from '../database/models/Vehicle'
 import { Q } from '@nozbe/watermelondb'
-import { sync } from './SyncService'
+import { safeSync } from './SyncService'
 import { posthog } from './analytics'
 import Document from '../database/models/Document'
 import { StorageService } from './StorageService'
@@ -124,7 +124,7 @@ export const MaintenanceService = {
             }
         })
         posthog.capture('maintenance_log_created', { type, cost, hasDocuments: !!documentUris?.length })
-        sync()
+        safeSync()
     },
     // Delete a maintenance log (with cascade delete of linked documents)
     deleteLog: async (log: MaintenanceLog) => {
@@ -148,7 +148,7 @@ export const MaintenanceService = {
             // Note: We are strictly NOT rolling back vehicle mileage as it's complex to determine "what was previous".
             // User can manually update mileage if needed.
         })
-        sync()
+        safeSync()
     },
 
     // Update a maintenance log
@@ -185,6 +185,6 @@ export const MaintenanceService = {
                 }
             }
         })
-        sync()
+        safeSync()
     },
 }
