@@ -2,7 +2,7 @@ import { database } from '../database'
 import { TableName } from '../database/constants'
 import Document from '../database/models/Document'
 import { Q } from '@nozbe/watermelondb'
-import { sync } from './SyncService'
+import { safeSync } from './SyncService'
 import { posthog } from './analytics'
 import { StorageService } from './StorageService'
 import { supabase } from './Supabase'
@@ -145,7 +145,7 @@ export const DocumentService = {
             }
         })
         posthog.capture('document_uploaded', { type, pageCount: filePaths.length })
-        sync()
+        safeSync()
     },
 
     // Delete a document (Soft Delete)
@@ -158,7 +158,7 @@ export const DocumentService = {
         await database.write(async () => {
             await document.markAsDeleted()
         })
-        sync()
+        safeSync()
     },
 
     // Update an existing document
@@ -250,7 +250,7 @@ export const DocumentService = {
 
             await database.batch(...batchOperations)
         })
-        sync()
+        safeSync()
     }
 }
 

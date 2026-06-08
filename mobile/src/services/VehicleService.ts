@@ -1,16 +1,18 @@
 import { database } from '../database'
 import { TableName } from '../database/constants'
 import Vehicle from '../database/models/Vehicle'
-import { sync } from './SyncService'
+import { safeSync } from './SyncService'
 import { posthog } from './analytics'
 import { Q } from '@nozbe/watermelondb'
 
 export const VehicleService = {
     // Observe all vehicles (Reactive) - Ordered by display_order
+    // observeWithColumns re-emits when a displayed field changes (e.g. mileage updated
+    // after adding a maintenance log), not only when the list membership changes.
     observeVehicles: () => {
         return database.collections.get<Vehicle>(TableName.VEHICLES)
             .query(Q.sortBy('display_order', Q.asc))
-            .observe()
+            .observeWithColumns(['brand', 'model', 'vin', 'year', 'current_mileage', 'display_order'])
     },
 
 
@@ -32,7 +34,7 @@ export const VehicleService = {
             })
         })
         posthog.capture('vehicle_added', { brand, model, year })
-        sync()
+        safeSync()
     },
 
     // Update vehicle details
@@ -51,7 +53,7 @@ export const VehicleService = {
                 }
             })
         })
-        sync()
+        safeSync()
     },
 
     // Delete vehicle (Cascade delete to avoid Foreign Key constraints)
@@ -74,7 +76,7 @@ export const VehicleService = {
             // 3. Delete the Vehicle itself
             await vehicle.markAsDeleted()
         })
-        sync()
+        safeSync()
     },
 
     // Update the display order of multiple vehicles
@@ -88,6 +90,6 @@ export const VehicleService = {
                 )
             )
         })
-        sync()
+        safeSync()
     },
 }
